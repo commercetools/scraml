@@ -5,6 +5,7 @@ import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 
 import java.io.File
+import scala.meta.Term
 
 class DefaultModelGenSpec extends AnyFlatSpec with Matchers {
   "Default model gen" should "generate data type from API spec" in {
@@ -14,6 +15,24 @@ class DefaultModelGenSpec extends AnyFlatSpec with Matchers {
       "scraml"
     )
 
-    ModelGenRunner.run(DefaultModelGen)(params).unsafeRunSync()
+    val generated = ModelGenRunner.run(DefaultModelGen)(params).unsafeRunSync()
+
+    generated.files.headOption match {
+      case Some(GeneratedFile(source, file)) =>
+        source.packageName should be("datatypes")
+        source.source.toString() should be("final case class DataType(id: String)")
+        source.name should be("DataType")
+        file.getPath should be("target/scraml-test/scraml/datatypes.scala")
+      case _ => fail()
+    }
+  }
+
+  it should "create a package from string" in {
+    DefaultModelGen.packageTerm("a").toString() should be("a")
+    DefaultModelGen.packageTerm("a.b").toString() should be("a.b")
+    DefaultModelGen.packageTerm("a.b.c").toString() should be("a.b.c")
+    DefaultModelGen.packageTerm("a.b.c.d.e").toString() should be(
+      Term.Select(Term.Select(Term.Select(Term.Select(Term.Name("a"), Term.Name("b")), Term.Name("c")), Term.Name("d")), Term.Name("e")).toString()
+    )
   }
 }

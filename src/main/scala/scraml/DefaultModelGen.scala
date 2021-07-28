@@ -17,7 +17,7 @@ sealed trait GeneratedSource {
 final case class TypeRef(scalaType: Type, packageName: Option[String] = None)
 
 final case class ObjectTypeSource(name: String,
-                                  source: scala.meta.Defn.Class,
+                                  source: Tree,
                                   packageName: String) extends GeneratedSource
 
 final case class GeneratedFile(source: GeneratedSource, file: File)
@@ -137,16 +137,15 @@ object DefaultModelGen extends ModelGen {
   private def appendSource(file: File, source: GeneratedSource): IO[GeneratedFile] =
     writeToFile(file, s"${source.source.toString()}\n", append = true).map(GeneratedFile(source, _))
 
-  private def packageTerm(packageName: String): Term.Ref = {
+  private[scraml] def packageTerm(packageName: String): Term.Ref = {
     def select(parts: List[String]): Term.Ref = parts match {
-      case first :: second :: Nil => Term.Select(Term.Name(first), Term.Name(second))
+      case Nil => Term.Name(packageName)
+      case first :: Nil => Term.Name(first)
+      case first :: second :: Nil => Term.Select(Term.Name(second), Term.Name(first))
       case first :: remainder => Term.Select(select(remainder), Term.Name(first))
     }
 
-    packageName.split("\\.").toList match {
-      case first :: Nil => Term.Name(first)
-      case moreThanOne => select(moreThanOne)
-    }
+    select(packageName.split("\\.").toList.reverse)
   }
 
   private def writePackages(generated: GeneratedPackages, params: ModelGenParams): IO[GeneratedModel] = {
