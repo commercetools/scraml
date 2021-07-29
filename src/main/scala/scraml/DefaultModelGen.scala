@@ -12,13 +12,15 @@ sealed trait GeneratedSource {
   def name: String
   def packageName: String
   def source: Tree
+  def comment: String
 }
 
 final case class TypeRef(scalaType: Type, packageName: Option[String] = None, defaultValue: Option[Term] = None)
 
 final case class ObjectTypeSource(name: String,
                                   source: Tree,
-                                  packageName: String) extends GeneratedSource
+                                  packageName: String,
+                                  comment: String) extends GeneratedSource
 
 final case class GeneratedFile(source: GeneratedSource, file: File)
 final case class GeneratedPackage(sources: List[GeneratedSource] = List.empty) {
@@ -177,11 +179,16 @@ object DefaultModelGen extends ModelGen {
           case None => caseClassSource(objectType, scalaBaseTypeRef)
         }
       }
-    } yield ObjectTypeSource(objectType.getName, source, packageName)
+      docsUri = getAnnotation(objectType)("docs-uri").flatMap(annotation => Option(annotation.getValue).map(_.getValue.toString))
+      comment =
+        s"""/**
+           |* ${docsUri.map("see " + _).orElse(Option(objectType.getDescription)).getOrElse(s"generated type for ${objectType.getName}")}
+           |*/""".stripMargin
+    } yield ObjectTypeSource(objectType.getName, source, packageName, comment)
   }
 
   private def appendSource(file: File, source: GeneratedSource): IO[GeneratedFile] =
-    writeToFile(file, s"${source.source.toString()}\n", append = true).map(GeneratedFile(source, _))
+    writeToFile(file, s"${source.comment}\n${source.source.toString()}\n", append = true).map(GeneratedFile(source, _))
 
   private[scraml] def packageTerm(packageName: String): Term.Ref = {
     def select(parts: List[String]): Term.Ref = parts match {
