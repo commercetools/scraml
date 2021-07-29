@@ -14,7 +14,7 @@ sealed trait GeneratedSource {
   def source: Tree
 }
 
-final case class TypeRef(scalaType: Type, packageName: Option[String] = None)
+final case class TypeRef(scalaType: Type, packageName: Option[String] = None, defaultValue: Option[Term] = None)
 
 final case class ObjectTypeSource(name: String,
                                   source: Tree,
@@ -58,26 +58,26 @@ object DefaultModelGen extends ModelGen {
   private def getPackageName(anyType: AnyType): Option[String] =
     getAnnotation(anyType)("package").map(_.getValue.getValue.toString.toLowerCase)
 
-  private def scalaType(apiType: AnyType, optional: Boolean): Option[TypeRef] = {
-    val (baseType, packageName) = apiType match {
-      case _: BooleanType => (Type.Name("Boolean"), None)
-      case _: IntegerType => (Type.Name("Int"), None)
-      case number: NumberType => (Type.Name(numberTypeString(number)), None)
-      case _: StringType => (Type.Name("String"), None)
+  private def scalaTypeRef(apiType: AnyType, optional: Boolean): Option[TypeRef] = {
+    val (baseType: Type, packageName: Option[String], defaultValue: Option[Term]) = apiType match {
+      case _: BooleanType => (Type.Name("Boolean"), None, None)
+      case _: IntegerType => (Type.Name("Int"), None, None)
+      case number: NumberType => (Type.Name(numberTypeString(number)), None, None)
+      case _: StringType => (Type.Name("String"), None, None)
       case array: ArrayType =>
         // we do not need to be optional inside an collection, hence setting it to false
-        (Type.Apply(Type.Name(arrayType), List(scalaType(array.getItems, false).map(_.scalaType)).flatten), None)
-      case objectType: ObjectType if objectType.getName != "object" => (Type.Name(objectType.getName), getPackageName(objectType))
-      case union: UnionType => (Type.Apply(Type.Name("Either"), union.getOneOf.asScala.flatMap(scalaType(_, optional)).map(_.scalaType).toList), None)
-      case _: DateTimeType => (dateTimeType, None)
-      case _: DateOnlyType => (dateOnlyType, None)
-      case _: TimeOnlyType => (timeOnlyType, None)
-      case _ => (Type.Name(anyTypeName), None)
+        (Type.Apply(Type.Name(arrayType), List(scalaTypeRef(array.getItems, false).map(_.scalaType)).flatten), None, Some(Term.Select(Term.Name(arrayType), Term.Name("empty"))))
+      case objectType: ObjectType if objectType.getName != "object" => (Type.Name(objectType.getName), getPackageName(objectType), None)
+      case union: UnionType => (Type.Apply(Type.Name("Either"), union.getOneOf.asScala.flatMap(scalaTypeRef(_, optional)).map(_.scalaType).toList), None, None)
+      case _: DateTimeType => (dateTimeType, None, None)
+      case _: DateOnlyType => (dateOnlyType, None, None)
+      case _: TimeOnlyType => (timeOnlyType, None, None)
+      case _ => (Type.Name(anyTypeName), None, None)
     }
 
     if(optional) {
-      Some(TypeRef(Type.Apply(Type.Name("Option"), List(baseType)), packageName))
-    } else Some(TypeRef(baseType, packageName))
+      Some(TypeRef(Type.Apply(Type.Name("Option"), List(baseType)), packageName, Some(Term.Name("None"))))
+    } else Some(TypeRef(baseType, packageName, defaultValue))
   }
 
   /** map type refs from the 'asMap' annotation to real scala types */
@@ -86,34 +86,34 @@ object DefaultModelGen extends ModelGen {
     case "any" => anyTypeName
   }
 
-  private def scalaProperty(prop: Property, objectType: ObjectType): Option[Term.Param] = {
-    lazy val noneDefault = if(prop.getRequired) None else Some(Term.Name("None"))
+  private def scalaProperty(prop: Property): Option[Term.Param] = {
     lazy val optional = !prop.getRequired
+    val typeRef = scalaTypeRef(prop.getType, optional)
 
-    getAnnotation(objectType)("asMap").map(_.getValue) match {
-      case Some(asMap: ObjectInstance) =>
-        val properties = asMap.getValue.asScala
-        for {
-          keyType <- properties.find(_.getName == "key").map(_.getValue.getValue.toString)
-          valueType <- properties.find(_.getName == "value").map(_.getValue.getValue.toString)
-        } yield Term.Param(Nil, Term.Name("values"), Some(Type.Apply(Type.Name("Map"), List(Type.Name(mapTypeToScala(keyType)), Type.Name(mapTypeToScala(valueType))))), None)
-
-      case _ if Option(prop.getPattern).isDefined =>
-        prop.getName match {
-          case "//" =>
-            Some(Term.Param(Nil, Term.Name("values"), scalaType(prop.getType, optional).map(theType => Type.Apply(Type.Name("Map"), List(Type.Name("String"), theType.scalaType))), noneDefault))
-          case _ =>
-            Some(Term.Param(Nil, Term.Name("value"), scalaType(prop.getType, optional).map(theType => Type.Apply(Type.Name("Tuple2"), List(Type.Name("String"), theType.scalaType))), noneDefault))
-        }
-
-      case _ => Some(Term.Param(Nil, Term.Name(prop.getName), scalaType(prop.getType, optional).map(_.scalaType), noneDefault))
-    }
+    if(Option(prop.getPattern).isDefined) {
+      prop.getName match {
+        case "//" =>
+          typeRef.map(ref => Term.Param(Nil, Term.Name("values"), Some(Type.Apply(Type.Name("Map"), List(Type.Name("String"), ref.scalaType))), None))
+        case _ =>
+          typeRef.map(ref => Term.Param(Nil, Term.Name("value"), Some(Type.Apply(Type.Name("Tuple2"), List(Type.Name("String"), ref.scalaType))), None))
+      }
+    } else typeRef.map(ref => Term.Param(Nil, Term.Name(prop.getName), Some(ref.scalaType), ref.defaultValue))
   }
 
-  private def objectTypeSource(objectType: ObjectType): IO[ObjectTypeSource] = for {
-    packageName <- IO.fromOption(getPackageName(objectType))(new IllegalStateException("object type should have package name"))
-    params = List(objectType.getProperties.asScala.flatMap(scalaProperty(_, objectType)).toList)
-    source = Defn.Class(
+  private def caseClassSource(objectType: ObjectType, baseType: Option[TypeRef] = None): Defn.Class = {
+    val params = getAnnotation(objectType)("asMap").map(_.getValue) match {
+      case Some(asMap: ObjectInstance) =>
+        val properties = asMap.getValue.asScala
+        val mapParam: Option[List[Term.Param]] = for {
+          keyType <- properties.find(_.getName == "key").map(_.getValue.getValue.toString)
+          valueType <- properties.find(_.getName == "value").map(_.getValue.getValue.toString)
+        } yield List(Term.Param(Nil, Term.Name("values"), Some(Type.Apply(Type.Name("Map"), List(Type.Name(mapTypeToScala(keyType)), Type.Name(mapTypeToScala(valueType))))), None))
+        mapParam.toList
+
+      case _ => List(objectType.getAllProperties.asScala.flatMap(scalaProperty).toList)
+    }
+
+    Defn.Class(
       mods = List(Mod.Final(), Mod.Case()),
       name = Type.Name(objectType.getName),
       tparams = Nil,
@@ -124,7 +124,7 @@ object DefaultModelGen extends ModelGen {
       ),
       templ = Template(
         early = Nil,
-        inits = Nil,
+        inits = baseType.map(ref => List(Init(ref.scalaType, Name(""), Nil))).getOrElse(Nil),
         self = Self(
           name = Name.Anonymous(),
           decltpe = None
@@ -132,7 +132,53 @@ object DefaultModelGen extends ModelGen {
         stats = Nil
       )
     )
-  } yield ObjectTypeSource(objectType.getName, source, packageName)
+  }
+
+  private def caseObjectSource(name: String, baseType: Option[TypeRef] = None): Defn.Object =
+    Defn.Object(List(Mod.Case()), Term.Name(name), Template(Nil, inits = baseType.map(ref => List(Init(ref.scalaType, Name(""), Nil))).getOrElse(Nil), Self(Name(""), None), Nil, Nil))
+
+  private def traitSource(objectType: ObjectType, baseType: Option[TypeRef] = None): Defn.Trait = {
+    val defs = objectType.getAllProperties.asScala.flatMap { property =>
+      scalaTypeRef(property.getType, !property.getRequired).map { scalaType =>
+        Decl.Def(Nil, Term.Name(property.getName), tparams = Nil, paramss = Nil, scalaType.scalaType)
+      }
+    }.toList
+
+    Defn.Trait(
+      mods = Nil,
+      name = Type.Name(objectType.getName),
+      tparams = Nil,
+      ctor = Ctor.Primary(Nil, Name(""), Nil),
+      templ = Template(
+        early = Nil,
+        inits = baseType.map(ref => List(Init(ref.scalaType, Name(""), Nil))).getOrElse(Nil),
+        self = Self(Name(""), None),
+        stats = defs,
+        derives = Nil
+      )
+    )
+  }
+
+  private def objectTypeSource(objectType: ObjectType): IO[ObjectTypeSource] = {
+    for {
+      packageName <- IO.fromOption(getPackageName(objectType))(new IllegalStateException("object type should have package name"))
+      source: Tree = {
+        val apiBaseType = Option(objectType.asInstanceOf[AnyType].getType)
+        val scalaBaseTypeRef = apiBaseType.flatMap(scalaTypeRef(_, false))
+        val discriminator = Option(objectType.getDiscriminator)
+        val isAbstract = getAnnotation(objectType)("abstract").exists(_.getValue.getValue.toString.toBoolean)
+        val isMapType = getAnnotation(objectType)("asMap").isDefined
+        val hasSubTypes = objectType.getSubTypes.asScala.exists(_.getName != objectType.getName)
+
+        discriminator match {
+          case Some(_) => traitSource(objectType, scalaBaseTypeRef)
+          case None if isAbstract || hasSubTypes => traitSource(objectType, scalaBaseTypeRef)
+          case None if !isMapType && objectType.getAllProperties.isEmpty => caseObjectSource(objectType.getName, scalaBaseTypeRef)
+          case None => caseClassSource(objectType, scalaBaseTypeRef)
+        }
+      }
+    } yield ObjectTypeSource(objectType.getName, source, packageName)
+  }
 
   private def appendSource(file: File, source: GeneratedSource): IO[GeneratedFile] =
     writeToFile(file, s"${source.source.toString()}\n", append = true).map(GeneratedFile(source, _))
