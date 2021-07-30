@@ -2,6 +2,6 @@ lazy val root = (project in file("."))
   .settings(
     name := "scraml-ct-api-test",
     version := "0.1",
-    ramlFile := file("reference/api-specs/api/api.raml"),
+    ramlFile := Some(file("reference/api-specs/api/api.raml")),
     packageName := "de.commercetools.api"
   )

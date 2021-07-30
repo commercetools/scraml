@@ -34,11 +34,12 @@ final case class GeneratedPackages(packages: Map[String, GeneratedPackage] = Map
 }
 
 object DefaultModelGen extends ModelGen {
-  lazy val arrayType = "List"
+  lazy val defaultArrayTypeName = "List"
+  lazy val defaultAnyTypeName = "Any"
+
   lazy val dateTimeType: Type.Select = Type.Select(Term.Select(Term.Name("java"), Term.Name("time")), Type.Name("LocalDateTime"))
   lazy val dateOnlyType: Type.Select = Type.Select(Term.Select(Term.Name("java"), Term.Name("time")), Type.Name("LocalDate"))
   lazy val timeOnlyType: Type.Select = Type.Select(Term.Select(Term.Name("java"), Term.Name("time")), Type.Name("LocalTime"))
-  lazy val anyTypeName = "Any"
 
   private def getAnnotation(from: AnyType)(name: String): Option[Annotation] = Option(from.getAnnotation(name))
 
@@ -60,37 +61,47 @@ object DefaultModelGen extends ModelGen {
   private def getPackageName(anyType: AnyType): Option[String] =
     getAnnotation(anyType)("package").map(_.getValue.getValue.toString.toLowerCase)
 
-  private def scalaTypeRef(apiType: AnyType, optional: Boolean): Option[TypeRef] = {
-    val (baseType: Type, packageName: Option[String], defaultValue: Option[Term]) = apiType match {
-      case _: BooleanType => (Type.Name("Boolean"), None, None)
-      case _: IntegerType => (Type.Name("Int"), None, None)
-      case number: NumberType => (Type.Name(numberTypeString(number)), None, None)
-      case _: StringType => (Type.Name("String"), None, None)
+  private case class TypeRefDetails(baseType: Type, packageName: Option[String] = None, defaultValue: Option[Term] = None)
+
+  private def scalaTypeRef(apiType: AnyType, optional: Boolean, typeName: Option[String] = None): Option[TypeRef] = {
+    lazy val mappedType = apiType match {
+      case _: BooleanType => TypeRefDetails(Type.Name("Boolean"))
+      case _: IntegerType => TypeRefDetails(Type.Name("Int"))
+      case number: NumberType => TypeRefDetails(Type.Name(numberTypeString(number)))
+      case _: StringType => TypeRefDetails(Type.Name("String"))
       case array: ArrayType =>
+        val arrayType = getAnnotation(array)("scala-array-type").map(_.getValue.getValue.toString).getOrElse(defaultArrayTypeName)
         // we do not need to be optional inside an collection, hence setting it to false
-        (Type.Apply(Type.Name(arrayType), List(scalaTypeRef(array.getItems, false).map(_.scalaType)).flatten), None, Some(Term.Select(Term.Name(arrayType), Term.Name("empty"))))
-      case objectType: ObjectType if objectType.getName != "object" => (Type.Name(objectType.getName), getPackageName(objectType), None)
-      case union: UnionType => (Type.Apply(Type.Name("Either"), union.getOneOf.asScala.flatMap(scalaTypeRef(_, optional)).map(_.scalaType).toList), None, None)
-      case _: DateTimeType => (dateTimeType, None, None)
-      case _: DateOnlyType => (dateOnlyType, None, None)
-      case _: TimeOnlyType => (timeOnlyType, None, None)
-      case _ => (Type.Name(anyTypeName), None, None)
+        TypeRefDetails(Type.Apply(typeFromName(arrayType), List(scalaTypeRef(array.getItems, false).map(_.scalaType)).flatten), None, Some(Term.Select(packageTerm(arrayType), Term.Name("empty"))))
+      case objectType: ObjectType if objectType.getName != "object" => TypeRefDetails(Type.Name(objectType.getName), getPackageName(objectType), None)
+      case union: UnionType => TypeRefDetails(Type.Apply(Type.Name("Either"), union.getOneOf.asScala.flatMap(scalaTypeRef(_, optional)).map(_.scalaType).toList))
+      case _: DateTimeType => TypeRefDetails(dateTimeType)
+      case _: DateOnlyType => TypeRefDetails(dateOnlyType)
+      case _: TimeOnlyType => TypeRefDetails(timeOnlyType)
+      case _ => TypeRefDetails(Type.Name(defaultAnyTypeName))
+    }
+
+    val typeRef = typeName match {
+      case Some(scalaTypeName) => TypeRefDetails(typeFromName(scalaTypeName), None, None)
+      case None => mappedType
     }
 
     if(optional) {
-      Some(TypeRef(Type.Apply(Type.Name("Option"), List(baseType)), packageName, Some(Term.Name("None"))))
-    } else Some(TypeRef(baseType, packageName, defaultValue))
+      Some(TypeRef(Type.Apply(Type.Name("Option"), List(typeRef.baseType)), typeRef.packageName, Some(Term.Name("None"))))
+    } else Some(TypeRef(typeRef.baseType, typeRef.packageName, typeRef.defaultValue))
   }
 
   /** map type refs from the 'asMap' annotation to real scala types */
   private def mapTypeToScala: String => String = {
     case "string" => "String"
-    case "any" => anyTypeName
+    case "any" => defaultAnyTypeName
   }
 
   private def scalaProperty(prop: Property): Option[Term.Param] = {
     lazy val optional = !prop.getRequired
-    val typeRef = scalaTypeRef(prop.getType, optional)
+    val scalaTypeAnnotation = Option(prop.getAnnotation("scala-type")).map(_.getValue.getValue.toString)
+
+    val typeRef = scalaTypeRef(prop.getType, optional, scalaTypeAnnotation)
 
     if(Option(prop.getPattern).isDefined) {
       prop.getName match {
@@ -190,16 +201,25 @@ object DefaultModelGen extends ModelGen {
   private def appendSource(file: File, source: GeneratedSource): IO[GeneratedFile] =
     writeToFile(file, s"${source.comment}\n${source.source.toString()}\n", append = true).map(GeneratedFile(source, _))
 
-  private[scraml] def packageTerm(packageName: String): Term.Ref = {
-    def select(parts: List[String]): Term.Ref = parts match {
-      case Nil => Term.Name(packageName)
-      case first :: Nil => Term.Name(first)
-      case first :: second :: Nil => Term.Select(Term.Name(second), Term.Name(first))
-      case first :: remainder => Term.Select(select(remainder), Term.Name(first))
+  private def termSelect(parts: List[String], default: String): Term.Ref = parts match {
+    case Nil => Term.Name(default)
+    case first :: Nil => Term.Name(first)
+    case first :: second :: Nil => Term.Select(Term.Name(second), Term.Name(first))
+    case first :: remainder => Term.Select(termSelect(remainder, default), Term.Name(first))
+  }
+
+  private[scraml] def packageTerm(packageName: String): Term.Ref =
+    termSelect(packageName.split("\\.").toList.reverse, packageName)
+
+  private def typeFromNameParts(parts: List[String]): Type.Ref =
+    parts match {
+      case first :: Nil => Type.Name(first)
+      case first :: second :: Nil => Type.Select(Term.Name(second), Type.Name(first))
+      case first :: remainder => Type.Select(termSelect(remainder, first), Type.Name(first))
     }
 
-    select(packageName.split("\\.").toList.reverse)
-  }
+  private[scraml] def typeFromName(fullQualifiedName: String): Type.Ref =
+    typeFromNameParts(fullQualifiedName.split("\\.").toList.reverse)
 
   private def writePackages(generated: GeneratedPackages, params: ModelGenParams): IO[GeneratedModel] = {
     val generate = generated.packages.map {
@@ -228,7 +248,7 @@ object DefaultModelGen extends ModelGen {
   } yield packages
 
   override def generate(api: Api, params: ModelGenParams): IO[GeneratedModel] = for {
-    _ <- FileUtil.deleteRecursively(params.targetDir)
+    _ <- FileUtil.deleteRecursively(new File(params.targetDir, params.basePackage))
     packages <- generatePackages(api)
     model <- writePackages(packages, params)
   } yield model

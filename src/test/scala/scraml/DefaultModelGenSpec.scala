@@ -20,7 +20,7 @@ class DefaultModelGenSpec extends AnyFlatSpec with Matchers {
     generated.files.headOption match {
       case Some(GeneratedFile(source, file)) =>
         source.packageName should be("datatypes")
-        source.source.toString() should be("final case class DataType(id: String)")
+        source.source.toString() should be("final case class DataType(id: String, customTypeProp: scala.long.BigDecimal, customArrayTypeProp: Vector[Any] = Vector.empty)")
         source.name should be("DataType")
         file.getPath should be("target/scraml-test/scraml/datatypes.scala")
       case _ => fail()
@@ -34,5 +34,12 @@ class DefaultModelGenSpec extends AnyFlatSpec with Matchers {
     DefaultModelGen.packageTerm("a.b.c.d.e").toString() should be(
       Term.Select(Term.Select(Term.Select(Term.Select(Term.Name("a"), Term.Name("b")), Term.Name("c")), Term.Name("d")), Term.Name("e")).toString()
     )
+  }
+
+  it should "create a type from string" in {
+    DefaultModelGen.typeFromName("a").toString() should be("a")
+    DefaultModelGen.typeFromName("a.b").toString() should be("a.b")
+    DefaultModelGen.typeFromName("a.b.c").toString() should be("a.b.c")
+    DefaultModelGen.typeFromName("a.b.c.d.e").toString() should be("a.b.c.d.e")
   }
 }
