@@ -11,3 +11,7 @@ and [scalameta](https://scalameta.org/).
 sbt scripted # runs all tests in src/sbt-test
 sbt scripted sbt-scraml/simple # runs a specific test
 ```
+
+## How to use
+
+there is a [test project](src/sbt-test/sbt-scraml/simple) that you can use as a starting point. 
