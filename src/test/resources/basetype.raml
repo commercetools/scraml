@@ -1,0 +1,11 @@
+#%RAML 1.0 DataType
+(package): DataTypes
+(docs-uri): "https://example.org/base-type"
+displayName: BaseType
+type: object
+discriminator: type
+properties:
+  type:
+    type: string
+  id:
+    type: string

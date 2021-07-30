@@ -17,12 +17,18 @@ class DefaultModelGenSpec extends AnyFlatSpec with Matchers {
 
     val generated = ModelGenRunner.run(DefaultModelGen)(params).unsafeRunSync()
 
-    generated.files.headOption match {
-      case Some(GeneratedFile(source, file)) =>
-        source.packageName should be("datatypes")
-        source.source.toString() should be("final case class DataType(id: String, customTypeProp: scala.long.BigDecimal, customArrayTypeProp: Vector[Any] = Vector.empty)")
-        source.name should be("DataType")
-        file.getPath should be("target/scraml-test/scraml/datatypes.scala")
+    generated.files match {
+      case baseType :: dataType :: Nil =>
+        baseType.source.packageName should be("datatypes")
+        baseType.source.source.toString() should be("trait BaseType { def id: String }")
+        baseType.source.name should be("BaseType")
+        baseType.file.getPath should be("target/scraml-test/scraml/datatypes.scala")
+
+        dataType.source.packageName should be("datatypes")
+        dataType.source.source.toString() should be("final case class DataType(id: String, foo: String, customTypeProp: scala.long.BigDecimal, customArrayTypeProp: Vector[Any] = Vector.empty) extends BaseType")
+        dataType.source.name should be("DataType")
+        dataType.file.getPath should be("target/scraml-test/scraml/datatypes.scala")
+
       case _ => fail()
     }
   }

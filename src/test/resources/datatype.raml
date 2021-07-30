@@ -2,11 +2,11 @@
 (package): DataTypes
 (docs-uri): "https://example.org/data-type"
 displayName: DataType
-type: object
+type: BaseType
+discriminatorValue: data
 properties:
-  id:
+  foo:
     type: string
-    description: unique id
   customTypeProp:
     (scala-type): "scala.long.BigDecimal"
     type: number
