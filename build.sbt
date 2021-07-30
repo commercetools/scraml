@@ -1,6 +1,16 @@
-ThisBuild / version := "0.1.1-SNAPSHOT"
-ThisBuild / organization := "com.commercetools"
-ThisBuild / homepage := Some(url("https://github.com/commercetools/scraml"))
+inThisBuild(List(
+  organization := "com.commercetools",
+  homepage := Some(url("https://github.com/commercetools/scraml")),
+  licenses := List("Apache-2.0" -> url("http://www.apache.org/licenses/LICENSE-2.0")),
+  developers := List(
+    Developer(
+      "commercetools/priceless-backend-team",
+      "Priceless Team",
+      "priceless-backend@commercetools.com",
+      url("https://commercetools.com")
+    )
+  )
+))
 
 lazy val root = (project in file("."))
   .enablePlugins(SbtPlugin)
