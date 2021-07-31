@@ -37,9 +37,9 @@ object DefaultModelGen extends ModelGen {
   lazy val defaultArrayTypeName = "List"
   lazy val defaultAnyTypeName = "Any"
 
-  lazy val dateTimeType: Type.Select = Type.Select(Term.Select(Term.Name("java"), Term.Name("time")), Type.Name("LocalDateTime"))
-  lazy val dateOnlyType: Type.Select = Type.Select(Term.Select(Term.Name("java"), Term.Name("time")), Type.Name("LocalDate"))
-  lazy val timeOnlyType: Type.Select = Type.Select(Term.Select(Term.Name("java"), Term.Name("time")), Type.Name("LocalTime"))
+  lazy val dateTimeType: Type.Ref = typeFromName("java.time.LocalDateTime")
+  lazy val dateOnlyType: Type.Ref = typeFromName("java.time.LocalDate")
+  lazy val timeOnlyType: Type.Ref = typeFromName("java.time.LocalTime")
 
   private def getAnnotation(from: AnyType)(name: String): Option[Annotation] = Option(from.getAnnotation(name))
 
@@ -113,8 +113,8 @@ object DefaultModelGen extends ModelGen {
     } else typeRef.map(ref => Term.Param(Nil, Term.Name(prop.getName), Some(ref.scalaType), ref.defaultValue))
   }
 
-  private def caseClassSource(objectType: ObjectType, baseType: Option[TypeRef] = None): Defn.Class = {
-    val params = getAnnotation(objectType)("asMap").map(_.getValue) match {
+  private def caseClassSource(objectType: ObjectType, params: ModelGenParams, baseType: Option[TypeRef] = None): Defn.Class = {
+    val classParams = getAnnotation(objectType)("asMap").map(_.getValue) match {
       case Some(asMap: ObjectInstance) =>
         val properties = asMap.getValue.asScala
         val mapParam: Option[List[Term.Param]] = for {
@@ -131,14 +131,20 @@ object DefaultModelGen extends ModelGen {
         List(objectType.getAllProperties.asScala.filter(property => !discriminatorField.contains(property.getName)).flatMap(scalaProperty).toList)
     }
 
+    val jsonTypeMod = params.jsonSupport match {
+      case Some(Sphere) if Option(objectType.getDiscriminatorValue).isDefined =>
+        List(Mod.Annot(Init(typeFromName("io.sphere.json.annotations.JSONTypeHint"), Name(""), List(List(Lit.String(objectType.getDiscriminatorValue))))))
+      case _ => Nil
+    }
+
     Defn.Class(
-      mods = List(Mod.Final(), Mod.Case()),
+      mods = jsonTypeMod ++ List(Mod.Final(), Mod.Case()),
       name = Type.Name(objectType.getName),
       tparams = Nil,
       ctor = Ctor.Primary(
         mods = Nil,
         name = Name.Anonymous(),
-        paramss = params
+        paramss = classParams
       ),
       templ = Template(
         early = Nil,
@@ -155,15 +161,21 @@ object DefaultModelGen extends ModelGen {
   private def caseObjectSource(name: String, baseType: Option[TypeRef] = None): Defn.Object =
     Defn.Object(List(Mod.Case()), Term.Name(name), Template(Nil, inits = baseType.map(ref => List(Init(ref.scalaType, Name(""), Nil))).getOrElse(Nil), Self(Name(""), None), Nil, Nil))
 
-  private def traitSource(objectType: ObjectType, baseType: Option[TypeRef] = None): Defn.Trait = {
+  private def traitSource(objectType: ObjectType, baseType: Option[TypeRef] = None, params: ModelGenParams): Defn.Trait = {
     val defs = objectType.getAllProperties.asScala.filter(property => !Option(objectType.getDiscriminator).contains(property.getName)).flatMap { property =>
       scalaTypeRef(property.getType, !property.getRequired).map { scalaType =>
         Decl.Def(Nil, Term.Name(property.getName), tparams = Nil, paramss = Nil, scalaType.scalaType)
       }
     }.toList
 
+    val mods = params.jsonSupport match {
+      case Some(Sphere) if Option(objectType.getDiscriminator).isDefined =>
+        List(Mod.Annot(Init(typeFromName("io.sphere.json.annotations.JSONTypeHintField"), Name(""), List(List(Lit.String(objectType.getDiscriminator))))))
+      case _ => Nil
+    }
+
     Defn.Trait(
-      mods = Nil,
+      mods = mods,
       name = Type.Name(objectType.getName),
       tparams = Nil,
       ctor = Ctor.Primary(Nil, Name(""), Nil),
@@ -177,7 +189,7 @@ object DefaultModelGen extends ModelGen {
     )
   }
 
-  private def objectTypeSource(objectType: ObjectType): IO[ObjectTypeSource] = {
+  private def objectTypeSource(objectType: ObjectType, params: ModelGenParams): IO[ObjectTypeSource] = {
     for {
       packageName <- IO.fromOption(getPackageName(objectType))(new IllegalStateException("object type should have package name"))
       source: Tree = {
@@ -189,10 +201,9 @@ object DefaultModelGen extends ModelGen {
         val hasSubTypes = objectType.getSubTypes.asScala.exists(_.getName != objectType.getName)
 
         discriminator match {
-          case Some(_) => traitSource(objectType, scalaBaseTypeRef)
-          case None if isAbstract || hasSubTypes => traitSource(objectType, scalaBaseTypeRef)
+          case Some(_) | None if isAbstract || hasSubTypes=> traitSource(objectType, scalaBaseTypeRef, params)
           case None if !isMapType && objectType.getAllProperties.isEmpty => caseObjectSource(objectType.getName, scalaBaseTypeRef)
-          case None => caseClassSource(objectType, scalaBaseTypeRef)
+          case None => caseClassSource(objectType, params, scalaBaseTypeRef)
         }
       }
       docsUri = getAnnotation(objectType)("docs-uri").flatMap(annotation => Option(annotation.getValue).map(_.getValue.toString))
@@ -218,15 +229,16 @@ object DefaultModelGen extends ModelGen {
   private[scraml] def packageTerm(packageName: String): Term.Ref =
     termSelect(packageName.split("\\.").toList.reverse, packageName)
 
-  private def typeFromNameParts(parts: List[String]): Type.Ref =
+  private def typeFromNameParts(parts: List[String], default: String): Type.Ref =
     parts match {
+      case Nil => Type.Name(default)
       case first :: Nil => Type.Name(first)
       case first :: second :: Nil => Type.Select(Term.Name(second), Type.Name(first))
       case first :: remainder => Type.Select(termSelect(remainder, first), Type.Name(first))
     }
 
   private[scraml] def typeFromName(fullQualifiedName: String): Type.Ref =
-    typeFromNameParts(fullQualifiedName.split("\\.").toList.reverse)
+    typeFromNameParts(fullQualifiedName.split("\\.").toList.reverse, fullQualifiedName)
 
   private def writePackages(generated: GeneratedPackages, params: ModelGenParams): IO[GeneratedModel] = {
     val generate = generated.packages.map {
@@ -246,9 +258,9 @@ object DefaultModelGen extends ModelGen {
     generate.toList.sequence.map(_.flatten).map(GeneratedModel(_))
   }
 
-  private def generatePackages(api: Api): IO[GeneratedPackages] = for {
+  private def generatePackages(api: Api, params: ModelGenParams): IO[GeneratedPackages] = for {
     types <- api.getTypes.asScala.toList.map {
-      case objectType: ObjectType => objectTypeSource(objectType).map(Some(_))
+      case objectType: ObjectType => objectTypeSource(objectType, params).map(Some(_))
       case _ => IO(None)
     }.sequence
     packages = types.flatten.foldLeft(GeneratedPackages())(_ addSource _)
@@ -256,7 +268,7 @@ object DefaultModelGen extends ModelGen {
 
   override def generate(api: Api, params: ModelGenParams): IO[GeneratedModel] = for {
     _ <- FileUtil.deleteRecursively(new File(params.targetDir, params.basePackage))
-    packages <- generatePackages(api)
+    packages <- generatePackages(api, params)
     model <- writePackages(packages, params)
   } yield model
 }

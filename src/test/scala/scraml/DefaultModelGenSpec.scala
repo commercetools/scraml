@@ -25,7 +25,7 @@ class DefaultModelGenSpec extends AnyFlatSpec with Matchers {
         baseType.file.getPath should be("target/scraml-test/scraml/datatypes.scala")
 
         dataType.source.packageName should be("datatypes")
-        dataType.source.source.toString() should be("final case class DataType(id: String, foo: String, customTypeProp: scala.long.BigDecimal, customArrayTypeProp: Vector[Any] = Vector.empty) extends BaseType")
+        dataType.source.source.toString() should be("final case class DataType(id: String, foo: Option[String] = None, customTypeProp: scala.long.BigDecimal, customArrayTypeProp: Vector[Any] = Vector.empty) extends BaseType")
         dataType.source.name should be("DataType")
         dataType.file.getPath should be("target/scraml-test/scraml/datatypes.scala")
 
