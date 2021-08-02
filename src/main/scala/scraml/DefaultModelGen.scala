@@ -71,8 +71,9 @@ object DefaultModelGen extends ModelGen {
       case _: StringType => TypeRefDetails(Type.Name("String"))
       case array: ArrayType =>
         val arrayType = getAnnotation(array)("scala-array-type").map(_.getValue.getValue.toString).getOrElse(defaultArrayTypeName)
+        val itemTypeOverride = getAnnotation(array)("scala-type").map(_.getValue.getValue.toString)
         // we do not need to be optional inside an collection, hence setting it to false
-        TypeRefDetails(Type.Apply(typeFromName(arrayType), List(scalaTypeRef(array.getItems, false).map(_.scalaType)).flatten), None, Some(Term.Select(packageTerm(arrayType), Term.Name("empty"))))
+        TypeRefDetails(Type.Apply(typeFromName(arrayType), List(scalaTypeRef(array.getItems, false, itemTypeOverride).map(_.scalaType)).flatten), None, Some(Term.Select(packageTerm(arrayType), Term.Name("empty"))))
       case objectType: ObjectType if objectType.getName != "object" => TypeRefDetails(Type.Name(objectType.getName), getPackageName(objectType), None)
       case union: UnionType => TypeRefDetails(Type.Apply(Type.Name("Either"), union.getOneOf.asScala.flatMap(scalaTypeRef(_, optional)).map(_.scalaType).toList))
       case _: DateTimeType => TypeRefDetails(dateTimeType)
