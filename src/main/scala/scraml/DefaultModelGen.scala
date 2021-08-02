@@ -164,7 +164,7 @@ object DefaultModelGen extends ModelGen {
     Defn.Object(List(Mod.Case()), Term.Name(name), Template(Nil, inits = baseType.map(ref => List(Init(ref.scalaType, Name(""), Nil))).getOrElse(Nil), Self(Name(""), None), Nil, Nil))
 
   private def traitSource(objectType: ObjectType, baseType: Option[TypeRef] = None, params: ModelGenParams): Defn.Trait = {
-    val defs = objectType.getAllProperties.asScala.filter(property => !Option(objectType.getDiscriminator).contains(property.getName)).flatMap { property =>
+    val defs = objectType.getAllProperties.asScala.filter(property => !discriminators(objectType).contains(property.getName)).flatMap { property =>
       scalaTypeRef(property.getType, !property.getRequired).map { scalaType =>
         Decl.Def(Nil, Term.Name(property.getName), tparams = Nil, paramss = Nil, scalaType.scalaType)
       }
