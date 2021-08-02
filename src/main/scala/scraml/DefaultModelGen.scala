@@ -119,7 +119,7 @@ object DefaultModelGen extends ModelGen {
     case _ => List.empty
   }
 
-  private def caseClassSource(objectType: ObjectType, params: ModelGenParams, baseType: Option[TypeRef] = None): Defn.Class = {
+  private def caseClassSource(objectType: ObjectType, params: ModelGenParams, baseType: Option[TypeRef] = None, extendType: Option[Type] = None): Defn.Class = {
     val classParams = getAnnotation(objectType)("asMap").map(_.getValue) match {
       case Some(asMap: ObjectInstance) =>
         val properties = asMap.getValue.asScala
@@ -150,7 +150,7 @@ object DefaultModelGen extends ModelGen {
       ),
       templ = Template(
         early = Nil,
-        inits = baseType.map(ref => List(Init(ref.scalaType, Name(""), Nil))).getOrElse(Nil),
+        inits = initFromTypeOpt(baseType.map(_.scalaType)) ++ initFromTypeOpt(extendType),
         self = Self(
           name = Name.Anonymous(),
           decltpe = None
@@ -160,10 +160,12 @@ object DefaultModelGen extends ModelGen {
     )
   }
 
-  private def caseObjectSource(name: String, baseType: Option[TypeRef] = None): Defn.Object =
-    Defn.Object(List(Mod.Case()), Term.Name(name), Template(Nil, inits = baseType.map(ref => List(Init(ref.scalaType, Name(""), Nil))).getOrElse(Nil), Self(Name(""), None), Nil, Nil))
+  private def initFromTypeOpt(aType: Option[Type]): List[Init] = aType.map(ref => List(Init(ref, Name(""), Nil))).getOrElse(Nil)
 
-  private def traitSource(objectType: ObjectType, baseType: Option[TypeRef] = None, params: ModelGenParams): Defn.Trait = {
+  private def caseObjectSource(name: String, baseType: Option[TypeRef] = None, extendType: Option[Type] = None): Defn.Object =
+    Defn.Object(List(Mod.Case()), Term.Name(name), Template(Nil, inits = initFromTypeOpt(baseType.map(_.scalaType)) ++ initFromTypeOpt(extendType), Self(Name(""), None), Nil, Nil))
+
+  private def traitSource(objectType: ObjectType, baseType: Option[TypeRef] = None, params: ModelGenParams, extendType: Option[Type] = None): Defn.Trait = {
     val defs = objectType.getAllProperties.asScala.filter(property => !discriminators(objectType).contains(property.getName)).flatMap { property =>
       scalaTypeRef(property.getType, !property.getRequired).map { scalaType =>
         Decl.Def(Nil, Term.Name(property.getName), tparams = Nil, paramss = Nil, scalaType.scalaType)
@@ -175,10 +177,6 @@ object DefaultModelGen extends ModelGen {
         List(Mod.Annot(Init(typeFromName("io.sphere.json.annotations.JSONTypeHintField"), Name(""), List(List(Lit.String(objectType.getDiscriminator))))))
       case _ => Nil
     }
-
-    def initFromTypeOpt(aType: Option[Type]): List[Init] = aType.map(ref => List(Init(ref, Name(""), Nil))).getOrElse(Nil)
-
-    val extendType = getAnnotation(objectType)("scala-extends").map(_.getValue.getValue.toString).map(typeFromName)
 
     Defn.Trait(
       mods = mods,
@@ -205,11 +203,12 @@ object DefaultModelGen extends ModelGen {
         val isAbstract = getAnnotation(objectType)("abstract").exists(_.getValue.getValue.toString.toBoolean)
         val isMapType = getAnnotation(objectType)("asMap").isDefined
         val hasSubTypes = objectType.getSubTypes.asScala.exists(_.getName != objectType.getName)
+        val extendType = getAnnotation(objectType)("scala-extends").map(_.getValue.getValue.toString).map(typeFromName)
 
         discriminator match {
-          case Some(_) | None if isAbstract || hasSubTypes=> traitSource(objectType, scalaBaseTypeRef, params)
-          case None if !isMapType && objectType.getAllProperties.isEmpty => caseObjectSource(objectType.getName, scalaBaseTypeRef)
-          case None => caseClassSource(objectType, params, scalaBaseTypeRef)
+          case Some(_) | None if isAbstract || hasSubTypes=> traitSource(objectType, scalaBaseTypeRef, params, extendType)
+          case None if !isMapType && objectType.getAllProperties.isEmpty => caseObjectSource(objectType.getName, scalaBaseTypeRef, extendType)
+          case None => caseClassSource(objectType, params, scalaBaseTypeRef, extendType)
         }
       }
       docsUri = getAnnotation(objectType)("docs-uri").flatMap(annotation => Option(annotation.getValue).map(_.getValue.toString))
