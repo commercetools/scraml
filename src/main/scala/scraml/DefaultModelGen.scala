@@ -160,26 +160,38 @@ object DefaultModelGen extends ModelGen {
     )
   }
 
+  private def getSubTypes(objectType: ObjectType): Iterator[AnyType] =
+    objectType.getSubTypes.asScala.filter(_.getName != objectType.getName).iterator
+
   private def initFromTypeOpt(aType: Option[Type]): List[Init] = aType.map(ref => List(Init(ref, Name(""), Nil))).getOrElse(Nil)
 
   private def caseObjectSource(name: String, baseType: Option[TypeRef] = None, extendType: Option[Type] = None): Defn.Object =
     Defn.Object(List(Mod.Case()), Term.Name(name), Template(Nil, inits = initFromTypeOpt(baseType.map(_.scalaType)) ++ initFromTypeOpt(extendType), Self(Name(""), None), Nil, Nil))
 
-  private def traitSource(objectType: ObjectType, baseType: Option[TypeRef] = None, params: ModelGenParams, extendType: Option[Type] = None): Defn.Trait = {
+  private def traitSource(packageName: String,
+                          objectType: ObjectType,
+                          baseType: Option[TypeRef] = None,
+                          params: ModelGenParams,
+                          extendType: Option[Type] = None): Defn.Trait = {
     val defs = objectType.getAllProperties.asScala.filter(property => !discriminators(objectType).contains(property.getName)).flatMap { property =>
       scalaTypeRef(property.getType, !property.getRequired).map { scalaType =>
         Decl.Def(Nil, Term.Name(property.getName), tparams = Nil, paramss = Nil, scalaType.scalaType)
       }
     }.toList
 
-    val mods = params.jsonSupport match {
+    val jsonMods = params.jsonSupport match {
       case Some(Sphere) if Option(objectType.getDiscriminator).isDefined =>
         List(Mod.Annot(Init(typeFromName("io.sphere.json.annotations.JSONTypeHintField"), Name(""), List(List(Lit.String(objectType.getDiscriminator))))))
       case _ => Nil
     }
 
+    val sealedModOpt: Option[Mod.Sealed] =
+      if (getSubTypes(objectType).forall(getPackageName(_).contains(packageName))) {
+        Some(Mod.Sealed())
+      } else None
+
     Defn.Trait(
-      mods = mods,
+      mods = jsonMods ++ sealedModOpt,
       name = Type.Name(objectType.getName),
       tparams = Nil,
       ctor = Ctor.Primary(Nil, Name(""), Nil),
@@ -202,11 +214,10 @@ object DefaultModelGen extends ModelGen {
         val discriminator = Option(objectType.getDiscriminator)
         val isAbstract = getAnnotation(objectType)("abstract").exists(_.getValue.getValue.toString.toBoolean)
         val isMapType = getAnnotation(objectType)("asMap").isDefined
-        val hasSubTypes = objectType.getSubTypes.asScala.exists(_.getName != objectType.getName)
         val extendType = getAnnotation(objectType)("scala-extends").map(_.getValue.getValue.toString).map(typeFromName)
 
         discriminator match {
-          case Some(_) | None if isAbstract || hasSubTypes=> traitSource(objectType, scalaBaseTypeRef, params, extendType)
+          case Some(_) | None if isAbstract || getSubTypes(objectType).nonEmpty => traitSource(packageName, objectType, scalaBaseTypeRef, params, extendType)
           case None if !isMapType && objectType.getAllProperties.isEmpty => caseObjectSource(objectType.getName, scalaBaseTypeRef, extendType)
           case None => caseClassSource(objectType, params, scalaBaseTypeRef, extendType)
         }
