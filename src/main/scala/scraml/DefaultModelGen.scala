@@ -119,6 +119,16 @@ object DefaultModelGen extends ModelGen {
     case _ => List.empty
   }
 
+  private def getDiscriminatorValueMod(objectType: ObjectType, params: ModelGenParams): Option[Mod.Annot] =
+    params.jsonSupport match {
+      case Some(Sphere) if Option(objectType.getDiscriminatorValue).isDefined =>
+        Some(Mod.Annot(Init(typeFromName("io.sphere.json.annotations.JSONTypeHint"), Name(""), List(List(Lit.String(objectType.getDiscriminatorValue))))))
+      case _ => None
+    }
+
+  private def typeProperties(objectType: ObjectType) =
+    objectType.getAllProperties.asScala.filter(property => !discriminators(objectType).contains(property.getName))
+
   private def caseClassSource(objectType: ObjectType, params: ModelGenParams, baseType: Option[TypeRef] = None, extendType: Option[Type] = None): Defn.Class = {
     val classParams = getAnnotation(objectType)("asMap").map(_.getValue) match {
       case Some(asMap: ObjectInstance) =>
@@ -130,17 +140,11 @@ object DefaultModelGen extends ModelGen {
         mapParam.toList
 
       case _ =>
-        List(objectType.getAllProperties.asScala.filter(property => !discriminators(objectType).contains(property.getName)).flatMap(scalaProperty).toList)
-    }
-
-    val jsonTypeMod = params.jsonSupport match {
-      case Some(Sphere) if Option(objectType.getDiscriminatorValue).isDefined =>
-        List(Mod.Annot(Init(typeFromName("io.sphere.json.annotations.JSONTypeHint"), Name(""), List(List(Lit.String(objectType.getDiscriminatorValue))))))
-      case _ => Nil
+        List(typeProperties(objectType).flatMap(scalaProperty).toList)
     }
 
     Defn.Class(
-      mods = jsonTypeMod ++ List(Mod.Final(), Mod.Case()),
+      mods = getDiscriminatorValueMod(objectType, params).toList ++ List(Mod.Final(), Mod.Case()),
       name = Type.Name(objectType.getName),
       tparams = Nil,
       ctor = Ctor.Primary(
@@ -165,15 +169,19 @@ object DefaultModelGen extends ModelGen {
 
   private def initFromTypeOpt(aType: Option[Type]): List[Init] = aType.map(ref => List(Init(ref, Name(""), Nil))).getOrElse(Nil)
 
-  private def caseObjectSource(name: String, baseType: Option[TypeRef] = None, extendType: Option[Type] = None): Defn.Object =
-    Defn.Object(List(Mod.Case()), Term.Name(name), Template(Nil, inits = initFromTypeOpt(baseType.map(_.scalaType)) ++ initFromTypeOpt(extendType), Self(Name(""), None), Nil, Nil))
+  private def caseObjectSource(objectType: ObjectType, params: ModelGenParams, baseType: Option[TypeRef] = None, extendType: Option[Type] = None): Defn.Object =
+    Defn.Object(
+      mods = getDiscriminatorValueMod(objectType, params).toList ++ List(Mod.Case()),
+      Term.Name(objectType.getName),
+      Template(Nil, inits = initFromTypeOpt(baseType.map(_.scalaType)) ++ initFromTypeOpt(extendType), Self(Name(""), None), Nil, Nil)
+    )
 
   private def traitSource(packageName: String,
                           objectType: ObjectType,
                           baseType: Option[TypeRef] = None,
                           params: ModelGenParams,
                           extendType: Option[Type] = None): Defn.Trait = {
-    val defs = objectType.getAllProperties.asScala.filter(property => !discriminators(objectType).contains(property.getName)).flatMap { property =>
+    val defs = typeProperties(objectType).flatMap { property =>
       scalaTypeRef(property.getType, !property.getRequired).map { scalaType =>
         Decl.Def(Nil, Term.Name(property.getName), tparams = Nil, paramss = Nil, scalaType.scalaType)
       }
@@ -218,7 +226,7 @@ object DefaultModelGen extends ModelGen {
 
         discriminator match {
           case Some(_) | None if isAbstract || getSubTypes(objectType).nonEmpty => traitSource(packageName, objectType, scalaBaseTypeRef, params, extendType)
-          case None if !isMapType && objectType.getAllProperties.isEmpty => caseObjectSource(objectType.getName, scalaBaseTypeRef, extendType)
+          case None if !isMapType && typeProperties(objectType).isEmpty => caseObjectSource(objectType, params, scalaBaseTypeRef, extendType)
           case None => caseClassSource(objectType, params, scalaBaseTypeRef, extendType)
         }
       }
