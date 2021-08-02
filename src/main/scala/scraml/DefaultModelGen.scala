@@ -114,6 +114,11 @@ object DefaultModelGen extends ModelGen {
     } else typeRef.map(ref => Term.Param(Nil, Term.Name(prop.getName), Some(ref.scalaType), ref.defaultValue))
   }
 
+  def discriminators(aType: AnyType): List[String] = aType match {
+    case objectType: ObjectType => List(objectType.getDiscriminator) ++ Option(aType.getType).map(discriminators).getOrElse(List.empty)
+    case _ => List.empty
+  }
+
   private def caseClassSource(objectType: ObjectType, params: ModelGenParams, baseType: Option[TypeRef] = None): Defn.Class = {
     val classParams = getAnnotation(objectType)("asMap").map(_.getValue) match {
       case Some(asMap: ObjectInstance) =>
@@ -125,11 +130,7 @@ object DefaultModelGen extends ModelGen {
         mapParam.toList
 
       case _ =>
-        val discriminatorField = Option(objectType.getType()).flatMap {
-          case objectType: ObjectType => Option(objectType.getDiscriminator)
-          case _ => None
-        }
-        List(objectType.getAllProperties.asScala.filter(property => !discriminatorField.contains(property.getName)).flatMap(scalaProperty).toList)
+        List(objectType.getAllProperties.asScala.filter(property => !discriminators(objectType).contains(property.getName)).flatMap(scalaProperty).toList)
     }
 
     val jsonTypeMod = params.jsonSupport match {
