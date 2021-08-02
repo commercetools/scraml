@@ -20,7 +20,7 @@ class DefaultModelGenSpec extends AnyFlatSpec with Matchers {
     generated.files match {
       case baseType :: dataType :: Nil =>
         baseType.source.packageName should be("datatypes")
-        baseType.source.source.toString() should be("trait BaseType { def id: String }")
+        baseType.source.source.toString() should be("trait BaseType extends Any { def id: String }")
         baseType.source.name should be("BaseType")
         baseType.file.getPath should be("target/scraml-test/scraml/datatypes.scala")
 

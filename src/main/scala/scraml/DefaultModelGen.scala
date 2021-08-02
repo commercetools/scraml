@@ -176,6 +176,10 @@ object DefaultModelGen extends ModelGen {
       case _ => Nil
     }
 
+    def initFromTypeOpt(aType: Option[Type]): List[Init] = aType.map(ref => List(Init(ref, Name(""), Nil))).getOrElse(Nil)
+
+    val extendType = getAnnotation(objectType)("scala-extends").map(_.getValue.getValue.toString).map(typeFromName)
+
     Defn.Trait(
       mods = mods,
       name = Type.Name(objectType.getName),
@@ -183,7 +187,7 @@ object DefaultModelGen extends ModelGen {
       ctor = Ctor.Primary(Nil, Name(""), Nil),
       templ = Template(
         early = Nil,
-        inits = baseType.map(ref => List(Init(ref.scalaType, Name(""), Nil))).getOrElse(Nil),
+        inits =  initFromTypeOpt(baseType.map(_.scalaType)) ++ initFromTypeOpt(extendType),
         self = Self(Name(""), None),
         stats = defs,
         derives = Nil
