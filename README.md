@@ -1,5 +1,8 @@
 # SCRAML
 
+[![latest release](https://shields.io/badge/-Maven_Central-lightgrey?style=flat&logo=scala)](https://search.maven.org/search?q=g:com.commercetools%20AND%20a:sbt-scraml)
+
+
 `sbt` plugin that generates code from RAML files at build time.
 
 Built on top of the [commercetools/rest-modeling-framework](https://github.com/commercetools/rest-modeling-framework)

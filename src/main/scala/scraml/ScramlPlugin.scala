@@ -8,14 +8,17 @@ object ScramlPlugin extends AutoPlugin {
   override def trigger = allRequirements
 
   object autoImport {
-    val ramlFile = settingKey[Option[File]]("ramlFile")
-    val packageName = settingKey[String]("packageName")
+    val ramlFile = settingKey[Option[File]]("RAML file to be used by the sbt-scraml plugin")
+    val basePackageName = settingKey[String]("base package name to be used for generated types")
+    val jsonSupport = settingKey[Option[JsonSupport]]("if set, JSON support will be generated for the selected library")
+    val catsSupport = settingKey[Option[JsonSupport]]("if set, JSON support will be generated for the selected library")
   }
 
   import autoImport._
   override lazy val globalSettings: Seq[Setting[_]] = Seq(
     ramlFile := None,
-    packageName := "scraml"
+    basePackageName := "scraml",
+    jsonSupport := None
   )
 
   override lazy val projectSettings: Seq[Setting[_]] = Seq(
@@ -23,7 +26,7 @@ object ScramlPlugin extends AutoPlugin {
       val targetDir: File = (Compile / sourceManaged).value
 
       ramlFile.value.map { file =>
-        val params = ModelGenParams(file, targetDir, packageName.value)
+        val params = ModelGenParams(file, targetDir, basePackageName.value, jsonSupport.value)
 
         val generated = ModelGenRunner.run(DefaultModelGen)(params).unsafeRunSync()
         val s = streams.value

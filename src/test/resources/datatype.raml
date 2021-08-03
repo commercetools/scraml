@@ -5,7 +5,7 @@ displayName: DataType
 type: BaseType
 discriminatorValue: data
 properties:
-  foo:
+  foo?:
     type: string
   customTypeProp:
     (scala-type): "scala.long.BigDecimal"
@@ -13,5 +13,7 @@ properties:
   customArrayTypeProp:
     (scala-array-type): "Vector"
     type: array
+    (scala-type): "scala.long.BigDecimal"
     items:
       type: object
+

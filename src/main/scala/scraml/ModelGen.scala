@@ -5,9 +5,14 @@ import io.vrap.rmf.raml.model.modules.Api
 
 import java.io.File
 
+sealed trait JsonSupport
+case object Sphere extends JsonSupport
+case object Circe extends JsonSupport
+
 final case class ModelGenParams(raml: File,
                                 targetDir: File,
-                                basePackage: String)
+                                basePackage: String,
+                                jsonSupport: Option[JsonSupport] = None)
 
 final case class GeneratedModel(files: Seq[GeneratedFile]) {
   override def toString: String = {

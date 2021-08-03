@@ -11,7 +11,8 @@ class CtApiGenSpec extends AnyFlatSpec with Matchers {
     val params = ModelGenParams(
       new File("src/sbt-test/sbt-scraml/ct-api/reference/api-specs/api/api.raml"),
       new File("target/scraml-test-ct"),
-      "scraml"
+      "scraml",
+      jsonSupport = Some(Sphere)
     )
 
     println(ModelGenRunner.run(DefaultModelGen)(params).unsafeRunSync())
