@@ -22,6 +22,13 @@ class DefaultModelGenSpec extends AnyFlatSpec with Matchers {
       case baseType :: dataType :: emptyBase :: noProps :: Nil =>
         baseType.source.packageName should be("datatypes")
         baseType.source.source.toString() should be("@io.sphere.json.annotations.JSONTypeHintField(\"type\") sealed trait BaseType extends Any { def id: String }")
+        baseType.source.companion.map(_.toString()) should be(Some(
+          s"""object BaseType {
+             |  import io.sphere.json.generic._
+             |  import io.sphere.json._
+             |  implicit lazy val json: JSON[BaseType] = deriveJSON[BaseType]
+             |}""".stripMargin))
+
         baseType.source.name should be("BaseType")
         baseType.file.getPath should be("target/scraml-test/scraml/datatypes.scala")
 

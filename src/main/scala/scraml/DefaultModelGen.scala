@@ -172,54 +172,63 @@ object DefaultModelGen extends ModelGen {
 
   private def initFromTypeOpt(aType: Option[Type]): List[Init] = aType.map(ref => List(Init(ref, Name(""), Nil))).getOrElse(Nil)
 
-  private def companionObjectSource(source: Tree): Option[Defn.Object] = source match {
-    case aClass : Defn.Class if aClass.mods.exists(_.isInstanceOf[Mod.Case]) =>
-      val className = aClass.name.value
-      val imports = List(
-        q"import cats.Show",
-        q"import cats.kernel.Eq"
-      )
-      val implicits = List(
-        q"""
-        implicit val ${Pat.Var(Term.Name(className + "Eq"))}: Eq[${aClass.name}] =
-          Eq.fromUniversalEquals
-        """,
-        q"""
-        implicit val ${Pat.Var(Term.Name(className + "Show"))}: Show[${aClass.name}] = Show.show {
-          instance =>
-            val buffer = new StringBuilder($className)
-            buffer.append(':')
-            buffer.append('\n')
-
-            0.until(instance.productArity).zip(instance.productElementNames).foreach {
-              case (index, name) =>
-                buffer.append('\t')
-                buffer.append(name)
-                buffer.append(": ")
-                buffer.append(instance.productElement(index))
+  private def companionObjectSource(objectType: ObjectType, params: ModelGenParams): Defn.Object = {
+    val typeName = objectType.getName
+    val cats = params.catsSupport.toList.flatMap {
+      case EqSupport =>
+          q"""
+            import cats.kernel.Eq
+            implicit val ${Pat.Var(Term.Name(typeName + "Eq"))}: Eq[${Type.Name(typeName)}] =
+              Eq.fromUniversalEquals
+          """.stats
+      case ShowSupport =>
+          q"""
+            import cats.Show
+            implicit val ${Pat.Var(Term.Name(typeName + "Show"))}: Show[${Type.Name(typeName)}] = Show.show {
+              instance =>
+                val buffer = new StringBuilder($typeName)
+                buffer.append(':')
                 buffer.append('\n')
-            }
 
-            buffer.toString()
-        }"""
+                0.until(instance.productArity).zip(instance.productElementNames).foreach {
+                  case (index, name) =>
+                    buffer.append('\t')
+                    buffer.append(name)
+                    buffer.append(": ")
+                    buffer.append(instance.productElement(index))
+                    buffer.append('\n')
+                }
+
+                buffer.toString()
+            }""".stats
+    }
+
+    val json = params.jsonSupport.map {
+      case Sphere =>
+        if(getAnnotation(objectType)("scala-derive-json").exists(_.getValue.getValue.toString.toBoolean)) {
+          q"""import io.sphere.json.generic._
+            import io.sphere.json._
+
+            implicit lazy val json: JSON[${Type.Name(typeName)}] = deriveJSON[${Type.Name(typeName)}]
+          """.stats
+        } else List.empty
+
+      case other => throw new UnsupportedOperationException(s"$other support not implemented yet")
+    }
+
+    Defn.Object(
+      List(),
+      Term.Name(typeName),
+      Template(
+        early = Nil,
+        inits = Nil,
+        self = Self(
+          name = Name.Anonymous(),
+          decltpe = None
+        ),
+        stats = json.getOrElse(List.empty) ++ cats
       )
-      Some(
-        Defn.Object(
-          List(),
-          Term.Name(className),
-          Template(
-            early = Nil,
-            inits = Nil,
-            self = Self(
-              name = Name.Anonymous(),
-              decltpe = None
-            ),
-            stats = imports ++ implicits
-          )
-        )
-      )
-    case _ =>
-      None
+    )
   }
 
   private def caseObjectSource(objectType: ObjectType, params: ModelGenParams, baseType: Option[TypeRef] = None, extendType: Option[Type] = None): Defn.Object =
@@ -269,20 +278,23 @@ object DefaultModelGen extends ModelGen {
   private def objectTypeSource(objectType: ObjectType, params: ModelGenParams): IO[ObjectTypeSource] = {
     for {
       packageName <- IO.fromOption(getPackageName(objectType))(new IllegalStateException("object type should have package name"))
-      source: Tree = {
-        val apiBaseType = Option(objectType.asInstanceOf[AnyType].getType)
-        val scalaBaseTypeRef = apiBaseType.flatMap(scalaTypeRef(_, false))
-        val discriminator = Option(objectType.getDiscriminator)
-        val isAbstract = getAnnotation(objectType)("abstract").exists(_.getValue.getValue.toString.toBoolean)
-        val isMapType = getAnnotation(objectType)("asMap").isDefined
-        val extendType = getAnnotation(objectType)("scala-extends").map(_.getValue.getValue.toString).map(typeFromName)
-
+      apiBaseType = Option(objectType.asInstanceOf[AnyType].getType)
+      scalaBaseTypeRef = apiBaseType.flatMap(scalaTypeRef(_, false))
+      discriminator = Option(objectType.getDiscriminator)
+      isAbstract = getAnnotation(objectType)("abstract").exists(_.getValue.getValue.toString.toBoolean)
+      isMapType = getAnnotation(objectType)("asMap").isDefined
+      extendType = getAnnotation(objectType)("scala-extends").map(_.getValue.getValue.toString).map(typeFromName)
+      (source, companion) =
         discriminator match {
-          case Some(_) | None if isAbstract || getSubTypes(objectType).nonEmpty => traitSource(packageName, objectType, scalaBaseTypeRef, params, extendType)
-          case None if !isMapType && typeProperties(objectType).isEmpty => caseObjectSource(objectType, params, scalaBaseTypeRef, extendType)
-          case None => caseClassSource(objectType, params, scalaBaseTypeRef, extendType)
+          case Some(_) | None if isAbstract || getSubTypes(objectType).nonEmpty =>
+            (traitSource(packageName, objectType, scalaBaseTypeRef, params, extendType), Some(companionObjectSource(objectType, params)))
+
+          case None if !isMapType && typeProperties(objectType).isEmpty =>
+            (caseObjectSource(objectType, params, scalaBaseTypeRef, extendType), None)
+
+          case None =>
+            (caseClassSource(objectType, params, scalaBaseTypeRef, extendType), Some(companionObjectSource(objectType, params)))
         }
-      }
       docsUri = getAnnotation(objectType)("docs-uri").flatMap(annotation => Option(annotation.getValue).map(_.getValue.toString))
       comment =
         s"""/**
@@ -292,11 +304,11 @@ object DefaultModelGen extends ModelGen {
            |*
            |* ${docsUri.map("see " + _).orElse(Option(objectType.getDescription)).getOrElse(s"generated type for ${objectType.getName}")}
            |*/""".stripMargin
-    } yield ObjectTypeSource(objectType.getName, source, packageName, comment, companionObjectSource(source))
+    } yield ObjectTypeSource(objectType.getName, source, packageName, comment, companion)
   }
 
   private def appendSource(file: File, source: GeneratedSource): IO[GeneratedFile] =
-    writeToFile(file, s"${source.comment}\n${source.source.toString()}\n", append = true).map(GeneratedFile(source, _))
+    writeToFile(file, s"${source.comment}\n${source.source.toString()}\n${source.companion.map(_.toString()+ "\n").getOrElse("")}\n", append = true).map(GeneratedFile(source, _))
 
   private def termSelect(parts: List[String], default: String): Term.Ref = parts match {
     case Nil => Term.Name(default)
