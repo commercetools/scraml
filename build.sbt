@@ -18,6 +18,7 @@ lazy val root = (project in file("."))
     name := "sbt-scraml",
     libraryDependencies += "io.vrap.rmf" % "raml-model" % "0.2.0-20201204211458",
     libraryDependencies += "org.scalameta" %% "scalameta" % "4.4.20",
+    libraryDependencies += "org.scalameta" %% "scalafmt-dynamic" % "3.0.0-RC6",
     libraryDependencies += "org.typelevel" %% "cats-effect" % "3.1.1",
     libraryDependencies += "org.scalatest" %% "scalatest" % "3.2.9" % Test,
     pluginCrossBuild / sbtVersion := {

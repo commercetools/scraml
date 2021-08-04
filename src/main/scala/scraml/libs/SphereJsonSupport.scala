@@ -3,24 +3,80 @@ package scraml.libs
 import _root_.io.vrap.rmf.raml.model.types.ObjectType
 import scraml.LibrarySupport.appendObjectStats
 import scraml.MetaUtil.typeFromName
-import scraml.RMFUtil.getAnnotation
-import scraml.{DefnWithCompanion, LibrarySupport, ModelGenContext}
+import scraml.RMFUtil.{getAnnotation, getSubTypes}
+import scraml.{DefnWithCompanion, LibrarySupport, ModelGenContext, RMFUtil}
 
 import scala.meta._
 
 object SphereJsonSupport extends LibrarySupport {
-  private def deriveObjectJson(typeName: String): List[Stat] =
-    q"""import io.sphere.json.generic._
-        implicit lazy val json = jsonProduct0(${Term.Name(typeName)})
-     """.stats
+  private def shouldDeriveJson(objectType: ObjectType): Boolean =
+    getAnnotation(objectType)("scala-derive-json").exists(_.getValue.getValue.toString.toBoolean)
+
+  private def deriveObjectJson(objectType: ObjectType): List[Stat] =
+    if(shouldDeriveJson(objectType)) {
+      q"""import io.sphere.json.generic._
+          implicit lazy val json = jsonProduct0(${Term.Name(objectType.getName)})
+      """.stats
+    } else List.empty
 
   private def deriveJson(objectType: ObjectType): List[Stat] =
-    if(getAnnotation(objectType)("scala-derive-json").exists(_.getValue.getValue.toString.toBoolean)) {
+    if(shouldDeriveJson(objectType)) {
       q"""import io.sphere.json.generic._
           import io.sphere.json._
 
           implicit lazy val json: JSON[${Type.Name(objectType.getName)}] = deriveJSON[${Type.Name(objectType.getName)}]
-          """.stats
+      """.stats
+    } else List.empty
+
+  private def deriveTypeSwitch(objectType: ObjectType): List[Stat] =
+    if(shouldDeriveJson(objectType)) {
+      val switchStat =
+        Term.Apply(Term.ApplyType(Term.Name("jsonTypeSwitch"), List(Type.Name(objectType.getName)) ++ getSubTypes(objectType).map(subType => Type.Name(subType.getName)).toList), List(Term.Name("Nil")))
+
+      q"""import io.sphere.json.generic._
+          import io.sphere.json._
+
+          implicit lazy val json: JSON[${Type.Name(objectType.getName)}] = $switchStat
+      """.stats
+    } else List.empty
+
+  private def deriveWithFallback(context: ModelGenContext): List[Stat] =
+    if(shouldDeriveJson(context.objectType)) {
+      val subTypes = RMFUtil.getSubTypes(context.objectType).toList
+      val matchTypes = Term.Match(
+        Term.Name("value"),
+        cases = subTypes.map( subType => {
+          val caseName = subType.getName.toLowerCase
+          val typeName = subType.getName
+          Case(Pat.Typed(Pat.Var(Term.Name(caseName)), Type.Name(typeName)), None, Term.Apply(Term.Select(Term.Select(Term.Name(typeName), Term.Name("json")), Term.Name("write")), List(Term.Name(caseName)))),
+        }),
+        mods = Nil
+      )
+
+      val read = subTypes.headOption match {
+        case Some(firstSubType) =>
+          val initRead: String =
+            q"""
+              ${Term.Name(firstSubType.getName)}.json.read(jval)
+              """.toString
+          subTypes.drop(1).foldLeft(initRead) {
+            case (acc, next) =>
+              val nextRead = q"""orElse(${Term.Name(next.getName)}.json.read(jval))""".toString
+              s"$acc.$nextRead"
+          }
+        case _ => ""
+      }
+
+      val jsonStats = q"""
+                  import io.sphere.json.generic._
+                  import io.sphere.json._
+                  import org.json4s._
+
+                  implicit val json = new JSON[${Type.Name(context.objectType.getName)}] {
+                  override def read(jval: JsonAST.JValue): JValidation[${Type.Name(context.objectType.getName)}] = ${read.parse[Term].get}
+                  override def write(value: ${Type.Name(context.objectType.getName)}): JsonAST.JValue = $matchTypes
+                }""".stats
+      jsonStats
     } else List.empty
 
   private def getDiscriminatorValueMod(objectType: ObjectType): Option[Mod.Annot] =
@@ -35,7 +91,7 @@ object SphereJsonSupport extends LibrarySupport {
     )
 
   override def modifyObject(objectDef: Defn.Object)(context: ModelGenContext): DefnWithCompanion[Defn.Object] =
-    DefnWithCompanion(appendObjectStats(objectDef.copy(mods = getDiscriminatorValueMod(context.objectType).toList ++ objectDef.mods), deriveObjectJson(context.objectType.getName)), None)
+    DefnWithCompanion(appendObjectStats(objectDef.copy(mods = getDiscriminatorValueMod(context.objectType).toList ++ objectDef.mods), deriveObjectJson(context.objectType)), None)
 
   override def modifyTrait(traitDef: Defn.Trait, companion: Option[Defn.Object])(context: ModelGenContext): DefnWithCompanion[Defn.Trait] =
     DefnWithCompanion(
@@ -46,6 +102,12 @@ object SphereJsonSupport extends LibrarySupport {
 
         traitDef.copy(mods = typeHintField ++ traitDef.mods)
       },
-      companion = companion.map(appendObjectStats(_, deriveJson(context.objectType)))
+      companion = {
+        val stats = if(Option(context.objectType.getDiscriminator).isDefined) {
+          deriveJson(context.objectType)
+        } else deriveWithFallback(context)
+
+        companion.map(appendObjectStats(_, stats))
+      }
     )
 }

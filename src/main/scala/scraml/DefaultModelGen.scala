@@ -3,8 +3,10 @@ import cats.effect.IO
 import cats.implicits.toTraverseOps
 import io.vrap.rmf.raml.model.modules.Api
 import io.vrap.rmf.raml.model.types._
+import org.scalafmt.interfaces.Scalafmt
 
 import java.io.{File, FileOutputStream}
+import java.nio.file.Paths
 import java.time.LocalDateTime
 import scala.jdk.CollectionConverters._
 import scala.meta._
@@ -37,8 +39,8 @@ final case class GeneratedPackages(packages: Map[String, GeneratedPackage] = Map
 }
 
 object DefaultModelGen extends ModelGen {
-  import RMFUtil.getAnnotation
   import MetaUtil._
+  import RMFUtil._
 
   lazy val defaultArrayTypeName = "List"
   lazy val defaultAnyTypeName = "Any"
@@ -161,9 +163,6 @@ object DefaultModelGen extends ModelGen {
     )
   }
 
-  private def getSubTypes(objectType: ObjectType): Iterator[AnyType] =
-    objectType.getSubTypes.asScala.filter(_.getName != objectType.getName).iterator
-
   private def initFromTypeOpt(aType: Option[Type]): List[Init] = aType.map(ref => List(Init(ref, Name(""), Nil))).getOrElse(Nil)
 
   private def companionObjectSource(objectType: ObjectType): Defn.Object = {
@@ -236,7 +235,10 @@ object DefaultModelGen extends ModelGen {
       context = ModelGenContext(packageName, objectType, params, scalaBaseTypeRef, extendType)
       source =
         discriminator match {
-          case Some(_) | None if isAbstract || getSubTypes(objectType).nonEmpty =>
+          case Some(_) =>
+            LibrarySupport.applyTrait(traitSource(context), Some(companionObjectSource(objectType)))(params.librarySupport, context)
+
+          case None if isAbstract || getSubTypes(objectType).nonEmpty =>
             LibrarySupport.applyTrait(traitSource(context), Some(companionObjectSource(objectType)))(params.librarySupport, context)
 
           case None if !isMapType && typeProperties(objectType).isEmpty =>
@@ -257,10 +259,20 @@ object DefaultModelGen extends ModelGen {
     } yield ObjectTypeSource(objectType.getName, source.defn, packageName, comment, source.companion)
   }
 
-  private def appendSource(file: File, source: GeneratedSource): IO[GeneratedFile] =
-    writeToFile(file, s"${source.comment}\n${source.source.toString()}\n${source.companion.map(_.toString()+ "\n").getOrElse("")}\n", append = true).map(GeneratedFile(source, _))
+  private def appendSource(file: File,
+                           source: GeneratedSource,
+                           formatConfig: Option[File],
+                           formatter: Scalafmt): IO[GeneratedFile] = {
+    val sourceString = s"${source.comment}\n${source.source.toString()}\n${source.companion.map(_.toString()+ "\n").getOrElse("")}\n"
+    val formattedSource = formatConfig match {
+      case Some(configFile) if configFile.exists() => formatter.format(configFile.toPath, file.toPath, sourceString)
+      case _ => sourceString
+    }
+    writeToFile(file, formattedSource, append = true).map(GeneratedFile(source, _))
+  }
 
   private def writePackages(generated: GeneratedPackages, params: ModelGenParams): IO[GeneratedModel] = {
+    val scalafmt = Scalafmt.create(this.getClass.getClassLoader)
     val generate = generated.packages.map {
       case (name, generatedPackage) =>
         for {
@@ -271,7 +283,7 @@ object DefaultModelGen extends ModelGen {
           }
           packageStatement = Pkg(packageTerm(s"${params.basePackage}"), Nil).toString()
           withPackage <- writeToFile(file, s"$packageStatement\n\n")
-          files <- generatedPackage.sources.map(appendSource(withPackage, _)).sequence
+          files <- generatedPackage.sources.map(appendSource(withPackage, _, params.formatConfig, scalafmt)).sequence
         } yield files
     }
 

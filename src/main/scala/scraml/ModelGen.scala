@@ -20,7 +20,8 @@ final case class ModelGenParams(raml: File,
                                 targetDir: File,
                                 basePackage: String,
                                 jsonSupport: Option[JsonSupport] = None,
-                                catsSupport: Set[CatsSupport] = Set.empty) {
+                                catsSupport: Set[CatsSupport] = Set.empty,
+                                formatConfig: Option[File] = None) {
   def librarySupport: List[LibrarySupport] = jsonSupport.map {
     case Sphere => List(SphereJsonSupport)
     case Circe => Nil
