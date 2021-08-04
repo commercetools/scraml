@@ -38,24 +38,27 @@ class DefaultModelGenSpec extends AnyFlatSpec with Matchers {
         dataType.file.getPath should be("target/scraml-test/scraml/datatypes.scala")
 
         emptyBase.source.source.toString() should be("@io.sphere.json.annotations.JSONTypeHintField(\"type\") sealed trait EmptyBase")
-        noProps.source.source.toString() should be("@io.sphere.json.annotations.JSONTypeHint(\"nope\") case object NoProps extends EmptyBase")
+        noProps.source.source.toString() should be(s"""@io.sphere.json.annotations.JSONTypeHint(\"nope\") case object NoProps extends EmptyBase {
+                                                      |  import io.sphere.json.generic._
+                                                      |  implicit lazy val json = jsonProduct0(NoProps)
+                                                      |}""".stripMargin)
       case _ => fail()
     }
   }
 
   it should "create a package from string" in {
-    DefaultModelGen.packageTerm("a").toString() should be("a")
-    DefaultModelGen.packageTerm("a.b").toString() should be("a.b")
-    DefaultModelGen.packageTerm("a.b.c").toString() should be("a.b.c")
-    DefaultModelGen.packageTerm("a.b.c.d.e").toString() should be(
+    MetaUtil.packageTerm("a").toString() should be("a")
+    MetaUtil.packageTerm("a.b").toString() should be("a.b")
+    MetaUtil.packageTerm("a.b.c").toString() should be("a.b.c")
+    MetaUtil.packageTerm("a.b.c.d.e").toString() should be(
       Term.Select(Term.Select(Term.Select(Term.Select(Term.Name("a"), Term.Name("b")), Term.Name("c")), Term.Name("d")), Term.Name("e")).toString()
     )
   }
 
   it should "create a type from string" in {
-    DefaultModelGen.typeFromName("a").toString() should be("a")
-    DefaultModelGen.typeFromName("a.b").toString() should be("a.b")
-    DefaultModelGen.typeFromName("a.b.c").toString() should be("a.b.c")
-    DefaultModelGen.typeFromName("a.b.c.d.e").toString() should be("a.b.c.d.e")
+    MetaUtil.typeFromName("a").toString() should be("a")
+    MetaUtil.typeFromName("a.b").toString() should be("a.b")
+    MetaUtil.typeFromName("a.b.c").toString() should be("a.b.c")
+    MetaUtil.typeFromName("a.b.c.d.e").toString() should be("a.b.c.d.e")
   }
 }
