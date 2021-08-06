@@ -21,10 +21,6 @@ case object Circe extends JsonSupport {
   override def jsonType: String = "io.circe.Json"
 }
 
-sealed trait CatsSupport
-case object EqSupport   extends CatsSupport
-case object ShowSupport extends CatsSupport
-
 final case class ModelGenParams(
     raml: File,
     targetDir: File,
@@ -156,6 +152,12 @@ trait LibrarySupport {
       enumType: StringType
   )(enumTrait: Defn.Trait, companion: Option[Defn.Object]): DefnWithCompanion[Defn.Trait] =
     DefnWithCompanion(enumTrait, companion)
+
+  final protected def generatePropertiesCode(defn: Defn.Class)(f: Term.Param => List[Stat]): List[Stat] =
+    defn.ctor.paramss.flatMap(_.flatMap(f))
+
+  final protected def generatePropertiesCode(defn: Defn.Trait)(f: Term.Param => List[Stat]): List[Stat] =
+    defn.ctor.paramss.flatMap(_.flatMap(f))
 }
 
 object LibrarySupport {
