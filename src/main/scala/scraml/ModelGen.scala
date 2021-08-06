@@ -2,7 +2,8 @@ package scraml
 
 import cats.effect.IO
 import io.vrap.rmf.raml.model.modules.Api
-import io.vrap.rmf.raml.model.types.ObjectType
+import io.vrap.rmf.raml.model.types.{AnyType, ObjectType}
+import scraml.RMFUtil.getAnnotation
 import scraml.libs.{CatsEqSupport, CatsShowSupport, SphereJsonSupport}
 
 import java.io.File
@@ -37,7 +38,30 @@ final case class GeneratedModel(files: Seq[GeneratedFile]) {
   }
 }
 
-final case class ModelGenContext(packageName: String, objectType: ObjectType, params: ModelGenParams, baseType: Option[TypeRef] = None, extendType: Option[Type] = None)
+final case class ApiContext(private val api: Api) {
+  import scala.jdk.CollectionConverters._
+
+  def getTypes: Iterator[AnyType] = api.getTypes.asScala.iterator
+
+  lazy val typesByName: Map[String, AnyType] = {
+    api.getTypes.asScala.map(aType =>(aType.getName, aType))
+  }.toMap
+
+  lazy val scalaExtends: Map[String, AnyType] =
+    api.getTypes.asScala.flatMap { aType =>
+      for {
+        annotation <- getAnnotation(aType)("scala-extends")
+        anyType <- typesByName.get(annotation.getValue.getValue.toString)
+      } yield (aType.getName, anyType)
+    }.toMap
+}
+
+final case class ModelGenContext(packageName: String,
+                                 objectType: ObjectType,
+                                 params: ModelGenParams,
+                                 api: ApiContext,
+                                 baseType: Option[TypeRef] = None,
+                                 extendType: Option[Type] = None)
 
 final case class DefnWithCompanion[T <: Defn with Member](defn: T, companion: Option[Defn.Object])
 
@@ -73,22 +97,8 @@ trait ModelGen {
 }
 
 object ModelGenRunner {
-  import io.vrap.rmf.raml.model.RamlModelBuilder
-  import org.eclipse.emf.common.util.URI
-
-  def readModel(apiPath: File): IO[Api] = for {
-    model <- IO {
-      new RamlModelBuilder().buildApi(URI.createFileURI(apiPath.getAbsolutePath))
-    }
-
-    api <-
-      if(model.getValidationResults.isEmpty) {
-        IO.pure(model.getRootObject)
-      } else IO.raiseError(new IllegalArgumentException(s"error while reading model: ${model.getValidationResults}"))
-  } yield api
-
   def run(generator: ModelGen)(params: ModelGenParams): IO[GeneratedModel] = for {
-    api <- readModel(params.raml)
+    api <- RMFUtil.readModel(params.raml)
     model <- generator.generate(api, params)
   } yield model
 }

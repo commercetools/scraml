@@ -3,7 +3,7 @@ package scraml.libs
 import _root_.io.vrap.rmf.raml.model.types.ObjectType
 import scraml.LibrarySupport.appendObjectStats
 import scraml.MetaUtil.typeFromName
-import scraml.RMFUtil.{getAnnotation, getSubTypes}
+import scraml.RMFUtil.getAnnotation
 import scraml.{DefnWithCompanion, LibrarySupport, ModelGenContext, RMFUtil}
 
 import scala.meta._
@@ -28,21 +28,9 @@ object SphereJsonSupport extends LibrarySupport {
       """.stats
     } else List.empty
 
-  private def deriveTypeSwitch(objectType: ObjectType): List[Stat] =
-    if(shouldDeriveJson(objectType)) {
-      val switchStat =
-        Term.Apply(Term.ApplyType(Term.Name("jsonTypeSwitch"), List(Type.Name(objectType.getName)) ++ getSubTypes(objectType).map(subType => Type.Name(subType.getName)).toList), List(Term.Name("Nil")))
-
-      q"""import io.sphere.json.generic._
-          import io.sphere.json._
-
-          implicit lazy val json: JSON[${Type.Name(objectType.getName)}] = $switchStat
-      """.stats
-    } else List.empty
-
   private def deriveWithFallback(context: ModelGenContext): List[Stat] =
     if(shouldDeriveJson(context.objectType)) {
-      val subTypes = RMFUtil.getSubTypes(context.objectType).toList
+      val subTypes = RMFUtil.getSubTypes(context).toList
       val matchTypes = Term.Match(
         Term.Name("value"),
         cases = subTypes.map( subType => {

@@ -6,7 +6,6 @@ import io.vrap.rmf.raml.model.types._
 import org.scalafmt.interfaces.Scalafmt
 
 import java.io.{File, FileOutputStream}
-import java.nio.file.Paths
 import java.time.LocalDateTime
 import scala.jdk.CollectionConverters._
 import scala.meta._
@@ -63,9 +62,6 @@ object DefaultModelGen extends ModelGen {
     case NumberFormat.DOUBLE => "Double"
     case _ => "Int"
   }
-
-  private def getPackageName(anyType: AnyType): Option[String] =
-    getAnnotation(anyType)("package").map(_.getValue.getValue.toString.toLowerCase)
 
   private case class TypeRefDetails(baseType: Type, packageName: Option[String] = None, defaultValue: Option[Term] = None)
 
@@ -125,6 +121,10 @@ object DefaultModelGen extends ModelGen {
     case _ => List.empty
   }
 
+  /**
+   * get all (including inherited) properties of a type
+   * note: will not include properties from 'scala-extends' references
+   */
   private def typeProperties(objectType: ObjectType): Iterator[Property] =
     objectType.getAllProperties.asScala.iterator.filter(property => !discriminators(objectType).contains(property.getName))
 
@@ -204,7 +204,7 @@ object DefaultModelGen extends ModelGen {
     }.toList
 
     val sealedModOpt: Option[Mod.Sealed] =
-      if (getSubTypes(objectType).forall(getPackageName(_).contains(context.packageName))) {
+      if (getSubTypes(context).forall(getPackageName(_).contains(context.packageName))) {
         Some(Mod.Sealed())
       } else None
 
@@ -223,7 +223,7 @@ object DefaultModelGen extends ModelGen {
     )
   }
 
-  private def objectTypeSource(objectType: ObjectType, params: ModelGenParams): IO[ObjectTypeSource] = {
+  private def objectTypeSource(objectType: ObjectType, params: ModelGenParams, api: ApiContext): IO[ObjectTypeSource] = {
     for {
       packageName <- IO.fromOption(getPackageName(objectType))(new IllegalStateException("object type should have package name"))
       apiBaseType = Option(objectType.asInstanceOf[AnyType].getType)
@@ -232,13 +232,13 @@ object DefaultModelGen extends ModelGen {
       isAbstract = getAnnotation(objectType)("abstract").exists(_.getValue.getValue.toString.toBoolean)
       isMapType = getAnnotation(objectType)("asMap").isDefined
       extendType = getAnnotation(objectType)("scala-extends").map(_.getValue.getValue.toString).map(typeFromName)
-      context = ModelGenContext(packageName, objectType, params, scalaBaseTypeRef, extendType)
+      context = ModelGenContext(packageName, objectType, params, api, scalaBaseTypeRef, extendType)
       source =
         discriminator match {
           case Some(_) =>
             LibrarySupport.applyTrait(traitSource(context), Some(companionObjectSource(objectType)))(params.librarySupport, context)
 
-          case None if isAbstract || getSubTypes(objectType).nonEmpty =>
+          case None if isAbstract || getSubTypes(context).nonEmpty =>
             LibrarySupport.applyTrait(traitSource(context), Some(companionObjectSource(objectType)))(params.librarySupport, context)
 
           case None if !isMapType && typeProperties(objectType).isEmpty =>
@@ -290,9 +290,9 @@ object DefaultModelGen extends ModelGen {
     generate.toList.sequence.map(_.flatten).map(GeneratedModel(_))
   }
 
-  private def generatePackages(api: Api, params: ModelGenParams): IO[GeneratedPackages] = for {
-    types <- api.getTypes.asScala.toList.map {
-      case objectType: ObjectType => objectTypeSource(objectType, params).map(Some(_))
+  private def generatePackages(api: ApiContext, params: ModelGenParams): IO[GeneratedPackages] = for {
+    types <- api.getTypes.toList.map {
+      case objectType: ObjectType => objectTypeSource(objectType, params, api).map(Some(_))
       case _ => IO(None)
     }.sequence
     packages = types.flatten.foldLeft(GeneratedPackages())(_ addSource _)
@@ -300,7 +300,7 @@ object DefaultModelGen extends ModelGen {
 
   override def generate(api: Api, params: ModelGenParams): IO[GeneratedModel] = for {
     _ <- FileUtil.deleteRecursively(new File(params.targetDir, params.basePackage))
-    packages <- generatePackages(api, params)
+    packages <- generatePackages(ApiContext(api), params)
     model <- writePackages(packages, params)
   } yield model
 }
