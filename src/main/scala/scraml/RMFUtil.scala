@@ -12,7 +12,9 @@ object RMFUtil {
   def getPackageName(anyType: AnyType): Option[String] =
     getAnnotation(anyType)("package").map(_.getValue.getValue.toString.toLowerCase)
 
-  def getAnnotation(from: AnyType)(name: String): Option[Annotation] = Option(from.getAnnotation(name))
+  def getAnnotation(from: AnyType)(name: String): Option[Annotation] = Option(
+    from.getAnnotation(name)
+  )
 
   def readModel(apiPath: File): IO[Api] = for {
     model <- IO {
@@ -20,8 +22,11 @@ object RMFUtil {
     }
 
     api <-
-      if(model.getValidationResults.isEmpty) {
+      if (model.getValidationResults.isEmpty) {
         IO.pure(model.getRootObject)
-      } else IO.raiseError(new IllegalArgumentException(s"error while reading model: ${model.getValidationResults}"))
+      } else
+        IO.raiseError(
+          new IllegalArgumentException(s"error while reading model: ${model.getValidationResults}")
+        )
   } yield api
 }

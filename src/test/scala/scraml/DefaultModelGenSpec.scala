@@ -10,7 +10,7 @@ import scala.meta.Term
 class DefaultModelGenSpec extends AnyFlatSpec with Matchers {
   "Default model gen" should "generate data type from API spec" in {
     val params = ModelGenParams(
-      new File(getClass.getClassLoader.getResource("simple.raml").toURI),
+      new File("src/sbt-test/sbt-scraml/simple/api/simple.raml"),
       new File("target/scraml-test"),
       "scraml",
       None,
@@ -21,22 +21,32 @@ class DefaultModelGenSpec extends AnyFlatSpec with Matchers {
     val generated = ModelGenRunner.run(DefaultModelGen)(params).unsafeRunSync()
 
     generated.files match {
-      case baseType :: dataType :: emptyBase :: noProps :: Nil =>
+      case baseType :: dataType :: emptyBase :: noProps :: packageObject :: Nil =>
         baseType.source.packageName should be("datatypes")
-        baseType.source.source.toString() should be("sealed trait BaseType extends Any { def id: String }")
-        baseType.source.companion.map(_.toString()) should be(Some(
-          s"""object BaseType""".stripMargin))
+        baseType.source.source.toString() should be(
+          "sealed trait BaseType extends Any { def id: String }"
+        )
+        baseType.source.companion.map(_.toString()) should be(
+          Some(s"""object BaseType""".stripMargin)
+        )
 
         baseType.source.name should be("BaseType")
         baseType.file.getPath should be("target/scraml-test/scraml/datatypes.scala")
 
         dataType.source.packageName should be("datatypes")
-        dataType.source.source.toString() should be("final case class DataType(id: String, foo: Option[String] = None, customTypeProp: scala.long.BigDecimal, customArrayTypeProp: Vector[scala.long.BigDecimal] = Vector.empty) extends BaseType")
+        dataType.source.source.toString() should be(
+          "final case class DataType(id: String, foo: Option[String] = None, customTypeProp: scala.math.BigDecimal, customArrayTypeProp: Vector[scala.math.BigDecimal] = Vector.empty) extends BaseType"
+        )
         dataType.source.name should be("DataType")
         dataType.file.getPath should be("target/scraml-test/scraml/datatypes.scala")
 
         emptyBase.source.source.toString() should be("sealed trait EmptyBase")
-        noProps.source.source.toString() should be(s"""case object NoProps extends EmptyBase""".stripMargin)
+        noProps.source.source.toString() should be(
+          s"""case object NoProps extends EmptyBase""".stripMargin
+        )
+
+        packageObject.source.source.toString should be("package object scraml")
+
       case _ => fail()
     }
   }
@@ -46,7 +56,15 @@ class DefaultModelGenSpec extends AnyFlatSpec with Matchers {
     MetaUtil.packageTerm("a.b").toString() should be("a.b")
     MetaUtil.packageTerm("a.b.c").toString() should be("a.b.c")
     MetaUtil.packageTerm("a.b.c.d.e").toString() should be(
-      Term.Select(Term.Select(Term.Select(Term.Select(Term.Name("a"), Term.Name("b")), Term.Name("c")), Term.Name("d")), Term.Name("e")).toString()
+      Term
+        .Select(
+          Term.Select(
+            Term.Select(Term.Select(Term.Name("a"), Term.Name("b")), Term.Name("c")),
+            Term.Name("d")
+          ),
+          Term.Name("e")
+        )
+        .toString()
     )
   }
 

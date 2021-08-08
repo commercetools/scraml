@@ -1,0 +1,10 @@
+#%RAML 1.0 DataType
+(package): Other
+(docs-uri): "https://example.org/other-sub"
+displayName: OtherSub
+type: NoSealedBase
+(scala-derive-json): true
+discriminatorValue: "other-sub"
+properties:
+  id:
+    type: string

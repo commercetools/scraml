@@ -9,7 +9,8 @@ object CatsShowSupport extends LibrarySupport {
   private def showStats(typeName: String): List[Stat] =
     q"""
       import cats.Show
-      implicit val ${Pat.Var(Term.Name(typeName + "Show"))}: Show[${Type.Name(typeName)}] = Show.show {
+      implicit val ${Pat.Var(Term.Name(typeName + "Show"))}: Show[${Type
+      .Name(typeName)}] = Show.show {
         instance =>
           val buffer = new StringBuilder($typeName)
           buffer.append(':')
@@ -27,6 +28,11 @@ object CatsShowSupport extends LibrarySupport {
           buffer.toString()
       }""".stats
 
-  override def modifyClass(classDef: Defn.Class, companion: Option[Defn.Object])(context: ModelGenContext): DefnWithCompanion[Defn.Class] =
-    DefnWithCompanion(classDef, companion.map(appendObjectStats(_, showStats(context.objectType.getName))))
+  override def modifyClass(classDef: Defn.Class, companion: Option[Defn.Object])(
+      context: ModelGenContext
+  ): DefnWithCompanion[Defn.Class] =
+    DefnWithCompanion(
+      classDef,
+      companion.map(appendObjectStats(_, showStats(context.objectType.getName)))
+    )
 }

@@ -12,6 +12,8 @@ inThisBuild(List(
   )
 ))
 
+val circeVersion = "0.14.1"
+
 lazy val root = (project in file("."))
   .enablePlugins(SbtPlugin)
   .settings(
@@ -21,6 +23,11 @@ lazy val root = (project in file("."))
     libraryDependencies += "org.scalameta" %% "scalafmt-dynamic" % "3.0.0-RC6",
     libraryDependencies += "org.typelevel" %% "cats-effect" % "3.1.1",
     libraryDependencies += "org.scalatest" %% "scalatest" % "3.2.9" % Test,
+    libraryDependencies ++= Seq(
+      "io.circe" %% "circe-core",
+      "io.circe" %% "circe-generic",
+      "io.circe" %% "circe-parser"
+    ).map(_ % circeVersion % Test),
     pluginCrossBuild / sbtVersion := {
       scalaBinaryVersion.value match {
         case "2.12" => "1.5.0" // set minimum sbt version

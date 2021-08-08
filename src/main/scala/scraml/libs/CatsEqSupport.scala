@@ -13,6 +13,11 @@ object CatsEqSupport extends LibrarySupport {
         Eq.fromUniversalEquals
     """.stats
 
-  override def modifyClass(classDef: Defn.Class, companion: Option[Defn.Object])(context: ModelGenContext): DefnWithCompanion[Defn.Class] =
-    DefnWithCompanion(classDef, companion.map(appendObjectStats(_, eqStats(context.objectType.getName))))
+  override def modifyClass(classDef: Defn.Class, companion: Option[Defn.Object])(
+      context: ModelGenContext
+  ): DefnWithCompanion[Defn.Class] =
+    DefnWithCompanion(
+      classDef,
+      companion.map(appendObjectStats(_, eqStats(context.objectType.getName)))
+    )
 }

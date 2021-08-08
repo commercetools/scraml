@@ -2,11 +2,10 @@ val circeVersion = "0.14.1"
 
 lazy val root = (project in file("."))
   .settings(
-    scalaVersion := "2.13.6",
-    name := "scraml-ct-api-test",
+    name := "scraml-json-test",
     version := "0.1",
-    ramlFile := Some(file("reference/api-specs/api/api.raml")),
-    basePackageName := "de.commercetools.api",
+    ramlFile := Some(file("api/json.raml")),
+    basePackageName := "scraml",
     jsonSupport := Some(scraml.Circe),
     libraryDependencies += "com.commercetools" %% "sphere-json" % "0.12.5",
     libraryDependencies ++= Seq(

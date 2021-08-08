@@ -9,7 +9,7 @@ import java.io.File
 class SphereJsonSupportSpec extends AnyFlatSpec with Matchers {
   "Sphere JSON Support" should "generate JSON derivation" in {
     val params = ModelGenParams(
-      new File(getClass.getClassLoader.getResource("json/json.raml").toURI),
+      new File("src/sbt-test/sbt-scraml/json/api/json.raml"),
       new File("target/scraml-sphere-json-test"),
       "scraml",
       jsonSupport = Some(Sphere),
@@ -20,10 +20,10 @@ class SphereJsonSupportSpec extends AnyFlatSpec with Matchers {
     val generated = ModelGenRunner.run(DefaultModelGen)(params).unsafeRunSync()
 
     generated.files match {
-      case noDiscBase :: _ :: _ :: baseType :: dataType :: emptyBase :: noProps :: _ :: Nil =>
+      case noDiscBase :: _ :: _ :: baseType :: dataType :: emptyBase :: noProps :: _ :: _ :: _ :: Nil =>
         noDiscBase.source.source.toString() should be("sealed trait NoDiscriminatorBase")
-        noDiscBase.source.companion.map(_.toString()) should be(Some(
-          s"""object NoDiscriminatorBase {
+        noDiscBase.source.companion.map(_.toString()) should be(
+          Some(s"""object NoDiscriminatorBase {
              |  import io.sphere.json.generic._
              |  import io.sphere.json._
              |  import org.json4s._
@@ -36,12 +36,14 @@ class SphereJsonSupportSpec extends AnyFlatSpec with Matchers {
              |        NoDiscriminatorSub2.json.write(nodiscriminatorsub2)
              |    }
              |  }
-             |}""".stripMargin))
+             |}""".stripMargin)
+        )
 
         baseType.source.packageName should be("datatypes")
-        baseType.source.source.toString() should be("@io.sphere.json.annotations.JSONTypeHintField(\"type\") sealed trait BaseType extends Any { def id: String }")
-        baseType.source.companion.map(_.toString()) should be(Some(
-          s"""object BaseType {
+        baseType.source.source.toString() should be(
+          "@io.sphere.json.annotations.JSONTypeHintField(\"type\") sealed trait BaseType extends Any { def id: String }"
+        )
+        baseType.source.companion.map(_.toString()) should be(Some(s"""object BaseType {
              |  import io.sphere.json.generic._
              |  import io.sphere.json._
              |  implicit lazy val json: JSON[BaseType] = deriveJSON[BaseType]
@@ -51,20 +53,25 @@ class SphereJsonSupportSpec extends AnyFlatSpec with Matchers {
         baseType.file.getPath should be("target/scraml-sphere-json-test/scraml/datatypes.scala")
 
         dataType.source.packageName should be("datatypes")
-        dataType.source.source.toString() should be("@io.sphere.json.annotations.JSONTypeHint(\"data\") final case class DataType(id: String, foo: Option[String] = None, customTypeProp: scala.long.BigDecimal, customArrayTypeProp: Vector[scala.long.BigDecimal] = Vector.empty) extends BaseType")
+        dataType.source.source.toString() should be(
+          "@io.sphere.json.annotations.JSONTypeHint(\"data\") final case class DataType(id: String, foo: Option[String] = None, customTypeProp: scala.math.BigDecimal, customArrayTypeProp: Vector[scala.math.BigDecimal] = Vector.empty) extends BaseType"
+        )
         dataType.source.name should be("DataType")
-        dataType.source.companion.map(_.toString()) should be(Some(
-          s"""object DataType {
+        dataType.source.companion.map(_.toString()) should be(Some(s"""object DataType {
              |  import io.sphere.json.generic._
              |  import io.sphere.json._
              |  implicit lazy val json: JSON[DataType] = deriveJSON[DataType]
              |}""".stripMargin))
 
-        emptyBase.source.source.toString() should be("@io.sphere.json.annotations.JSONTypeHintField(\"type\") sealed trait EmptyBase")
-        noProps.source.source.toString() should be(s"""@io.sphere.json.annotations.JSONTypeHint(\"nope\") case object NoProps extends EmptyBase {
+        emptyBase.source.source.toString() should be(
+          "@io.sphere.json.annotations.JSONTypeHintField(\"type\") sealed trait EmptyBase"
+        )
+        noProps.source.source.toString() should be(
+          s"""@io.sphere.json.annotations.JSONTypeHint(\"nope\") case object NoProps extends EmptyBase {
                                                       |  import io.sphere.json.generic._
                                                       |  implicit lazy val json = jsonProduct0(NoProps)
-                                                      |}""".stripMargin)
+                                                      |}""".stripMargin
+        )
     }
   }
 }

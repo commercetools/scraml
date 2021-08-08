@@ -1,0 +1,10 @@
+#%RAML 1.0 DataType
+(package): DataTypes
+(docs-uri): "https://example.org/no-sealed-base"
+displayName: NoSealedBase
+type: object
+(scala-derive-json): true
+discriminator: "type"
+properties:
+  type:
+    type: string
