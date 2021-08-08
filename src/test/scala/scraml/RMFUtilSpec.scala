@@ -15,9 +15,9 @@ class RMFUtilSpec extends AnyFlatSpec with Matchers {
 
     api.getTypes.asScala.find(_.getName == "A") match {
       case Some(baseType: ObjectType) =>
-        val context = ModelGenContext("test", baseType, ModelGenParams(ramlFile, new File("target"), "base"), ApiContext(api))
-        RMFUtil
-          .getSubTypes(context)
+        val context = ModelGenContext("test", baseType, ModelGenParams(ramlFile, new File("target"), "base", None, Set.empty, None), ApiContext(api))
+        context
+          .getSubTypes
           .toList
           .map(_.getName) should be(List("B", "C"))
       case _ => fail("type for test not found")

@@ -12,7 +12,10 @@ class DefaultModelGenSpec extends AnyFlatSpec with Matchers {
     val params = ModelGenParams(
       new File(getClass.getClassLoader.getResource("simple.raml").toURI),
       new File("target/scraml-test"),
-      "scraml"
+      "scraml",
+      None,
+      Set.empty,
+      None
     )
 
     val generated = ModelGenRunner.run(DefaultModelGen)(params).unsafeRunSync()

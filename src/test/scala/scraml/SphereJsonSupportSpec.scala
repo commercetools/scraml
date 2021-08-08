@@ -9,16 +9,18 @@ import java.io.File
 class SphereJsonSupportSpec extends AnyFlatSpec with Matchers {
   "Sphere JSON Support" should "generate JSON derivation" in {
     val params = ModelGenParams(
-      new File(getClass.getClassLoader.getResource("sphere-json/sphere.raml").toURI),
+      new File(getClass.getClassLoader.getResource("json/json.raml").toURI),
       new File("target/scraml-sphere-json-test"),
       "scraml",
-      jsonSupport = Some(Sphere)
+      jsonSupport = Some(Sphere),
+      librarySupport = Set.empty,
+      None
     )
 
     val generated = ModelGenRunner.run(DefaultModelGen)(params).unsafeRunSync()
 
     generated.files match {
-      case noDiscBase :: _ :: _ :: baseType :: dataType :: emptyBase :: noProps :: Nil =>
+      case noDiscBase :: _ :: _ :: baseType :: dataType :: emptyBase :: noProps :: _ :: Nil =>
         noDiscBase.source.source.toString() should be("sealed trait NoDiscriminatorBase")
         noDiscBase.source.companion.map(_.toString()) should be(Some(
           s"""object NoDiscriminatorBase {
