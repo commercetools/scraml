@@ -97,6 +97,8 @@ final case class ModelGenContext(
         .flatMap(entry => api.typesByName.get(entry._1))
   }
 
+  def typeProperties: Iterator[Property] = RMFUtil.typeProperties(objectType)
+
   lazy val isSealed: Boolean = getSubTypes.forall(getPackageName(_).contains(packageName))
 }
 

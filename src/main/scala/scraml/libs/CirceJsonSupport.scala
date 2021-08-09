@@ -2,8 +2,9 @@ package scraml.libs
 
 import _root_.io.vrap.rmf.raml.model.types.ObjectType
 import scraml.LibrarySupport._
+import scraml.MetaUtil.packageTerm
 import scraml.RMFUtil.getAnnotation
-import scraml.{DefnWithCompanion, LibrarySupport, ModelGenContext}
+import scraml.{DefnWithCompanion, LibrarySupport, ModelGenContext, RMFUtil}
 
 import scala.meta._
 
@@ -44,14 +45,19 @@ object CirceJsonSupport extends LibrarySupport {
               Term.Name("encodeAll"),
               Nil,
               List(
-                subTypes.map(subType =>
-                  Term.Param(
-                    List(Mod.Implicit()),
-                    Term.Name(s"${subType.getName}Encoder"),
-                    Some(Type.Apply(Type.Name("Encoder"), List(Type.Name(subType.getName)))),
-                    None
-                  )
-                )
+                subTypes.flatMap {
+                  case subType: ObjectType
+                      if RMFUtil.typeProperties(subType).nonEmpty => // filter out case objects
+                    Some(
+                      Term.Param(
+                        List(Mod.Implicit()),
+                        Term.Name(s"${subType.getName}Encoder"),
+                        Some(Type.Apply(Type.Name("Encoder"), List(Type.Name(subType.getName)))),
+                        None
+                      )
+                    )
+                  case _ => None
+                }
               ),
               Some(Type.Apply(Type.Name("Encoder"), List(Type.Name(typeName)))),
               Term.NewAnonymous(
@@ -79,8 +85,11 @@ object CirceJsonSupport extends LibrarySupport {
                       Some(Type.Name("Json")),
                       Term.Match(
                         Term.Name(typeName.toLowerCase),
-                        subTypes.map { case subType: ObjectType =>
-                          if (Option(context.objectType.getDiscriminator).isDefined)
+                        subTypes.map {
+                          case subType: ObjectType
+                              if Option(context.objectType.getDiscriminator).isDefined && RMFUtil
+                                .typeProperties(subType)
+                                .nonEmpty =>
                             Case(
                               Pat.Typed(
                                 Pat.Var(Term.Name(subType.getName.toLowerCase)),
@@ -101,7 +110,7 @@ object CirceJsonSupport extends LibrarySupport {
                                     List(
                                       Lit.String(context.objectType.getDiscriminator),
                                       Term.Apply(
-                                        Term.Name("JString"),
+                                        packageTerm("Json.fromString"),
                                         List(Lit.String(subType.getDiscriminatorValue))
                                       )
                                     )
@@ -109,7 +118,10 @@ object CirceJsonSupport extends LibrarySupport {
                                 )
                               )
                             )
-                          else
+                          case subType: ObjectType
+                              if Option(context.objectType.getDiscriminator).isEmpty && RMFUtil
+                                .typeProperties(subType)
+                                .nonEmpty =>
                             Case(
                               Pat.Typed(
                                 Pat.Var(Term.Name(subType.getName.toLowerCase)),
@@ -119,6 +131,34 @@ object CirceJsonSupport extends LibrarySupport {
                               Term.Apply(
                                 Term.Name(s"${subType.getName}Encoder"),
                                 List(Term.Name(subType.getName.toLowerCase))
+                              )
+                            )
+                          case subType: ObjectType => // case object
+                            Case(
+                              Term.Name(subType.getName),
+                              None,
+                              Term.Apply(
+                                Term.Select(Term.Name("Json"), Term.Name("obj")),
+                                List(
+                                  Term.ApplyInfix(
+                                    Lit.String(
+                                      Option(context.objectType.getDiscriminator).getOrElse("type")
+                                    ),
+                                    Term.Name("->"),
+                                    Nil,
+                                    List(
+                                      Term.Apply(
+                                        Term.Select(Term.Name("Json"), Term.Name("fromString")),
+                                        List(
+                                          Lit.String(
+                                            Option(subType.getDiscriminatorValue)
+                                              .getOrElse(subType.getName)
+                                          )
+                                        )
+                                      )
+                                    )
+                                  )
+                                )
                               )
                             )
                         },
@@ -156,12 +196,21 @@ object CirceJsonSupport extends LibrarySupport {
                 ),
                 List(Type.Name("String"))
               ),
-              subTypes.map { case subType: ObjectType =>
-                Case(
-                  Pat.Extract(Term.Name("Right"), List(Lit.String(subType.getDiscriminatorValue))),
-                  None,
-                  Term.Apply(Term.Name(s"${subType.getName}Decoder"), List(Term.Name("c")))
-                )
+              subTypes.map {
+                case subType: ObjectType if RMFUtil.typeProperties(subType).nonEmpty =>
+                  Case(
+                    Pat
+                      .Extract(Term.Name("Right"), List(Lit.String(subType.getDiscriminatorValue))),
+                    None,
+                    Term.Apply(Term.Name(s"${subType.getName}Decoder"), List(Term.Name("c")))
+                  )
+                case subType: ObjectType => // case object
+                  Case(
+                    Pat
+                      .Extract(Term.Name("Right"), List(Lit.String(subType.getDiscriminatorValue))),
+                    None,
+                    Term.Apply(Term.Name("Right"), List(Term.Name(subType.getName)))
+                  )
               } ++ List(
                 Case(
                   Pat.Var(Term.Name("other")),
@@ -193,14 +242,18 @@ object CirceJsonSupport extends LibrarySupport {
               Term.Name("decodeAll"),
               Nil,
               List(
-                subTypes.map(subType =>
-                  Term.Param(
-                    List(Mod.Implicit()),
-                    Term.Name(s"${subType.getName}Decoder"),
-                    Some(Type.Apply(Type.Name("Decoder"), List(Type.Name(subType.getName)))),
-                    None
-                  )
-                )
+                subTypes.flatMap {
+                  case subType: ObjectType if RMFUtil.typeProperties(subType).nonEmpty =>
+                    Some(
+                      Term.Param(
+                        List(Mod.Implicit()),
+                        Term.Name(s"${subType.getName}Decoder"),
+                        Some(Type.Apply(Type.Name("Decoder"), List(Type.Name(subType.getName)))),
+                        None
+                      )
+                    )
+                  case _ => None
+                }
               ),
               Some(Type.Apply(Type.Name("Decoder"), List(Type.Name(typeName)))),
               Term.NewAnonymous(

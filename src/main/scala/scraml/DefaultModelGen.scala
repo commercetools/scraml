@@ -84,22 +84,6 @@ object DefaultModelGen extends ModelGen {
       )
   }
 
-  def discriminators(aType: AnyType): List[String] = aType match {
-    case objectType: ObjectType =>
-      List(objectType.getDiscriminator) ++ Option(aType.getType)
-        .map(discriminators)
-        .getOrElse(List.empty)
-    case _ => List.empty
-  }
-
-  /** get all (including inherited) properties of a type note: will not include properties from
-    * 'scala-extends' references
-    */
-  private def typeProperties(objectType: ObjectType): Iterator[Property] =
-    objectType.getAllProperties.asScala.iterator.filter(property =>
-      !discriminators(objectType).contains(property.getName)
-    )
-
   private def caseClassSource(context: ModelGenContext): Defn.Class = {
     val classParams = getAnnotation(context.objectType)("asMap").map(_.getValue) match {
       case Some(asMap: ObjectInstance) =>
@@ -123,7 +107,7 @@ object DefaultModelGen extends ModelGen {
         mapParam.toList
 
       case _ =>
-        List(typeProperties(context.objectType).flatMap(scalaProperty(context)).toList)
+        List(context.typeProperties.flatMap(scalaProperty(context)).toList)
     }
 
     Defn.Class(
@@ -187,7 +171,7 @@ object DefaultModelGen extends ModelGen {
 
   private def traitSource(context: ModelGenContext): Defn.Trait = {
     val objectType = context.objectType
-    val defs = typeProperties(objectType).flatMap { property =>
+    val defs = context.typeProperties.flatMap { property =>
       ModelGen
         .scalaTypeRef(property.getType, !property.getRequired, None, context.anyTypeName)
         .map { scalaType =>
@@ -258,7 +242,7 @@ object DefaultModelGen extends ModelGen {
               Some(companionObjectSource(objectType))
             )(params.allLibraries, context)
 
-          case None if !isMapType && typeProperties(objectType).isEmpty =>
+          case None if !isMapType && context.typeProperties.isEmpty =>
             LibrarySupport.applyObject(caseObjectSource(context))(params.allLibraries, context)
 
           case None =>

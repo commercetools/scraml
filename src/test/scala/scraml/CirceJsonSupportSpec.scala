@@ -56,7 +56,7 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers {
                                                                       |  implicit def encodeAll(implicit DataTypeEncoder: Encoder[DataType]): Encoder[BaseType] = new Encoder[BaseType] {
                                                                       |    override def apply(basetype: BaseType): Json = basetype match {
                                                                       |      case datatype: DataType =>
-                                                                      |        DataTypeEncoder(datatype).mapObject(_.add("type", JString("data")))
+                                                                      |        DataTypeEncoder(datatype).mapObject(_.add("type", Json.fromString("data")))
                                                                       |    }
                                                                       |  }
                                                                       |}""".stripMargin))
@@ -76,6 +76,25 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers {
              |}""".stripMargin))
 
         emptyBase.source.source.toString() should be("sealed trait EmptyBase")
+        emptyBase.source.companion.map(_.toString()) should be(Some(s"""object EmptyBase {
+             |  import io.circe.Decoder.Result
+             |  import io.circe._
+             |  implicit def decodeAll(): Decoder[EmptyBase] = new Decoder[EmptyBase] {
+             |    override def apply(c: HCursor): Result[EmptyBase] = c.downField("type").as[String] match {
+             |      case Right("nope") =>
+             |        Right(NoProps)
+             |      case other =>
+             |        Left(DecodingFailure(s"unknown discriminator: $$other", c.history))
+             |    }
+             |  }
+             |  implicit def encodeAll(): Encoder[EmptyBase] = new Encoder[EmptyBase] {
+             |    override def apply(emptybase: EmptyBase): Json = emptybase match {
+             |      case NoProps =>
+             |        Json.obj("type" -> Json.fromString("nope"))
+             |    }
+             |  }
+             |}""".stripMargin))
+
         noProps.source.source.toString() should be(
           s"""case object NoProps extends EmptyBase""".stripMargin
         )
@@ -95,7 +114,7 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers {
                                                                           |  implicit def encodeAll(implicit OtherSubEncoder: Encoder[OtherSub]): Encoder[NoSealedBase] = new Encoder[NoSealedBase] {
                                                                           |    override def apply(nosealedbase: NoSealedBase): Json = nosealedbase match {
                                                                           |      case othersub: OtherSub =>
-                                                                          |        OtherSubEncoder(othersub).mapObject(_.add("type", JString("other-sub")))
+                                                                          |        OtherSubEncoder(othersub).mapObject(_.add("type", Json.fromString("other-sub")))
                                                                           |    }
                                                                           |  }
                                                                           |}""".stripMargin))
