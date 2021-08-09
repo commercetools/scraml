@@ -1,8 +1,7 @@
 package scraml
 
 import cats.effect.unsafe.implicits.global
-import io.circe.Decoder.Result
-import io.circe.{Codec, HCursor, Json}
+import io.circe.{Decoder, Encoder}
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 
@@ -22,7 +21,7 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers {
     val generated = ModelGenRunner.run(DefaultModelGen)(params).unsafeRunSync()
 
     generated.files match {
-      case noDiscBase :: _ :: _ :: baseType :: dataType :: emptyBase :: noProps :: noSealedBase :: _ :: mapLike :: packageObject :: Nil =>
+      case noDiscBase :: _ :: _ :: baseType :: dataType :: emptyBase :: noProps :: noSealedBase :: someEnum :: otherSub :: mapLike :: packageObject :: Nil =>
         noDiscBase.source.source.toString() should be("sealed trait NoDiscriminatorBase")
         noDiscBase.source.companion.map(_.toString()) should be(
           Some(s"""object NoDiscriminatorBase {
@@ -137,6 +136,28 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers {
              |    override def apply(c: HCursor): Result[MapLike] = c.as[Map[String, String]].map(MapLike.apply)
              |  }
              |}""".stripMargin))
+
+        someEnum.source.source.toString() should be(
+          s"""sealed trait SomeEnum""".stripMargin
+        )
+
+        someEnum.source.companion.map(_.toString()) should be(Some(s"""object SomeEnum {
+                                                                      |  case object A extends SomeEnum
+                                                                      |  case object B extends SomeEnum
+                                                                      |  import io.circe._
+                                                                      |  implicit val encode: Encoder[SomeEnum] = Encoder[String].contramap({
+                                                                      |    case A => "A"
+                                                                      |    case B => "B"
+                                                                      |  })
+                                                                      |  implicit val decode: Decoder[SomeEnum] = Decoder[String].emap({
+                                                                      |    case "A" =>
+                                                                      |      Right(A)
+                                                                      |    case "B" =>
+                                                                      |      Right(B)
+                                                                      |    case other =>
+                                                                      |      Left(s"invalid enum value: $$other")
+                                                                      |  })
+                                                                      |}""".stripMargin))
 
         packageObject.source.source.toString should be(s"""package object scraml {
              |  import io.circe.Decoder.Result

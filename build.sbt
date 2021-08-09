@@ -37,7 +37,7 @@ lazy val root = (project in file("."))
       Resolver.jcenterRepo
     ),
     scriptedLaunchOpts := { scriptedLaunchOpts.value ++
-      Seq("-Xmx1024M", "-Dplugin.version=" + version.value)
+      Seq("-Xmx2048M", "-Dplugin.version=" + version.value)
     },
     scriptedBufferLog := false
   )

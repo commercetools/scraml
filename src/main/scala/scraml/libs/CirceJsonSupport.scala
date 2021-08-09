@@ -1,14 +1,17 @@
 package scraml.libs
 
-import _root_.io.vrap.rmf.raml.model.types.ObjectType
 import scraml.LibrarySupport._
 import scraml.MetaUtil.packageTerm
+import scraml.ModelGen.isSingleton
 import scraml.RMFUtil.getAnnotation
-import scraml.{DefnWithCompanion, LibrarySupport, ModelGen, ModelGenContext, RMFUtil}
+import scraml.{DefnWithCompanion, LibrarySupport, ModelGenContext}
 
-import scala.meta._
+import io.vrap.rmf.raml.model.types.{ObjectType, StringType}
 
 object CirceJsonSupport extends LibrarySupport {
+  import scala.meta._
+  import scala.collection.JavaConverters._
+
   private def shouldDeriveJson(objectType: ObjectType): Boolean =
     getAnnotation(objectType)("scala-derive-json").forall(_.getValue.getValue.toString.toBoolean)
 
@@ -31,10 +34,6 @@ object CirceJsonSupport extends LibrarySupport {
           aDecoder.either(bDecoder)(c)
       }
      """.stats
-
-  private def isSingleton(objectType: ObjectType, anyTypeName: String) =
-    ModelGen.isMapType(objectType, anyTypeName).isEmpty &&
-      RMFUtil.typeProperties(objectType).isEmpty
 
   private def deriveJsonTypeSwitch(context: ModelGenContext): List[Stat] =
     if (shouldDeriveJson(context.objectType)) {
@@ -353,4 +352,81 @@ object CirceJsonSupport extends LibrarySupport {
 
   override def modifyPackageObject: Pkg.Object => Pkg.Object =
     appendPkgObjectStats(_, eitherCodec)
+
+  override def modifyEnum(
+      enumType: StringType
+  )(enumTrait: Defn.Trait, companion: Option[Defn.Object]): DefnWithCompanion[Defn.Trait] = {
+    val enumDecode = Defn.Val(
+      List(Mod.Implicit()),
+      List(Pat.Var(Term.Name("decode"))),
+      Some(Type.Apply(Type.Name("Decoder"), List(Type.Name(enumType.getName)))),
+      Term.Apply(
+        Term.Select(
+          Term.ApplyType(Term.Name("Decoder"), List(Type.Name("String"))),
+          Term.Name("emap")
+        ),
+        List(
+          Term.PartialFunction(
+            enumType.getEnum.asScala
+              .map(instance =>
+                Case(
+                  Lit.String(instance.getValue.toString),
+                  None,
+                  Term.Apply(Term.Name("Right"), List(Term.Name(instance.getValue.toString)))
+                )
+              )
+              .toList ++ List(
+              Case(
+                Pat.Var(Term.Name("other")),
+                None,
+                Term.Apply(
+                  Term.Name("Left"),
+                  List(
+                    Term.Interpolate(
+                      Term.Name("s"),
+                      List(Lit.String("invalid enum value: "), Lit.String("")),
+                      List(Term.Name("other"))
+                    )
+                  )
+                )
+              )
+            )
+          )
+        )
+      )
+    )
+
+    val enumEncode = Defn.Val(
+      List(Mod.Implicit()),
+      List(Pat.Var(Term.Name("encode"))),
+      Some(Type.Apply(Type.Name("Encoder"), List(Type.Name(enumType.getName)))),
+      Term.Apply(
+        Term.Select(
+          Term.ApplyType(Term.Name("Encoder"), List(Type.Name("String"))),
+          Term.Name("contramap")
+        ),
+        List(
+          Term.PartialFunction(
+            enumType.getEnum.asScala
+              .map(instance =>
+                Case(
+                  Term.Name(instance.getValue.toString),
+                  None,
+                  Lit.String(instance.getValue.toString)
+                )
+              )
+              .toList
+          )
+        )
+      )
+    )
+
+    val stats =
+      q"""
+        import io.circe._
+        $enumEncode
+        $enumDecode
+       """.stats
+    DefnWithCompanion(enumTrait, companion.map(appendObjectStats(_, stats)))
+  }
 }

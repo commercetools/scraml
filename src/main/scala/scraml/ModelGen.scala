@@ -94,10 +94,10 @@ final case class ModelGenContext(
         .flatMap(entry => api.typesByName.get(entry._1))
   }
 
-  def typeProperties: Iterator[Property] = RMFUtil.typeProperties(objectType)
-
+  lazy val typeProperties: Seq[Property] = RMFUtil.typeProperties(objectType).toSeq
   lazy val isSealed: Boolean = getSubTypes.forall(getPackageName(_).contains(packageName))
   lazy val isMapType: Option[MapTypeSpec] = ModelGen.isMapType(objectType, anyTypeName)
+  lazy val isSingleton: Boolean           = isMapType.isEmpty && typeProperties.isEmpty
 
   def typeParams: List[Term.Param] = isMapType match {
     case Some(mapType) =>
@@ -137,6 +137,11 @@ trait LibrarySupport {
     DefnWithCompanion(traitDef, companion)
 
   def modifyPackageObject: Pkg.Object => Pkg.Object = identity
+
+  def modifyEnum(
+      enumType: StringType
+  )(enumTrait: Defn.Trait, companion: Option[Defn.Object]): DefnWithCompanion[Defn.Trait] =
+    DefnWithCompanion(enumTrait, companion)
 }
 
 object LibrarySupport {
@@ -162,6 +167,12 @@ object LibrarySupport {
     }
   def applyPackageObject(packageObject: Pkg.Object)(libs: List[LibrarySupport]): Pkg.Object =
     libs.foldLeft(packageObject: Pkg.Object) { case (acc, lib) => lib.modifyPackageObject(acc) }
+  def applyEnum(enumType: StringType)(enumTrait: Defn.Trait, companion: Defn.Object)(
+      libs: List[LibrarySupport]
+  ): DefnWithCompanion[Defn.Trait] =
+    libs.foldLeft(DefnWithCompanion(enumTrait, Some(companion))) { case (acc, lib) =>
+      lib.modifyEnum(enumType)(acc.defn, acc.companion)
+    }
 
   def appendObjectStats(defn: Defn.Object, stats: List[Stat]): Defn.Object =
     defn.copy(templ = defn.templ.copy(stats = defn.templ.stats ++ stats))
@@ -209,7 +220,14 @@ object ModelGen {
       case _: BooleanType     => TypeRefDetails(Type.Name("Boolean"))
       case _: IntegerType     => TypeRefDetails(Type.Name("Int"))
       case number: NumberType => TypeRefDetails(Type.Name(numberTypeString(number)))
-      case _: StringType      => TypeRefDetails(Type.Name("String"))
+      // only use enum type names on top-level defined enums
+      // we would need to generate types for property types otherwise
+      case _: StringType if apiType.eContainer().eClass().getName == "Property" =>
+        TypeRefDetails(Type.Name("String"))
+      case stringEnum: StringType if Option(stringEnum.getEnum).forall(!_.isEmpty) =>
+        TypeRefDetails(Type.Name(stringEnum.getName))
+      case _: StringType =>
+        TypeRefDetails(Type.Name("String"))
       case array: ArrayType =>
         val arrayType = getAnnotation(array)("scala-array-type")
           .map(_.getValue.getValue.toString)
@@ -277,6 +295,10 @@ object ModelGen {
     case "string" => Type.Name("String")
     case "any"    => typeFromName(anyTypeName)
   }
+
+  def isSingleton(objectType: ObjectType, anyTypeName: String): Boolean =
+    ModelGen.isMapType(objectType, anyTypeName).isEmpty &&
+      RMFUtil.typeProperties(objectType).isEmpty
 
   def isMapType(objectType: ObjectType, anyTypeName: String): Option[MapTypeSpec] = {
     getAnnotation(objectType)("asMap").map(_.getValue) match {

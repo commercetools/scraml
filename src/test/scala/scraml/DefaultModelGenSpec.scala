@@ -21,7 +21,7 @@ class DefaultModelGenSpec extends AnyFlatSpec with Matchers {
     val generated = ModelGenRunner.run(DefaultModelGen)(params).unsafeRunSync()
 
     generated.files match {
-      case baseType :: dataType :: emptyBase :: noProps :: packageObject :: Nil =>
+      case baseType :: dataType :: emptyBase :: noProps :: enumType :: packageObject :: Nil =>
         baseType.source.packageName should be("datatypes")
         baseType.source.source.toString() should be(
           "sealed trait BaseType extends Any { def id: String }"
@@ -44,6 +44,12 @@ class DefaultModelGenSpec extends AnyFlatSpec with Matchers {
         noProps.source.source.toString() should be(
           s"""case object NoProps extends EmptyBase""".stripMargin
         )
+
+        enumType.source.source.toString() should be("sealed trait SomeEnum")
+        enumType.source.companion.map(_.toString()) should be(Some(s"""object SomeEnum {
+             |  case object A extends SomeEnum
+             |  case object B extends SomeEnum
+             |}""".stripMargin))
 
         packageObject.source.source.toString should be("package object scraml")
 
