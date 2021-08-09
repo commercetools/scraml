@@ -131,6 +131,11 @@ final case class ModelGenContext(
 final case class DefnWithCompanion[T <: Defn with Member](defn: T, companion: Option[Defn.Object])
 
 trait LibrarySupport {
+  abstract class HasProperties(names: Seq[String]) {
+    final def unapply(defn: Defn.Class): Boolean =
+      names.forall(n => defn.ctor.paramss.head.exists(_.name.value == n))
+  }
+
   def modifyClass(classDef: Defn.Class, companion: Option[Defn.Object])(
       context: ModelGenContext
   ): DefnWithCompanion[Defn.Class] =
