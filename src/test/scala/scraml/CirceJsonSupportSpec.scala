@@ -153,15 +153,4 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers {
              |}""".stripMargin)
     }
   }
-
-  case class MapLike(values: Map[String, String])
-
-  import io.circe.syntax._
-
-  implicit def json: Codec[MapLike] = new Codec[MapLike] {
-    override def apply(a: MapLike): Json =
-      a.values.asJson
-    override def apply(c: HCursor): Result[MapLike] =
-      c.as[Map[String, String]].map(MapLike.apply)
-  }
 }
