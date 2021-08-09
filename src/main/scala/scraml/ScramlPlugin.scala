@@ -49,7 +49,6 @@ object ScramlPlugin extends AutoPlugin {
           generated.files.map(_.file)
         }
         .getOrElse(List.empty)
-
     }.taskValue
   )
 }
