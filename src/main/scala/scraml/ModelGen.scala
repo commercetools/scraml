@@ -31,7 +31,8 @@ final case class ModelGenParams(
     basePackage: String,
     jsonSupport: Option[JsonSupport],
     librarySupport: Set[LibrarySupport],
-    formatConfig: Option[File]
+    formatConfig: Option[File],
+    generateDateCreated: Boolean = false
 ) {
   def allLibraries: List[LibrarySupport] = jsonSupport
     .map {
