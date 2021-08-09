@@ -79,19 +79,49 @@ object CirceJsonSupport extends LibrarySupport {
                       Some(Type.Name("Json")),
                       Term.Match(
                         Term.Name(typeName.toLowerCase),
-                        subTypes.map(subType =>
-                          Case(
-                            Pat.Typed(
-                              Pat.Var(Term.Name(subType.getName.toLowerCase)),
-                              Type.Name(subType.getName)
-                            ),
-                            None,
-                            Term.Apply(
-                              Term.Name(s"${subType.getName}Encoder"),
-                              List(Term.Name(subType.getName.toLowerCase))
+                        subTypes.map { case subType: ObjectType =>
+                          if (Option(context.objectType.getDiscriminator).isDefined)
+                            Case(
+                              Pat.Typed(
+                                Pat.Var(Term.Name(subType.getName.toLowerCase)),
+                                Type.Name(subType.getName)
+                              ),
+                              None,
+                              Term.Apply(
+                                Term.Select(
+                                  Term.Apply(
+                                    Term.Name(s"${subType.getName}Encoder"),
+                                    List(Term.Name(subType.getName.toLowerCase))
+                                  ),
+                                  Term.Name("mapObject")
+                                ),
+                                List(
+                                  Term.Apply(
+                                    Term.Select(Term.Placeholder(), Term.Name("add")),
+                                    List(
+                                      Lit.String(context.objectType.getDiscriminator),
+                                      Term.Apply(
+                                        Term.Name("JString"),
+                                        List(Lit.String(subType.getDiscriminatorValue))
+                                      )
+                                    )
+                                  )
+                                )
+                              )
                             )
-                          )
-                        ),
+                          else
+                            Case(
+                              Pat.Typed(
+                                Pat.Var(Term.Name(subType.getName.toLowerCase)),
+                                Type.Name(subType.getName)
+                              ),
+                              None,
+                              Term.Apply(
+                                Term.Name(s"${subType.getName}Encoder"),
+                                List(Term.Name(subType.getName.toLowerCase))
+                              )
+                            )
+                        },
                         Nil
                       )
                     )
@@ -233,14 +263,7 @@ object CirceJsonSupport extends LibrarySupport {
   ): DefnWithCompanion[Defn.Trait] =
     DefnWithCompanion(
       defn = traitDef,
-      companion = {
-        val jsonStats =
-          if (!context.isSealed || Option(context.objectType.getDiscriminator).isEmpty) {
-            deriveJsonTypeSwitch(context)
-          } else deriveJson(context.objectType)
-
-        companion.map(appendObjectStats(_, jsonStats))
-      }
+      companion = companion.map(appendObjectStats(_, deriveJsonTypeSwitch(context)))
     )
 
   override def modifyPackageObject: Pkg.Object => Pkg.Object =

@@ -25,7 +25,7 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers {
         noDiscBase.source.companion.map(_.toString()) should be(
           Some(s"""object NoDiscriminatorBase {
                   |  import io.circe.Decoder.Result
-                  |  import io.circe.{ HCursor, Json, Decoder, Encoder }
+                  |  import io.circe._
                   |  implicit def decodeAll(implicit NoDiscriminatorSub1Decoder: Decoder[NoDiscriminatorSub1], NoDiscriminatorSub2Decoder: Decoder[NoDiscriminatorSub2]): Decoder[NoDiscriminatorBase] = new Decoder[NoDiscriminatorBase] { override def apply(c: HCursor): Result[NoDiscriminatorBase] = NoDiscriminatorSub1Decoder.tryDecode(c).fold(_ => NoDiscriminatorSub2Decoder.tryDecode(c), Right(_)) }
                   |  implicit def encodeAll(implicit NoDiscriminatorSub1Encoder: Encoder[NoDiscriminatorSub1], NoDiscriminatorSub2Encoder: Encoder[NoDiscriminatorSub2]): Encoder[NoDiscriminatorBase] = new Encoder[NoDiscriminatorBase] {
                   |    override def apply(nodiscriminatorbase: NoDiscriminatorBase): Json = nodiscriminatorbase match {
@@ -43,10 +43,23 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers {
           "sealed trait BaseType extends Any { def id: String }"
         )
         baseType.source.companion.map(_.toString()) should be(Some(s"""object BaseType {
-             |  import io.circe._
-             |  import io.circe.generic.semiauto._
-             |  implicit lazy val json: Codec[BaseType] = deriveCodec[BaseType]
-             |}""".stripMargin))
+                                                                      |  import io.circe.Decoder.Result
+                                                                      |  import io.circe._
+                                                                      |  implicit def decodeAll(implicit DataTypeDecoder: Decoder[DataType]): Decoder[BaseType] = new Decoder[BaseType] {
+                                                                      |    override def apply(c: HCursor): Result[BaseType] = c.downField("type").as[String] match {
+                                                                      |      case Right("data") =>
+                                                                      |        DataTypeDecoder(c)
+                                                                      |      case other =>
+                                                                      |        Left(DecodingFailure(s"unknown discriminator: $$other", c.history))
+                                                                      |    }
+                                                                      |  }
+                                                                      |  implicit def encodeAll(implicit DataTypeEncoder: Encoder[DataType]): Encoder[BaseType] = new Encoder[BaseType] {
+                                                                      |    override def apply(basetype: BaseType): Json = basetype match {
+                                                                      |      case datatype: DataType =>
+                                                                      |        DataTypeEncoder(datatype).mapObject(_.add("type", JString("data")))
+                                                                      |    }
+                                                                      |  }
+                                                                      |}""".stripMargin))
 
         baseType.source.name should be("BaseType")
         baseType.file.getPath should be("target/scraml-circe-json-test/scraml/datatypes.scala")
@@ -70,7 +83,7 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers {
         noSealedBase.source.source.toString() should be("trait NoSealedBase")
         noSealedBase.source.companion.map(_.toString()) should be(Some(s"""object NoSealedBase {
                                                                           |  import io.circe.Decoder.Result
-                                                                          |  import io.circe.{ HCursor, Json, Decoder, Encoder }
+                                                                          |  import io.circe._
                                                                           |  implicit def decodeAll(implicit OtherSubDecoder: Decoder[OtherSub]): Decoder[NoSealedBase] = new Decoder[NoSealedBase] {
                                                                           |    override def apply(c: HCursor): Result[NoSealedBase] = c.downField("type").as[String] match {
                                                                           |      case Right("other-sub") =>
@@ -82,7 +95,7 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers {
                                                                           |  implicit def encodeAll(implicit OtherSubEncoder: Encoder[OtherSub]): Encoder[NoSealedBase] = new Encoder[NoSealedBase] {
                                                                           |    override def apply(nosealedbase: NoSealedBase): Json = nosealedbase match {
                                                                           |      case othersub: OtherSub =>
-                                                                          |        OtherSubEncoder(othersub)
+                                                                          |        OtherSubEncoder(othersub).mapObject(_.add("type", JString("other-sub")))
                                                                           |    }
                                                                           |  }
                                                                           |}""".stripMargin))
