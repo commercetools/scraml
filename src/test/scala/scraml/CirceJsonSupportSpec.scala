@@ -132,7 +132,7 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers {
              |  import io.circe.syntax._
              |  import io.circe._
              |  import io.circe.Decoder.Result
-             |  implicit def json: Codec[MapLike] = new Codec[MapLike] {
+             |  implicit lazy val json: Codec[MapLike] = new Codec[MapLike] {
              |    override def apply(a: MapLike): Json = a.values.asJson
              |    override def apply(c: HCursor): Result[MapLike] = c.as[Map[String, String]].map(MapLike.apply)
              |  }

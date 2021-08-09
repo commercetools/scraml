@@ -315,7 +315,7 @@ object CirceJsonSupport extends LibrarySupport {
           import io.circe._
           import io.circe.Decoder.Result
 
-          implicit def json: Codec[${Type.Name(context.objectType.getName)}] = new Codec[${Type
+          implicit lazy val json: Codec[${Type.Name(context.objectType.getName)}] = new Codec[${Type
             .Name(context.objectType.getName)}] {
             override def apply(a: ${Type.Name(context.objectType.getName)}): Json =
               a.values.asJson
