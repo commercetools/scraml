@@ -1,6 +1,8 @@
 package scraml
 
 import cats.effect.unsafe.implicits.global
+import io.circe.Decoder.Result
+import io.circe.{Codec, HCursor, Json}
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 
@@ -20,7 +22,7 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers {
     val generated = ModelGenRunner.run(DefaultModelGen)(params).unsafeRunSync()
 
     generated.files match {
-      case noDiscBase :: _ :: _ :: baseType :: dataType :: emptyBase :: noProps :: noSealedBase :: otherSub :: packageObject :: Nil =>
+      case noDiscBase :: _ :: _ :: baseType :: dataType :: emptyBase :: noProps :: noSealedBase :: _ :: mapLike :: packageObject :: Nil =>
         noDiscBase.source.source.toString() should be("sealed trait NoDiscriminatorBase")
         noDiscBase.source.companion.map(_.toString()) should be(
           Some(s"""object NoDiscriminatorBase {
@@ -103,21 +105,38 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers {
         noSealedBase.source.companion.map(_.toString()) should be(Some(s"""object NoSealedBase {
                                                                           |  import io.circe.Decoder.Result
                                                                           |  import io.circe._
-                                                                          |  implicit def decodeAll(implicit OtherSubDecoder: Decoder[OtherSub]): Decoder[NoSealedBase] = new Decoder[NoSealedBase] {
+                                                                          |  implicit def decodeAll(implicit OtherSubDecoder: Decoder[OtherSub], MapLikeDecoder: Decoder[MapLike]): Decoder[NoSealedBase] = new Decoder[NoSealedBase] {
                                                                           |    override def apply(c: HCursor): Result[NoSealedBase] = c.downField("type").as[String] match {
                                                                           |      case Right("other-sub") =>
                                                                           |        OtherSubDecoder(c)
+                                                                          |      case Right("map-like") =>
+                                                                          |        MapLikeDecoder(c)
                                                                           |      case other =>
                                                                           |        Left(DecodingFailure(s"unknown discriminator: $$other", c.history))
                                                                           |    }
                                                                           |  }
-                                                                          |  implicit def encodeAll(implicit OtherSubEncoder: Encoder[OtherSub]): Encoder[NoSealedBase] = new Encoder[NoSealedBase] {
+                                                                          |  implicit def encodeAll(implicit OtherSubEncoder: Encoder[OtherSub], MapLikeEncoder: Encoder[MapLike]): Encoder[NoSealedBase] = new Encoder[NoSealedBase] {
                                                                           |    override def apply(nosealedbase: NoSealedBase): Json = nosealedbase match {
                                                                           |      case othersub: OtherSub =>
                                                                           |        OtherSubEncoder(othersub).mapObject(_.add("type", Json.fromString("other-sub")))
+                                                                          |      case maplike: MapLike =>
+                                                                          |        MapLikeEncoder(maplike).mapObject(_.add("type", Json.fromString("map-like")))
                                                                           |    }
                                                                           |  }
                                                                           |}""".stripMargin))
+        mapLike.source.source.toString() should be(
+          s"""final case class MapLike(values: Map[String, String]) extends NoSealedBase""".stripMargin
+        )
+
+        mapLike.source.companion.map(_.toString()) should be(Some(s"""object MapLike {
+             |  import io.circe.syntax._
+             |  import io.circe._
+             |  import io.circe.Decoder.Result
+             |  implicit def json: Codec[MapLike] = new Codec[MapLike] {
+             |    override def apply(a: MapLike): Json = a.values.asJson
+             |    override def apply(c: HCursor): Result[MapLike] = c.as[Map[String, String]].map(MapLike.apply)
+             |  }
+             |}""".stripMargin))
 
         packageObject.source.source.toString should be(s"""package object scraml {
              |  import io.circe.Decoder.Result
@@ -133,5 +152,16 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers {
              |  implicit def eitherDecoder[A, B](implicit aDecoder: Decoder[A], bDecoder: Decoder[B]): Decoder[Either[A, B]] = new Decoder[Either[A, B]] { override def apply(c: HCursor): Result[Either[A, B]] = aDecoder.either(bDecoder)(c) }
              |}""".stripMargin)
     }
+  }
+
+  case class MapLike(values: Map[String, String])
+
+  import io.circe.syntax._
+
+  implicit def json: Codec[MapLike] = new Codec[MapLike] {
+    override def apply(a: MapLike): Json =
+      a.values.asJson
+    override def apply(c: HCursor): Result[MapLike] =
+      c.as[Map[String, String]].map(MapLike.apply)
   }
 }

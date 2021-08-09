@@ -67,6 +67,8 @@ final case class ApiContext(private val api: Api) {
     }.toMap
 }
 
+final case class MapTypeSpec(keyType: Type, valueType: Type, singleValue: Boolean = false)
+
 final case class ModelGenContext(
     packageName: String,
     objectType: ObjectType,
@@ -82,12 +84,6 @@ final case class ModelGenContext(
 
   lazy val anyTypeName: String = params.jsonSupport.map(_.jsonType).getOrElse("Any")
 
-  /** map type refs from the 'asMap' annotation to real scala types */
-  def mapTypeToScala: String => Type.Ref = {
-    case "string" => Type.Name("String")
-    case "any"    => typeFromName(anyTypeName)
-  }
-
   def getSubTypes: Iterator[AnyType] = {
     objectType.getSubTypes.asScala.filter(_.getName != objectType.getName).iterator ++
       api.scalaExtends
@@ -100,6 +96,25 @@ final case class ModelGenContext(
   def typeProperties: Iterator[Property] = RMFUtil.typeProperties(objectType)
 
   lazy val isSealed: Boolean = getSubTypes.forall(getPackageName(_).contains(packageName))
+  lazy val isMapType: Option[MapTypeSpec] = ModelGen.isMapType(objectType, anyTypeName)
+
+  def typeParams: List[Term.Param] = isMapType match {
+    case Some(mapType) =>
+      List(
+        Term.Param(
+          Nil,
+          Term.Name("values"),
+          Some(
+            Type.Apply(
+              Type.Name("Map"),
+              List(mapType.keyType, mapType.valueType)
+            )
+          ),
+          None
+        )
+      )
+    case None => typeProperties.flatMap(ModelGen.scalaProperty(this)(_)).toList
+  }
 }
 
 final case class DefnWithCompanion[T <: Defn with Member](defn: T, companion: Option[Defn.Object])
@@ -245,6 +260,54 @@ object ModelGen {
       )
     } else Some(TypeRef(typeRef.baseType, typeRef.packageName, typeRef.defaultValue))
   }
+
+  def scalaProperty(context: ModelGenContext)(prop: Property): Option[Term.Param] = {
+    lazy val optional = !prop.getRequired
+    val scalaTypeAnnotation =
+      Option(prop.getAnnotation("scala-type")).map(_.getValue.getValue.toString)
+
+    ModelGen
+      .scalaTypeRef(prop.getType, optional, scalaTypeAnnotation, context.anyTypeName)
+      .map(ref => Term.Param(Nil, Term.Name(prop.getName), Some(ref.scalaType), ref.defaultValue))
+  }
+
+  /** map type refs from the 'asMap' annotation to real scala types */
+  private def mapTypeToScala(anyTypeName: String): String => Type.Ref = {
+    case "string" => Type.Name("String")
+    case "any"    => typeFromName(anyTypeName)
+  }
+
+  def isMapType(objectType: ObjectType, anyTypeName: String): Option[MapTypeSpec] = {
+    getAnnotation(objectType)("asMap").map(_.getValue) match {
+      case Some(asMap: ObjectInstance) =>
+        val properties = asMap.getValue.asScala
+        for {
+          keyType   <- properties.find(_.getName == "key").map(_.getValue.getValue.toString)
+          valueType <- properties.find(_.getName == "value").map(_.getValue.getValue.toString)
+        } yield MapTypeSpec(
+          mapTypeToScala(anyTypeName)(keyType),
+          mapTypeToScala(anyTypeName)(valueType)
+        )
+
+      case _ =>
+        RMFUtil
+          .typeProperties(objectType)
+          .filter(prop => Option(prop.getPattern).isDefined)
+          .flatMap { prop =>
+            lazy val isSingle = prop.getName != "//"
+            lazy val optional = !prop.getRequired
+            val scalaTypeAnnotation =
+              Option(prop.getAnnotation("scala-type")).map(_.getValue.getValue.toString)
+
+            ModelGen.scalaTypeRef(prop.getType, optional, scalaTypeAnnotation, anyTypeName).map {
+              valueType =>
+                MapTypeSpec(Type.Name("String"), valueType.scalaType, isSingle)
+            }
+          }
+          .find(_ => true)
+    }
+  }
+
 }
 
 object ModelGenRunner {

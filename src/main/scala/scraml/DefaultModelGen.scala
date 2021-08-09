@@ -7,7 +7,6 @@ import org.scalafmt.interfaces.Scalafmt
 
 import java.io.File
 import java.time.LocalDateTime
-import scala.jdk.CollectionConverters._
 import scala.meta._
 
 sealed trait GeneratedSource {
@@ -49,67 +48,7 @@ object DefaultModelGen extends ModelGen {
   import MetaUtil._
   import RMFUtil._
 
-  private def scalaProperty(context: ModelGenContext)(prop: Property): Option[Term.Param] = {
-    lazy val optional = !prop.getRequired
-    val scalaTypeAnnotation =
-      Option(prop.getAnnotation("scala-type")).map(_.getValue.getValue.toString)
-
-    val typeRef =
-      ModelGen.scalaTypeRef(prop.getType, optional, scalaTypeAnnotation, context.anyTypeName)
-
-    if (Option(prop.getPattern).isDefined) {
-      prop.getName match {
-        case "//" =>
-          typeRef.map(ref =>
-            Term.Param(
-              Nil,
-              Term.Name("values"),
-              Some(Type.Apply(Type.Name("Map"), List(Type.Name("String"), ref.scalaType))),
-              None
-            )
-          )
-        case _ =>
-          typeRef.map(ref =>
-            Term.Param(
-              Nil,
-              Term.Name("value"),
-              Some(Type.Apply(Type.Name("Tuple2"), List(Type.Name("String"), ref.scalaType))),
-              None
-            )
-          )
-      }
-    } else
-      typeRef.map(ref =>
-        Term.Param(Nil, Term.Name(prop.getName), Some(ref.scalaType), ref.defaultValue)
-      )
-  }
-
   private def caseClassSource(context: ModelGenContext): Defn.Class = {
-    val classParams = getAnnotation(context.objectType)("asMap").map(_.getValue) match {
-      case Some(asMap: ObjectInstance) =>
-        val properties = asMap.getValue.asScala
-        val mapParam: Option[List[Term.Param]] = for {
-          keyType   <- properties.find(_.getName == "key").map(_.getValue.getValue.toString)
-          valueType <- properties.find(_.getName == "value").map(_.getValue.getValue.toString)
-        } yield List(
-          Term.Param(
-            Nil,
-            Term.Name("values"),
-            Some(
-              Type.Apply(
-                Type.Name("Map"),
-                List(context.mapTypeToScala(keyType), context.mapTypeToScala(valueType))
-              )
-            ),
-            None
-          )
-        )
-        mapParam.toList
-
-      case _ =>
-        List(context.typeProperties.flatMap(scalaProperty(context)).toList)
-    }
-
     Defn.Class(
       mods = List(Mod.Final(), Mod.Case()),
       name = Type.Name(context.objectType.getName),
@@ -117,7 +56,7 @@ object DefaultModelGen extends ModelGen {
       ctor = Ctor.Primary(
         mods = Nil,
         name = Name.Anonymous(),
-        paramss = classParams
+        paramss = List(context.typeParams)
       ),
       templ = Template(
         early = Nil,
@@ -328,6 +267,7 @@ object DefaultModelGen extends ModelGen {
   private def generatePackageObject(params: ModelGenParams): IO[GeneratedFile] = for {
     packageObjectFile <- IO {
       val file = new File(new File(basePackageFilePath(params)), "package.scala")
+      file.delete()
       file.getParentFile.mkdirs()
       file
     }
@@ -346,7 +286,7 @@ object DefaultModelGen extends ModelGen {
       (packageObject, s"$packageStatement${packageObject.toString}")
     }
     (theObject, source) = packageObjectWithSource
-    _ <- FileUtil.writeToFile(packageObjectFile, source.toString(), true)
+    _ <- FileUtil.writeToFile(packageObjectFile, source)
   } yield GeneratedFile(
     GeneratedTypeSource("package.scala", theObject, params.basePackage, "", None),
     packageObjectFile

@@ -4,7 +4,7 @@ import _root_.io.vrap.rmf.raml.model.types.ObjectType
 import scraml.LibrarySupport._
 import scraml.MetaUtil.packageTerm
 import scraml.RMFUtil.getAnnotation
-import scraml.{DefnWithCompanion, LibrarySupport, ModelGenContext, RMFUtil}
+import scraml.{DefnWithCompanion, LibrarySupport, ModelGen, ModelGenContext, RMFUtil}
 
 import scala.meta._
 
@@ -32,6 +32,10 @@ object CirceJsonSupport extends LibrarySupport {
       }
      """.stats
 
+  private def isSingleton(objectType: ObjectType, anyTypeName: String) =
+    ModelGen.isMapType(objectType, anyTypeName).isEmpty &&
+      RMFUtil.typeProperties(objectType).isEmpty
+
   private def deriveJsonTypeSwitch(context: ModelGenContext): List[Stat] =
     if (shouldDeriveJson(context.objectType)) {
       val typeName = context.objectType.getName
@@ -47,7 +51,7 @@ object CirceJsonSupport extends LibrarySupport {
               List(
                 subTypes.flatMap {
                   case subType: ObjectType
-                      if RMFUtil.typeProperties(subType).nonEmpty => // filter out case objects
+                      if !isSingleton(subType, context.anyTypeName) => // filter out case objects
                     Some(
                       Term.Param(
                         List(Mod.Implicit()),
@@ -87,9 +91,9 @@ object CirceJsonSupport extends LibrarySupport {
                         Term.Name(typeName.toLowerCase),
                         subTypes.map {
                           case subType: ObjectType
-                              if Option(context.objectType.getDiscriminator).isDefined && RMFUtil
-                                .typeProperties(subType)
-                                .nonEmpty =>
+                              if Option(
+                                context.objectType.getDiscriminator
+                              ).isDefined && !isSingleton(subType, context.anyTypeName) =>
                             Case(
                               Pat.Typed(
                                 Pat.Var(Term.Name(subType.getName.toLowerCase)),
@@ -119,9 +123,9 @@ object CirceJsonSupport extends LibrarySupport {
                               )
                             )
                           case subType: ObjectType
-                              if Option(context.objectType.getDiscriminator).isEmpty && RMFUtil
-                                .typeProperties(subType)
-                                .nonEmpty =>
+                              if Option(
+                                context.objectType.getDiscriminator
+                              ).isEmpty && !isSingleton(subType, context.anyTypeName) =>
                             Case(
                               Pat.Typed(
                                 Pat.Var(Term.Name(subType.getName.toLowerCase)),
@@ -197,7 +201,7 @@ object CirceJsonSupport extends LibrarySupport {
                 List(Type.Name("String"))
               ),
               subTypes.map {
-                case subType: ObjectType if RMFUtil.typeProperties(subType).nonEmpty =>
+                case subType: ObjectType if !isSingleton(subType, context.anyTypeName) =>
                   Case(
                     Pat
                       .Extract(Term.Name("Right"), List(Lit.String(subType.getDiscriminatorValue))),
@@ -243,7 +247,7 @@ object CirceJsonSupport extends LibrarySupport {
               Nil,
               List(
                 subTypes.flatMap {
-                  case subType: ObjectType if RMFUtil.typeProperties(subType).nonEmpty =>
+                  case subType: ObjectType if !isSingleton(subType, context.anyTypeName) =>
                     Some(
                       Term.Param(
                         List(Mod.Implicit()),
@@ -303,12 +307,40 @@ object CirceJsonSupport extends LibrarySupport {
       """.stats
     } else List.empty
 
+  private def mapTypeCodec(context: ModelGenContext): List[Stat] =
+    if (shouldDeriveJson(context.objectType)) {
+      context.isMapType match {
+        case Some(mapType) =>
+          q"""import io.circe.syntax._
+          import io.circe._
+          import io.circe.Decoder.Result
+
+          implicit def json: Codec[${Type.Name(context.objectType.getName)}] = new Codec[${Type
+            .Name(context.objectType.getName)}] {
+            override def apply(a: ${Type.Name(context.objectType.getName)}): Json =
+              a.values.asJson
+            override def apply(c: HCursor): Result[${Type.Name(context.objectType.getName)}] =
+              c.as[Map[${mapType.keyType}, ${mapType.valueType}]].map(${Term.Name(
+            context.objectType.getName
+          )}.apply)
+          }
+        """.stats
+        case None => List.empty
+      }
+
+    } else List.empty
+
   override def modifyClass(classDef: Defn.Class, companion: Option[Defn.Object])(
       context: ModelGenContext
   ): DefnWithCompanion[Defn.Class] =
     DefnWithCompanion(
       classDef,
-      companion = companion.map(appendObjectStats(_, deriveJson(context.objectType)))
+      companion = companion.map(
+        appendObjectStats(
+          _,
+          if (context.isMapType.isDefined) mapTypeCodec(context) else deriveJson(context.objectType)
+        )
+      )
     )
 
   override def modifyTrait(traitDef: Defn.Trait, companion: Option[Defn.Object])(
