@@ -310,6 +310,12 @@ object CirceJsonSupport extends LibrarySupport {
     if (shouldDeriveJson(context.objectType)) {
       context.isMapType match {
         case Some(mapType) =>
+          val mapApply = Type.Apply(Type.Name("Map"), List(mapType.keyType, mapType.valueType))
+
+          val decodeType: Type.Apply = if (mapType.optional) {
+            Type.Apply(Type.Name("Option"), List(mapApply))
+          } else mapApply
+
           q"""import io.circe.syntax._
           import io.circe._
           import io.circe.Decoder.Result
@@ -319,7 +325,7 @@ object CirceJsonSupport extends LibrarySupport {
             override def apply(a: ${Type.Name(context.objectType.getName)}): Json =
               a.values.asJson
             override def apply(c: HCursor): Result[${Type.Name(context.objectType.getName)}] =
-              c.as[Map[${mapType.keyType}, ${mapType.valueType}]].map(${Term.Name(
+              c.as[$decodeType].map(${Term.Name(
             context.objectType.getName
           )}.apply)
           }

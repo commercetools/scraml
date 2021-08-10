@@ -68,7 +68,12 @@ final case class ApiContext(private val api: Api) {
     }.toMap
 }
 
-final case class MapTypeSpec(keyType: Type, valueType: Type, singleValue: Boolean = false)
+final case class MapTypeSpec(
+    keyType: Type,
+    valueType: Type,
+    singleValue: Boolean = false,
+    optional: Boolean = false
+)
 
 final case class ModelGenContext(
     packageName: String,
@@ -100,18 +105,27 @@ final case class ModelGenContext(
   lazy val isSingleton: Boolean           = isMapType.isEmpty && typeProperties.isEmpty
 
   def typeParams: List[Term.Param] = isMapType match {
-    case Some(mapType) =>
+    case Some(mapTypeSpec) =>
+      val mapApply = Type.Apply(
+        Type.Name("Map"),
+        List(mapTypeSpec.keyType, mapTypeSpec.valueType)
+      )
+
+      val finalType = if (mapTypeSpec.optional) {
+        Type.Apply(
+          Type.Name("Option"),
+          List(mapApply)
+        )
+      } else mapApply
+
       List(
         Term.Param(
           Nil,
           Term.Name("values"),
           Some(
-            Type.Apply(
-              Type.Name("Map"),
-              List(mapType.keyType, mapType.valueType)
-            )
+            finalType
           ),
-          None
+          if (mapTypeSpec.optional) Some(Term.Name("None")) else None
         )
       )
     case None => typeProperties.flatMap(ModelGen.scalaProperty(this)(_)).toList
@@ -253,7 +267,7 @@ object ModelGen {
           Type.Apply(
             Type.Name("Either"),
             union.getOneOf.asScala
-              .flatMap(scalaTypeRef(_, optional, None, defaultAnyTypeName))
+              .flatMap(scalaTypeRef(_, false, None, defaultAnyTypeName))
               .map(_.scalaType)
               .toList
           )
@@ -322,9 +336,13 @@ object ModelGen {
             val scalaTypeAnnotation =
               Option(prop.getAnnotation("scala-type")).map(_.getValue.getValue.toString)
 
+            val scalaMapRequired =
+              Option(prop.getAnnotation("scala-map-required"))
+                .forall(_.getValue.getValue.toString.toBoolean)
+
             ModelGen.scalaTypeRef(prop.getType, optional, scalaTypeAnnotation, anyTypeName).map {
               valueType =>
-                MapTypeSpec(Type.Name("String"), valueType.scalaType, isSingle)
+                MapTypeSpec(Type.Name("String"), valueType.scalaType, isSingle, !scalaMapRequired)
             }
           }
           .find(_ => true)

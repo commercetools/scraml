@@ -1,6 +1,7 @@
 package scraml
 
 import cats.effect.unsafe.implicits.global
+import io.vrap.rmf.raml.model.types.ObjectType
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 
@@ -79,5 +80,29 @@ class DefaultModelGenSpec extends AnyFlatSpec with Matchers {
     MetaUtil.typeFromName("a.b").toString() should be("a.b")
     MetaUtil.typeFromName("a.b.c").toString() should be("a.b.c")
     MetaUtil.typeFromName("a.b.c.d.e").toString() should be("a.b.c.d.e")
+  }
+
+  it should "generate map types" in {
+    val params = ModelGenParams(
+      new File(getClass.getClassLoader.getResource("maptype/maptype.raml").toURI),
+      new File("target/scraml-maptype-test"),
+      "scraml",
+      None,
+      Set.empty,
+      None
+    )
+
+    val generated = ModelGenRunner.run(DefaultModelGen)(params).unsafeRunSync()
+
+    generated.files.toList match {
+      case someMapType :: someMapTypeOpt :: _ :: Nil =>
+        someMapType.source.source.toString() should be(
+          "final case class SomeMapType(values: Map[String, String])"
+        )
+        someMapTypeOpt.source.source.toString() should be(
+          "final case class SomeMapTypeOpt(values: Option[Map[String, String]] = None)"
+        )
+      case _ => fail()
+    }
   }
 }
