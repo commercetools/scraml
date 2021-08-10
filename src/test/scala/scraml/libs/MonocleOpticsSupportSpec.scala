@@ -77,7 +77,7 @@ final class MonocleOpticsSupportSpec extends AnyWordSpec with Diagrams {
           """object BaseType {
             |  object Optics {
             |    import monocle.Getter
-            |    val id: Lens[BaseType, String] = Getter[BaseType, String](_.id)
+            |    val id: Getter[BaseType, String] = Getter[BaseType, String](_.id)
             |  }
             |}""".stripMargin
         )

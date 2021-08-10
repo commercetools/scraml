@@ -25,7 +25,7 @@ object MonocleOpticsSupport extends LibrarySupport {
               val propName = Term.Name(prop.name.value)
 
               List(q"""
-                val ${Pat.Var(propName)}: Lens[$classType, $propType] =
+                val ${Pat.Var(propName)}: Getter[$classType, $propType] =
                   Getter[$classType, $propType](_.$propName)
                 """
              )
