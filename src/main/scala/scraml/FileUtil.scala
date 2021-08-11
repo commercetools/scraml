@@ -4,16 +4,19 @@ import cats.effect.IO
 import cats.implicits._
 
 import java.io.{File, FileOutputStream}
-import java.nio.file.{Files, Paths}
+import java.nio.file.{Files, Path, Paths}
 import scala.collection.JavaConverters._
 
 object FileUtil {
+  def findFiles(parent: File): Iterator[Path] =
+    Files
+      .walk(Paths.get(parent.getAbsolutePath))
+      .iterator()
+      .asScala
+
   def deleteRecursively(path: File): IO[List[Either[Throwable, Boolean]]] =
     if (path.exists()) {
-      Files
-        .walk(Paths.get(path.getAbsolutePath))
-        .iterator()
-        .asScala
+      findFiles(path)
         .map(path => IO(path.toFile.delete()).attempt)
         .toList
         .reverse

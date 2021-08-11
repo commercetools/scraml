@@ -30,25 +30,37 @@ object ScramlPlugin extends AutoPlugin {
   override lazy val projectSettings: Seq[Setting[_]] = Seq(
     Compile / sourceGenerators += Def.task {
       val targetDir: File = (Compile / sourceManaged).value
+      // adapted from https://stackoverflow.com/questions/33897874/sbt-sourcegenerators-task-execute-only-if-a-file-changes
+      val cachedGeneration = FileFunction.cached(
+        streams.value.cacheDirectory / "scraml"
+      ) { (_: Set[File]) =>
+        ramlFile.value
+          .map { file =>
+            val params = ModelGenParams(
+              file,
+              targetDir,
+              basePackageName.value,
+              jsonSupport.value,
+              librarySupport.value,
+              formatConfig.value
+            )
 
-      ramlFile.value
-        .map { file =>
-          val params = ModelGenParams(
-            file,
-            targetDir,
-            basePackageName.value,
-            jsonSupport.value,
-            librarySupport.value,
-            formatConfig.value
-          )
+            val generated = ModelGenRunner.run(DefaultModelGen)(params).unsafeRunSync()
+            val s         = streams.value
+            s.log.info(s"generated API model for $file in $targetDir")
+            s.log.debug(generated.toString)
+            generated.files.map(_.file)
+          }
+          .getOrElse(List.empty)
+          .toSet
+      }
 
-          val generated = ModelGenRunner.run(DefaultModelGen)(params).unsafeRunSync()
-          val s         = streams.value
-          s.log.info(s"generated API model for $file in $targetDir")
-          s.log.debug(generated.toString)
-          generated.files.map(_.file)
-        }
-        .getOrElse(List.empty)
+      ramlFile.value match {
+        case Some(apiFile) =>
+          val inputFiles = FileUtil.findFiles(apiFile.getParentFile).map(_.toFile).toSet
+          cachedGeneration(inputFiles).toSeq
+        case None => Seq.empty
+      }
     }.taskValue
   )
 }
