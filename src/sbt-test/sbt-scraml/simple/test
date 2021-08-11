@@ -1,1 +1,3 @@
 > compile
+# compile again, should not yield errors
+> compile
