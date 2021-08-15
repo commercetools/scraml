@@ -28,7 +28,6 @@ lazy val root = (project in file("."))
       "io.circe" %% "circe-generic",
       "io.circe" %% "circe-parser"
     ).map(_ % circeVersion % Test),
-    libraryDependencies += "com.github.julien-truffaut" %% "monocle-core"  % "2.1.0" % Test,
     pluginCrossBuild / sbtVersion := {
       scalaBinaryVersion.value match {
         case "2.12" => "1.5.0" // set minimum sbt version

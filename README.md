@@ -16,5 +16,5 @@ there is a [test project](src/sbt-test/sbt-scraml/simple) that you can use as a 
 
 ```shell
 sbt scripted # runs all tests in src/sbt-test
-sbt scripted sbt-scraml/simple # runs a specific test
+sbt 'scripted sbt-scraml/simple' # runs a specific test (note use of quotes)
 ```

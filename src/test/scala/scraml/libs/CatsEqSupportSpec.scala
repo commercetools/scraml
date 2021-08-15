@@ -33,7 +33,7 @@ final class CatsEqSupportSpec extends AnyWordSpec with Diagrams {
         theCompanion === Some(
           """object DataType {
             |  import cats.kernel.Eq
-            |  implicit val DataTypeEq: Eq[DataType] = new Eq {
+            |  implicit val DataTypeEq: Eq[DataType] = new Eq[DataType] {
             |    override def eqv(a: DataType, b: DataType): Boolean = {
             |      a.id == b.id && a.foo == b.foo && a.customTypeProp == b.customTypeProp && a.customArrayTypeProp == b.customArrayTypeProp
             |    }

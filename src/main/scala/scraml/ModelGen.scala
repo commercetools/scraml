@@ -131,6 +131,17 @@ final case class ModelGenContext(
 final case class DefnWithCompanion[T <: Defn with Member](defn: T, companion: Option[Defn.Object])
 
 trait LibrarySupport {
+  case object HasAnyProperties {
+    def unapply(defn: Defn.Class): Boolean =
+      defn.ctor.paramss.exists(_.nonEmpty)
+
+    def unapply(defn: Defn.Trait): Boolean =
+      defn.templ.stats.exists {
+        case prop: Decl.Def if prop.paramss.isEmpty => true
+        case _ => false
+      }
+  }
+
   abstract class HasProperties(names: Seq[String]) {
     final def unapply(defn: Defn.Class): Boolean =
       names.forall(n => defn.ctor.paramss.head.exists(_.name.value == n))

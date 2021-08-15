@@ -7,10 +7,18 @@ import scala.meta._
 
 object MonocleOpticsSupport extends LibrarySupport {
   override def modifyClass(classDef: Defn.Class, companion: Option[Defn.Object])(context: ModelGenContext): DefnWithCompanion[Defn.Class] =
-    DefnWithCompanion(classDef, companion.map(appendObjectStats(_, generateOptics(classDef))))
+    classDef match {
+      case HasAnyProperties() =>
+        DefnWithCompanion(classDef, companion.map(appendObjectStats(_, generateOptics(classDef))))
+      case _ => super.modifyClass(classDef, companion)(context)
+    }
 
-    override def modifyTrait(traitDef: Defn.Trait, companion: Option[Defn.Object])(context: ModelGenContext): DefnWithCompanion[Defn.Trait] =
-      DefnWithCompanion(traitDef, companion.map(appendObjectStats(_, generateOptics(traitDef))))
+  override def modifyTrait(traitDef: Defn.Trait, companion: Option[Defn.Object])(context: ModelGenContext): DefnWithCompanion[Defn.Trait] =
+    traitDef match {
+      case HasAnyProperties() =>
+        DefnWithCompanion(traitDef, companion.map(appendObjectStats(_, generateOptics(traitDef))))
+      case _ => super.modifyTrait(traitDef, companion)(context)
+    }
 
   private def generateOptics(traitDef: Defn.Trait): List[Stat] =
     List[Stat](q"""

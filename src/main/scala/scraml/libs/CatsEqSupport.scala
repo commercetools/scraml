@@ -12,7 +12,7 @@ object CatsEqSupport extends LibrarySupport {
     q"""
       import cats.kernel.Eq
       implicit val ${Pat.Var(Term.Name(classDef.name.value + "Eq"))}: Eq[${classDef.name}] =
-        new Eq {
+        new Eq[${classDef.name}] {
           override def eqv(a: ${classDef.name}, b: ${classDef.name}): Boolean = {
             ${
               val checks = classDef match {
