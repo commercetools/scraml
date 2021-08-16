@@ -1,0 +1,4 @@
+> compile
+# make sure the expected output is present
+$ exists target/scala-2.13/src_managed/main/scraml/datatypes.scala
+$ exists target/scala-2.13/src_managed/main/scraml/package.scala

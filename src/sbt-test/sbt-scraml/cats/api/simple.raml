@@ -1,0 +1,14 @@
+#%RAML 1.0
+title: Hello world # required title
+# taken from https://github.com/raml-org/raml-spec
+annotationTypes: !include annotations.raml
+# this is not optional, the file included here must follow the format shown 'types.raml'
+types: !include types.raml
+
+/greeting: # optional resource
+  get: # HTTP method declaration
+    responses: # declare a response
+      200: # HTTP status code
+        body: # declare content of response
+          application/json: # media type
+            type: DataType
