@@ -68,9 +68,9 @@ final class MonocleOpticsSupportSpec extends AnyWordSpec with Diagrams {
       assert(generated.files.nonEmpty)
 
       val theCompanion = generated.files
-          .find(_.source.name == "BaseType")
-          .flatMap(_.source.companion)
-          .map(_.toString())
+        .find(_.source.name == "BaseType")
+        .flatMap(_.source.companion)
+        .map(_.toString())
 
       assert(
         theCompanion.contains(
