@@ -25,11 +25,11 @@ final class CatsShowSupportSpec extends AnyWordSpec with Diagrams {
       assert(generated.files.nonEmpty)
 
       val theCompanion = generated.files
-          .find(_.source.name == "DataType")
-          .flatMap(_.source.companion)
-          .map(_.toString())
-          /// Scalameta puts a trailing space after "instance =>"
-          .map(_.replaceAll(" \n", "\n"))
+        .find(_.source.name == "DataType")
+        .flatMap(_.source.companion)
+        .map(_.toString())
+        /// Scalameta puts a trailing space after "instance =>"
+        .map(_.replaceAll(" \n", "\n"))
 
       assert(
         theCompanion === Some(
@@ -81,8 +81,8 @@ final class CatsShowSupportSpec extends AnyWordSpec with Diagrams {
       assert(generated.files.nonEmpty)
 
       val theCompanion = generated.files
-          .find(_.source.name == "NoProps")
-          .flatMap(_.source.companion)
+        .find(_.source.name == "NoProps")
+        .flatMap(_.source.companion)
 
       assert(theCompanion.isEmpty)
     }
