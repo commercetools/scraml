@@ -9,7 +9,21 @@ inThisBuild(List(
       "priceless-backend@commercetools.com",
       url("https://commercetools.com")
     )
-  )
+  ),
+  githubWorkflowPublish := Seq(
+    WorkflowStep.Sbt(
+      List("ci-release"),
+      env = Map(
+        "PGP_PASSPHRASE" -> "${{ secrets.PGP_PASSPHRASE }}",
+        "PGP_SECRET" -> "${{ secrets.PGP_SECRET }}",
+        "SONATYPE_PASSWORD" -> "${{ secrets.SONATYPE_PASSWORD }}",
+        "SONATYPE_USERNAME" -> "${{ secrets.SONATYPE_USERNAME }}"
+      )
+    )
+  ),
+  githubWorkflowTargetTags ++= Seq("v*"),
+  githubWorkflowPublishTargetBranches := Seq(RefPredicate.StartsWith(Ref.Tag("v"))),
+  githubWorkflowBuild := Seq(WorkflowStep.Sbt(List("scalafmtCheckAll", "test", "scripted")))
 ))
 
 val circeVersion = "0.14.1"
