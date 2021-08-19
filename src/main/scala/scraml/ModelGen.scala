@@ -86,11 +86,13 @@ final case class ModelGenContext(
 
   lazy val anyTypeName: String = params.jsonSupport.map(_.jsonType).getOrElse("Any")
 
-  def getSubTypes: Iterator[AnyType] = {
-    objectType.getSubTypes.asScala.filter(_.getName != objectType.getName).iterator ++
+  def getSubTypes: Iterator[AnyType] = getSubTypes(objectType)
+
+  def getSubTypes(aType: ObjectType): Iterator[AnyType] = {
+    aType.getSubTypes.asScala.filter(_.getName != aType.getName).iterator ++
       api.scalaExtends
         .find { case (_, typeValue) =>
-          typeValue.getName == objectType.getName
+          typeValue.getName == aType.getName
         }
         .flatMap(entry => api.typesByName.get(entry._1))
   }

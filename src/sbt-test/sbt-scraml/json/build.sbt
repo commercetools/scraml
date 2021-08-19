@@ -3,7 +3,7 @@ val circeVersion = "0.14.1"
 lazy val root = (project in file("."))
   .settings(
     name := "scraml-json-test",
-    version := "0.1",
+    version := "0.2",
     ramlFile := Some(file("api/json.raml")),
     basePackageName := "scraml",
     jsonSupport := Some(scraml.Circe),
