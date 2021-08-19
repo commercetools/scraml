@@ -86,11 +86,13 @@ final case class ModelGenContext(
 
   lazy val anyTypeName: String = params.jsonSupport.map(_.jsonType).getOrElse("Any")
 
-  def getSubTypes: Iterator[AnyType] = {
-    objectType.getSubTypes.asScala.filter(_.getName != objectType.getName).iterator ++
+  def getSubTypes: Iterator[AnyType] = getSubTypes(objectType)
+
+  def getSubTypes(aType: ObjectType): Iterator[AnyType] = {
+    aType.getSubTypes.asScala.filter(_.getName != aType.getName).iterator ++
       api.scalaExtends
         .find { case (_, typeValue) =>
-          typeValue.getName == objectType.getName
+          typeValue.getName == aType.getName
         }
         .flatMap(entry => api.typesByName.get(entry._1))
   }
@@ -138,7 +140,7 @@ trait LibrarySupport {
     def unapply(defn: Defn.Trait): Boolean =
       defn.templ.stats.exists {
         case prop: Decl.Def if prop.paramss.isEmpty => true
-        case _ => false
+        case _                                      => false
       }
   }
 
@@ -169,15 +171,20 @@ trait LibrarySupport {
   )(enumTrait: Defn.Trait, companion: Option[Defn.Object]): DefnWithCompanion[Defn.Trait] =
     DefnWithCompanion(enumTrait, companion)
 
-  final protected def generatePropertiesCode(defn: Defn.Class)(f: Term.Param => List[Stat]): List[Stat] =
+  final protected def generatePropertiesCode(defn: Defn.Class)(
+      f: Term.Param => List[Stat]
+  ): List[Stat] =
     defn.ctor.paramss.flatMap(_.flatMap(f))
 
-  final protected def generatePropertiesCode(defn: Defn.Trait)(f: Decl.Def => List[Stat]): List[Stat] =
-    defn.templ.stats.collect {
-      case prop: Decl.Def if prop.paramss.isEmpty => prop
-    }.flatMap(f)
+  final protected def generatePropertiesCode(
+      defn: Defn.Trait
+  )(f: Decl.Def => List[Stat]): List[Stat] =
+    defn.templ.stats
+      .collect {
+        case prop: Decl.Def if prop.paramss.isEmpty => prop
+      }
+      .flatMap(f)
 }
-
 
 object LibrarySupport {
   def applyClass(

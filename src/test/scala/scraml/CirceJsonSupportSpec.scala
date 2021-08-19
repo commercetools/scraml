@@ -21,19 +21,17 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers {
     val generated = ModelGenRunner.run(DefaultModelGen)(params).unsafeRunSync()
 
     generated.files match {
-      case noDiscBase :: _ :: _ :: baseType :: dataType :: emptyBase :: noProps :: noSealedBase :: someEnum :: otherSub :: mapLike :: packageObject :: Nil =>
-        noDiscBase.source.source.toString() should be("sealed trait NoDiscriminatorBase")
+      case noDiscBase :: _ :: _ :: baseType :: _ :: _ :: dataType :: emptyBase :: noProps :: noSealedBase :: someEnum :: otherSub :: mapLike :: packageObject :: Nil =>
+        noDiscBase.source.source.toString() should be(
+          "sealed trait NoDiscriminatorBase { def toJson(): io.circe.Json }"
+        )
         noDiscBase.source.companion.map(_.toString()) should be(
-          Some(s"""object NoDiscriminatorBase {
-                  |  import io.circe.Decoder.Result
+          Some("""object NoDiscriminatorBase {
                   |  import io.circe._
-                  |  implicit def decodeAll(implicit NoDiscriminatorSub1Decoder: Decoder[NoDiscriminatorSub1], NoDiscriminatorSub2Decoder: Decoder[NoDiscriminatorSub2]): Decoder[NoDiscriminatorBase] = new Decoder[NoDiscriminatorBase] { override def apply(c: HCursor): Result[NoDiscriminatorBase] = NoDiscriminatorSub1Decoder.tryDecode(c).fold(_ => NoDiscriminatorSub2Decoder.tryDecode(c), Right(_)) }
-                  |  implicit def encodeAll(implicit NoDiscriminatorSub1Encoder: Encoder[NoDiscriminatorSub1], NoDiscriminatorSub2Encoder: Encoder[NoDiscriminatorSub2]): Encoder[NoDiscriminatorBase] = new Encoder[NoDiscriminatorBase] {
-                  |    override def apply(nodiscriminatorbase: NoDiscriminatorBase): Json = nodiscriminatorbase match {
-                  |      case nodiscriminatorsub1: NoDiscriminatorSub1 =>
-                  |        NoDiscriminatorSub1Encoder(nodiscriminatorsub1)
-                  |      case nodiscriminatorsub2: NoDiscriminatorSub2 =>
-                  |        NoDiscriminatorSub2Encoder(nodiscriminatorsub2)
+                  |  implicit val encodeAll: Encoder[NoDiscriminatorBase] = new Encoder[NoDiscriminatorBase] { override def apply(instance: NoDiscriminatorBase): Json = instance.toJson() }
+                  |  implicit def decodeAll(implicit NoDiscriminatorSub1Decoder: Decoder[NoDiscriminatorSub1], NoDiscriminatorSub2Decoder: Decoder[NoDiscriminatorSub2]): Decoder[NoDiscriminatorBase] = new Decoder[NoDiscriminatorBase] {
+                  |    override def apply(c: HCursor): Decoder.Result[NoDiscriminatorBase] = {
+                  |      NoDiscriminatorSub1Decoder.tryDecode(c).fold(_ => NoDiscriminatorSub2Decoder.tryDecode(c), Right(_))
                   |    }
                   |  }
                   |}""".stripMargin)
@@ -41,23 +39,23 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers {
 
         baseType.source.packageName should be("datatypes")
         baseType.source.source.toString() should be(
-          "sealed trait BaseType extends Any { def id: String }"
+          """sealed trait BaseType extends Any {
+            |  def id: String
+            |  def toJson(): io.circe.Json
+            |}""".stripMargin
         )
-        baseType.source.companion.map(_.toString()) should be(Some(s"""object BaseType {
+        baseType.source.companion.map(_.toString()) should be(Some("""object BaseType {
                                                                       |  import io.circe.Decoder.Result
                                                                       |  import io.circe._
-                                                                      |  implicit def decodeAll(implicit DataTypeDecoder: Decoder[DataType]): Decoder[BaseType] = new Decoder[BaseType] {
+                                                                      |  implicit val encodeAll: Encoder[BaseType] = new Encoder[BaseType] { override def apply(instance: BaseType): Json = instance.toJson() }
+                                                                      |  implicit def decodeAll(implicit DataTypeDecoder: Decoder[DataType], GrandchildTypeDecoder: Decoder[GrandchildType]): Decoder[BaseType] = new Decoder[BaseType] {
                                                                       |    override def apply(c: HCursor): Result[BaseType] = c.downField("type").as[String] match {
                                                                       |      case Right("data") =>
                                                                       |        DataTypeDecoder(c)
+                                                                      |      case Right("grandchild") =>
+                                                                      |        GrandchildTypeDecoder(c)
                                                                       |      case other =>
-                                                                      |        Left(DecodingFailure(s"unknown discriminator: $$other", c.history))
-                                                                      |    }
-                                                                      |  }
-                                                                      |  implicit def encodeAll(implicit DataTypeEncoder: Encoder[DataType]): Encoder[BaseType] = new Encoder[BaseType] {
-                                                                      |    override def apply(basetype: BaseType): Json = basetype match {
-                                                                      |      case datatype: DataType =>
-                                                                      |        DataTypeEncoder(datatype).mapObject(_.add("type", Json.fromString("data")))
+                                                                      |        Left(DecodingFailure(s"unknown discriminator: $other", c.history))
                                                                       |    }
                                                                       |  }
                                                                       |}""".stripMargin))
@@ -67,7 +65,10 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers {
 
         dataType.source.packageName should be("datatypes")
         dataType.source.source.toString() should be(
-          "final case class DataType(id: String, foo: Option[String] = None, customTypeProp: scala.math.BigDecimal, customArrayTypeProp: Vector[scala.math.BigDecimal] = Vector.empty) extends BaseType"
+          """final case class DataType(id: String, foo: Option[String] = None, customTypeProp: scala.math.BigDecimal, customArrayTypeProp: Vector[scala.math.BigDecimal] = Vector.empty) extends BaseType {
+            |  import io.circe.{ Codec, Json }
+            |  def toJson(): Json = implicitly[Codec[DataType]].apply(this)
+            |}""".stripMargin
         )
         dataType.source.name should be("DataType")
         dataType.source.companion.map(_.toString()) should be(Some(s"""object DataType {
@@ -76,55 +77,53 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers {
              |  implicit lazy val json: Codec[DataType] = deriveCodec[DataType]
              |}""".stripMargin))
 
-        emptyBase.source.source.toString() should be("sealed trait EmptyBase")
-        emptyBase.source.companion.map(_.toString()) should be(Some(s"""object EmptyBase {
+        emptyBase.source.source.toString() should be(
+          "sealed trait EmptyBase { def toJson(): io.circe.Json }"
+        )
+        emptyBase.source.companion.map(_.toString()) should be(Some("""object EmptyBase {
              |  import io.circe.Decoder.Result
              |  import io.circe._
+             |  implicit val encodeAll: Encoder[EmptyBase] = new Encoder[EmptyBase] { override def apply(instance: EmptyBase): Json = instance.toJson() }
              |  implicit def decodeAll(): Decoder[EmptyBase] = new Decoder[EmptyBase] {
              |    override def apply(c: HCursor): Result[EmptyBase] = c.downField("type").as[String] match {
              |      case Right("nope") =>
              |        Right(NoProps)
              |      case other =>
-             |        Left(DecodingFailure(s"unknown discriminator: $$other", c.history))
-             |    }
-             |  }
-             |  implicit def encodeAll(): Encoder[EmptyBase] = new Encoder[EmptyBase] {
-             |    override def apply(emptybase: EmptyBase): Json = emptybase match {
-             |      case NoProps =>
-             |        Json.obj("type" -> Json.fromString("nope"))
+             |        Left(DecodingFailure(s"unknown discriminator: $other", c.history))
              |    }
              |  }
              |}""".stripMargin))
 
         noProps.source.source.toString() should be(
-          s"""case object NoProps extends EmptyBase""".stripMargin
+          """case object NoProps extends EmptyBase {
+             |  import io.circe.Json
+             |  def toJson(): Json = Json.fromFields(Map("type" -> Json.fromString("NoProps")))
+             |}""".stripMargin
         )
 
-        noSealedBase.source.source.toString() should be("trait NoSealedBase")
-        noSealedBase.source.companion.map(_.toString()) should be(Some(s"""object NoSealedBase {
+        noSealedBase.source.source.toString() should be(
+          "trait NoSealedBase { def toJson(): io.circe.Json }"
+        )
+        noSealedBase.source.companion.map(_.toString()) should be(Some("""object NoSealedBase {
                                                                           |  import io.circe.Decoder.Result
                                                                           |  import io.circe._
-                                                                          |  implicit def decodeAll(implicit OtherSubDecoder: Decoder[OtherSub], MapLikeDecoder: Decoder[MapLike]): Decoder[NoSealedBase] = new Decoder[NoSealedBase] {
+                                                                          |  implicit val encodeAll: Encoder[NoSealedBase] = new Encoder[NoSealedBase] { override def apply(instance: NoSealedBase): Json = instance.toJson() }
+                                                                          |  implicit def decodeAll(implicit MapLikeDecoder: Decoder[MapLike], OtherSubDecoder: Decoder[OtherSub]): Decoder[NoSealedBase] = new Decoder[NoSealedBase] {
                                                                           |    override def apply(c: HCursor): Result[NoSealedBase] = c.downField("type").as[String] match {
-                                                                          |      case Right("other-sub") =>
-                                                                          |        OtherSubDecoder(c)
                                                                           |      case Right("map-like") =>
                                                                           |        MapLikeDecoder(c)
+                                                                          |      case Right("other-sub") =>
+                                                                          |        OtherSubDecoder(c)
                                                                           |      case other =>
-                                                                          |        Left(DecodingFailure(s"unknown discriminator: $$other", c.history))
-                                                                          |    }
-                                                                          |  }
-                                                                          |  implicit def encodeAll(implicit OtherSubEncoder: Encoder[OtherSub], MapLikeEncoder: Encoder[MapLike]): Encoder[NoSealedBase] = new Encoder[NoSealedBase] {
-                                                                          |    override def apply(nosealedbase: NoSealedBase): Json = nosealedbase match {
-                                                                          |      case othersub: OtherSub =>
-                                                                          |        OtherSubEncoder(othersub).mapObject(_.add("type", Json.fromString("other-sub")))
-                                                                          |      case maplike: MapLike =>
-                                                                          |        MapLikeEncoder(maplike).mapObject(_.add("type", Json.fromString("map-like")))
+                                                                          |        Left(DecodingFailure(s"unknown discriminator: $other", c.history))
                                                                           |    }
                                                                           |  }
                                                                           |}""".stripMargin))
         mapLike.source.source.toString() should be(
-          s"""final case class MapLike(values: Map[String, String]) extends NoSealedBase""".stripMargin
+          s"""final case class MapLike(values: Map[String, String]) extends NoSealedBase {
+             |  import io.circe.{ Codec, Json }
+             |  def toJson(): Json = implicitly[Codec[MapLike]].apply(this)
+             |}""".stripMargin
         )
 
         mapLike.source.companion.map(_.toString()) should be(Some(s"""object MapLike {
@@ -141,7 +140,7 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers {
           s"""sealed trait SomeEnum""".stripMargin
         )
 
-        someEnum.source.companion.map(_.toString()) should be(Some(s"""object SomeEnum {
+        someEnum.source.companion.map(_.toString()) should be(Some("""object SomeEnum {
                                                                       |  case object A extends SomeEnum
                                                                       |  case object B extends SomeEnum
                                                                       |  import io.circe._
@@ -155,7 +154,7 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers {
                                                                       |    case "B" =>
                                                                       |      Right(B)
                                                                       |    case other =>
-                                                                      |      Left(s"invalid enum value: $$other")
+                                                                      |      Left(s"invalid enum value: $other")
                                                                       |  })
                                                                       |}""".stripMargin))
 

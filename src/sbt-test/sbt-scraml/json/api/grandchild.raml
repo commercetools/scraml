@@ -1,0 +1,20 @@
+#%RAML 1.0 DataType
+(package): DataTypes
+(docs-uri): "https://example.org/grandchild-type"
+displayName: GrandchildType
+type: IntermediateType
+(scala-derive-json): true
+discriminatorValue: grandchild
+properties:
+  foo?:
+    type: string
+  customTypeProp:
+    (scala-type): "scala.math.BigDecimal"
+    type: number
+  customArrayTypeProp:
+    (scala-array-type): "Vector"
+    type: array
+    (scala-type): "scala.math.BigDecimal"
+    items:
+      type: object
+
