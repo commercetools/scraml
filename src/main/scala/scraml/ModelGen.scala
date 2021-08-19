@@ -38,7 +38,9 @@ final case class ModelGenParams(
     .getOrElse(Nil) ++ librarySupport.toList
 }
 
-final case class GeneratedModel(files: Seq[GeneratedFile]) {
+final case class GeneratedModel(sourceFiles: Seq[GeneratedFile], packageObject: GeneratedFile) {
+  def files: Seq[GeneratedFile] = sourceFiles ++ List(packageObject)
+
   override def toString: String = {
     files
       .map(generatedFile => s"${generatedFile.source.name} (${generatedFile.file.getPath})")
@@ -162,7 +164,7 @@ trait LibrarySupport {
   ): DefnWithCompanion[Defn.Trait] =
     DefnWithCompanion(traitDef, companion)
 
-  def modifyPackageObject: Pkg.Object => Pkg.Object = identity
+  def modifyPackageObject(api: Api): Pkg.Object => Pkg.Object = identity
 
   def modifyEnum(
       enumType: StringType
@@ -205,8 +207,12 @@ object LibrarySupport {
     libs.foldLeft(DefnWithCompanion(defn, companion)) { case (acc, lib) =>
       lib.modifyTrait(acc.defn, acc.companion)(context)
     }
-  def applyPackageObject(packageObject: Pkg.Object)(libs: List[LibrarySupport]): Pkg.Object =
-    libs.foldLeft(packageObject: Pkg.Object) { case (acc, lib) => lib.modifyPackageObject(acc) }
+  def applyPackageObject(
+      packageObject: Pkg.Object
+  )(libs: List[LibrarySupport], api: Api): Pkg.Object =
+    libs.foldLeft(packageObject: Pkg.Object) { case (acc, lib) =>
+      lib.modifyPackageObject(api)(acc)
+    }
   def applyEnum(enumType: StringType)(enumTrait: Defn.Trait, companion: Defn.Object)(
       libs: List[LibrarySupport]
   ): DefnWithCompanion[Defn.Trait] =

@@ -1,12 +1,11 @@
 package scraml
 
 import cats.effect.unsafe.implicits.global
-import io.circe.Decoder.Result
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 
 import java.io.File
-import io.circe._
+import scraml.libs.TapirSupport
 
 class CtApiGenSpec extends AnyFlatSpec with Matchers {
   "Default model gen" should "generate ct API" in {
@@ -15,7 +14,7 @@ class CtApiGenSpec extends AnyFlatSpec with Matchers {
       new File("target/scraml-test-ct"),
       "scraml",
       jsonSupport = Some(Circe),
-      Set.empty,
+      Set(TapirSupport("Endpoints")),
       None
     )
 

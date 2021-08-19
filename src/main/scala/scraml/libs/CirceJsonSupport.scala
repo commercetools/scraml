@@ -1,11 +1,11 @@
 package scraml.libs
 
+import io.vrap.rmf.raml.model.modules.Api
 import scraml.LibrarySupport._
 import scraml.MetaUtil.packageTerm
 import scraml.ModelGen.isSingleton
 import scraml.RMFUtil.getAnnotation
 import scraml.{DefnWithCompanion, LibrarySupport, ModelGenContext}
-
 import io.vrap.rmf.raml.model.types.{ObjectType, StringType}
 
 object CirceJsonSupport extends LibrarySupport {
@@ -356,7 +356,7 @@ object CirceJsonSupport extends LibrarySupport {
       companion = companion.map(appendObjectStats(_, deriveJsonTypeSwitch(context)))
     )
 
-  override def modifyPackageObject: Pkg.Object => Pkg.Object =
+  override def modifyPackageObject(api: Api): Pkg.Object => Pkg.Object =
     appendPkgObjectStats(_, eitherCodec)
 
   override def modifyEnum(

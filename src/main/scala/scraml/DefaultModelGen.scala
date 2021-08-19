@@ -268,7 +268,7 @@ object DefaultModelGen extends ModelGen {
   private def writePackages(
       generated: GeneratedPackages,
       params: ModelGenParams
-  ): IO[GeneratedModel] = {
+  ): IO[List[GeneratedFile]] = {
     val scalafmt = Scalafmt.create(this.getClass.getClassLoader)
     val generate = generated.packages.map { case (name, generatedPackage) =>
       for {
@@ -285,7 +285,7 @@ object DefaultModelGen extends ModelGen {
       } yield files
     }
 
-    generate.toList.sequence.map(_.flatten).map(GeneratedModel(_))
+    generate.toList.sequence.map(_.flatten)
   }
 
   private def generatePackages(api: ApiContext, params: ModelGenParams): IO[GeneratedPackages] =
@@ -299,7 +299,7 @@ object DefaultModelGen extends ModelGen {
       packages = types.flatten.foldLeft(GeneratedPackages())(_ addSource _)
     } yield packages
 
-  private def generatePackageObject(params: ModelGenParams): IO[GeneratedFile] = for {
+  private def generatePackageObject(api: Api, params: ModelGenParams): IO[GeneratedFile] = for {
     packageObjectFile <- IO {
       val file = new File(new File(basePackageFilePath(params)), "package.scala")
       file.delete()
@@ -315,7 +315,7 @@ object DefaultModelGen extends ModelGen {
     packageObjectWithSource <- IO {
       val packageObject = LibrarySupport.applyPackageObject(
         q"""package object ${Term.Name(objectName)}"""
-      )(params.allLibraries)
+      )(params.allLibraries, api)
 
       val packageStatement = packageName.map(pkg => s"package $pkg\n").getOrElse("")
       (packageObject, s"$packageStatement${packageObject.toString}")
@@ -327,10 +327,14 @@ object DefaultModelGen extends ModelGen {
     packageObjectFile
   )
 
+  private def generateEndpoints(api: Api): IO[Unit] = IO {
+    api.getResources
+  }
+
   override def generate(api: Api, params: ModelGenParams): IO[GeneratedModel] = for {
     _             <- FileUtil.deleteRecursively(new File(params.targetDir, params.basePackage))
-    packageObject <- generatePackageObject(params)
+    packageObject <- generatePackageObject(api, params)
     packages      <- generatePackages(ApiContext(api), params)
-    model         <- writePackages(packages, params)
-  } yield model.copy(files = model.files ++ List(packageObject))
+    files         <- writePackages(packages, params)
+  } yield GeneratedModel(files, packageObject)
 }
