@@ -43,11 +43,11 @@ object CirceJsonSupport extends LibrarySupport {
         )
     }
 
-  private def discriminatorValue(aType: ObjectType): String =
-    Option(aType.getDiscriminatorValue).getOrElse(aType.getName.toLowerCase)
+  private def discriminatorValue(aType: ObjectType): Option[String] =
+    Option(aType.getDiscriminatorValue)
 
   private def typeEncoder(context: ModelGenContext): Defn.Val = {
-    val subTypes = context.getSubTypes
+    val subTypes = context.getDirectSubTypes.toList
     val typeName = context.objectType.getName
 
     Defn.Val(
@@ -105,7 +105,7 @@ object CirceJsonSupport extends LibrarySupport {
   }
 
   private def typeDecoder(firstSubType: AnyType, context: ModelGenContext): Defn.Val = {
-    val subTypes         = context.getSubTypes
+    val subTypes         = context.leafTypes.toList
     val typeName         = context.objectType.getName
     val discriminatorOpt = discriminator(context.objectType)
     val decode: Term = if (discriminatorOpt.isEmpty) {
@@ -134,16 +134,18 @@ object CirceJsonSupport extends LibrarySupport {
           ),
           List(Type.Name("String"))
         ),
-        subTypes.map { case subType: ObjectType =>
-          Case(
-            Pat
-              .Extract(Term.Name("Right"), List(Lit.String(discriminatorValue(subType)))),
-            None,
-            Term.Apply(
-              Term.Select(Term.Name(subType.getName), Term.Name("decoder")),
-              List(Term.Name("c"))
+        subTypes.flatMap { case subType: ObjectType =>
+          discriminatorValue(subType).map { discriminatorValueString =>
+            Case(
+              Pat
+                .Extract(Term.Name("Right"), List(Lit.String(discriminatorValueString))),
+              None,
+              Term.Apply(
+                Term.Select(Term.Name(subType.getName), Term.Name("decoder")),
+                List(Term.Name("c"))
+              )
             )
-          )
+          }
         } ++ List(
           Case(
             Pat.Var(Term.Name("other")),
@@ -198,7 +200,7 @@ object CirceJsonSupport extends LibrarySupport {
 
   private def deriveJsonTypeSwitch(context: ModelGenContext): List[Stat] =
     if (shouldDeriveJson(context.objectType)) {
-      val subTypes: List[AnyType] = context.getSubTypes
+      val subTypes: List[AnyType] = context.getDirectSubTypes.toList
 
       subTypes.headOption
         .map { firstSubType =>
@@ -219,7 +221,8 @@ object CirceJsonSupport extends LibrarySupport {
   private def deriveJson(objectType: ObjectType): List[Stat] =
     if (shouldDeriveJson(objectType)) {
       val encoderDef: Defn.Val = discriminator(objectType)
-        .map { _ =>
+        .flatMap(_ => discriminatorValue(objectType))
+        .map { discriminatorValueString =>
           Defn.Val(
             List(Mod.Implicit(), Mod.Lazy()),
             List(Pat.Var(Term.Name("encoder"))),
@@ -236,7 +239,7 @@ object CirceJsonSupport extends LibrarySupport {
                     Lit.String("type"),
                     Term.Apply(
                       Term.Select(Term.Name("Json"), Term.Name("fromString")),
-                      List(Lit.String(discriminatorValue(objectType)))
+                      List(Lit.String(discriminatorValueString))
                     )
                   )
                 )
@@ -325,37 +328,41 @@ object CirceJsonSupport extends LibrarySupport {
   override def modifyObject(objectDef: Defn.Object)(
       context: ModelGenContext
   ): DefnWithCompanion[Defn.Object] =
-    DefnWithCompanion(
-      appendObjectStats(
-        objectDef,
-        q"""
+    discriminatorValue(context.objectType)
+      .map { discriminatorValueString =>
+        DefnWithCompanion(
+          appendObjectStats(
+            objectDef,
+            q"""
         import io.circe._
         import io.circe.generic.semiauto._
         import io.circe.Decoder.Result
 
         implicit lazy val decoder: Decoder[${Type.Singleton(
-          Term.Name(context.objectType.getName)
-        )}] = new Decoder[${Type.Singleton(Term.Name(context.objectType.getName))}] {
+              Term.Name(context.objectType.getName)
+            )}] = new Decoder[${Type.Singleton(Term.Name(context.objectType.getName))}] {
           override def apply(c: HCursor): Result[${Type.Singleton(
-          Term.Name(context.objectType.getName)
-        )}] = c.downField("type").as[String] match {
-            case Right(${discriminatorValue(context.objectType)}) =>
+              Term.Name(context.objectType.getName)
+            )}] = c.downField("type").as[String] match {
+            case Right(${discriminatorValueString}) =>
               Right(${Term.Name(context.objectType.getName)})
             case other =>
               Left(DecodingFailure(s"unknown type: $$other", c.history))
           }
         }
         implicit lazy val encoder: Encoder[${Type.Singleton(
-          Term.Name(context.objectType.getName)
-        )}] = new Encoder[${Type.Singleton(Term.Name(context.objectType.getName))}] {
+              Term.Name(context.objectType.getName)
+            )}] = new Encoder[${Type.Singleton(Term.Name(context.objectType.getName))}] {
           override def apply(a: ${Type.Singleton(
-          Term.Name(context.objectType.getName)
-        )}): Json = Json.obj("type" -> Json.fromString(${discriminatorValue(context.objectType)}))
+              Term.Name(context.objectType.getName)
+            )}): Json = Json.obj("type" -> Json.fromString(${discriminatorValueString}))
         }
          """.stats
-      ),
-      None
-    )
+          ),
+          None
+        )
+      }
+      .getOrElse(DefnWithCompanion(objectDef, None))
 
   override def modifyPackageObject: Pkg.Object => Pkg.Object =
     appendPkgObjectStats(_, eitherCodec)

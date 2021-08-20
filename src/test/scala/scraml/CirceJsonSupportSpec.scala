@@ -20,7 +20,7 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers {
     val generated = ModelGenRunner.run(DefaultModelGen)(params).unsafeRunSync()
 
     generated.files match {
-      case noDiscBase :: _ :: _ :: baseType :: intermediateType :: grandchildType :: dataType :: emptyBase :: noProps :: noSealedBase :: someEnum :: otherSub :: mapLike :: packageObject :: Nil =>
+      case noDiscBase :: _ :: _ :: baseType :: intermediateType :: grandchildType :: dataType :: emptyBase :: noProps :: noSealedBase :: someEnum :: _ :: mapLike :: packageObject :: Nil =>
         noDiscBase.source.source.toString() should be("sealed trait NoDiscriminatorBase")
         noDiscBase.source.companion.map(_.toString()) should be(
           Some(s"""object NoDiscriminatorBase {
@@ -47,20 +47,20 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers {
                                                                       |  import io.circe._
                                                                       |  implicit lazy val decoder: Decoder[BaseType] = new Decoder[BaseType] {
                                                                       |    override def apply(c: HCursor): Result[BaseType] = c.downField("type").as[String] match {
-                                                                      |      case Right("intermediatetype") =>
-                                                                      |        IntermediateType.decoder(c)
                                                                       |      case Right("data") =>
                                                                       |        DataType.decoder(c)
+                                                                      |      case Right("grandchild") =>
+                                                                      |        GrandchildType.decoder(c)
                                                                       |      case other =>
                                                                       |        Left(DecodingFailure(s"unknown discriminator: $$other", c.history))
                                                                       |    }
                                                                       |  }
                                                                       |  implicit lazy val encoder: Encoder[BaseType] = new Encoder[BaseType] {
                                                                       |    override def apply(basetype: BaseType): Json = basetype match {
-                                                                      |      case intermediatetype: IntermediateType =>
-                                                                      |        IntermediateType.encoder(intermediatetype)
                                                                       |      case datatype: DataType =>
                                                                       |        DataType.encoder(datatype)
+                                                                      |      case intermediatetype: IntermediateType =>
+                                                                      |        IntermediateType.encoder(intermediatetype)
                                                                       |    }
                                                                       |  }
                                                                       |}""".stripMargin))
@@ -123,20 +123,20 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers {
                                                                           |  import io.circe._
                                                                           |  implicit lazy val decoder: Decoder[NoSealedBase] = new Decoder[NoSealedBase] {
                                                                           |    override def apply(c: HCursor): Result[NoSealedBase] = c.downField("type").as[String] match {
-                                                                          |      case Right("other-sub") =>
-                                                                          |        OtherSub.decoder(c)
                                                                           |      case Right("map-like") =>
                                                                           |        MapLike.decoder(c)
+                                                                          |      case Right("other-sub") =>
+                                                                          |        OtherSub.decoder(c)
                                                                           |      case other =>
                                                                           |        Left(DecodingFailure(s"unknown discriminator: $$other", c.history))
                                                                           |    }
                                                                           |  }
                                                                           |  implicit lazy val encoder: Encoder[NoSealedBase] = new Encoder[NoSealedBase] {
                                                                           |    override def apply(nosealedbase: NoSealedBase): Json = nosealedbase match {
-                                                                          |      case othersub: OtherSub =>
-                                                                          |        OtherSub.encoder(othersub)
                                                                           |      case maplike: MapLike =>
                                                                           |        MapLike.encoder(maplike)
+                                                                          |      case othersub: OtherSub =>
+                                                                          |        OtherSub.encoder(othersub)
                                                                           |    }
                                                                           |  }
                                                                           |}""".stripMargin))
