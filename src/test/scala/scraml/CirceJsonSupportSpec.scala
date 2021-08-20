@@ -1,7 +1,6 @@
 package scraml
 
 import cats.effect.unsafe.implicits.global
-import io.circe.{Decoder, Encoder}
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 
@@ -21,7 +20,7 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers {
     val generated = ModelGenRunner.run(DefaultModelGen)(params).unsafeRunSync()
 
     generated.files match {
-      case noDiscBase :: _ :: _ :: baseType :: dataType :: emptyBase :: noProps :: noSealedBase :: someEnum :: otherSub :: mapLike :: packageObject :: Nil =>
+      case noDiscBase :: _ :: _ :: baseType :: intermediateType :: grandchildType :: dataType :: emptyBase :: noProps :: noSealedBase :: someEnum :: otherSub :: mapLike :: packageObject :: Nil =>
         noDiscBase.source.source.toString() should be("sealed trait NoDiscriminatorBase")
         noDiscBase.source.companion.map(_.toString()) should be(
           Some(s"""object NoDiscriminatorBase {
@@ -46,16 +45,20 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers {
         baseType.source.companion.map(_.toString()) should be(Some(s"""object BaseType {
                                                                       |  import io.circe.Decoder.Result
                                                                       |  import io.circe._
-                                                                      |  implicit def decodeAll(implicit DataTypeDecoder: Decoder[DataType]): Decoder[BaseType] = new Decoder[BaseType] {
+                                                                      |  implicit def decodeAll(implicit IntermediateTypeDecoder: Decoder[IntermediateType], DataTypeDecoder: Decoder[DataType]): Decoder[BaseType] = new Decoder[BaseType] {
                                                                       |    override def apply(c: HCursor): Result[BaseType] = c.downField("type").as[String] match {
+                                                                      |      case Right("intermediatetype") =>
+                                                                      |        IntermediateTypeDecoder(c)
                                                                       |      case Right("data") =>
                                                                       |        DataTypeDecoder(c)
                                                                       |      case other =>
                                                                       |        Left(DecodingFailure(s"unknown discriminator: $$other", c.history))
                                                                       |    }
                                                                       |  }
-                                                                      |  implicit def encodeAll(implicit DataTypeEncoder: Encoder[DataType]): Encoder[BaseType] = new Encoder[BaseType] {
+                                                                      |  implicit def encodeAll(implicit IntermediateTypeEncoder: Encoder[IntermediateType], DataTypeEncoder: Encoder[DataType]): Encoder[BaseType] = new Encoder[BaseType] {
                                                                       |    override def apply(basetype: BaseType): Json = basetype match {
+                                                                      |      case intermediatetype: IntermediateType =>
+                                                                      |        IntermediateTypeEncoder(intermediatetype).mapObject(_.add("type", Json.fromString("intermediatetype")))
                                                                       |      case datatype: DataType =>
                                                                       |        DataTypeEncoder(datatype).mapObject(_.add("type", Json.fromString("data")))
                                                                       |    }
@@ -172,6 +175,39 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers {
              |  }
              |  implicit def eitherDecoder[A, B](implicit aDecoder: Decoder[A], bDecoder: Decoder[B]): Decoder[Either[A, B]] = new Decoder[Either[A, B]] { override def apply(c: HCursor): Result[Either[A, B]] = aDecoder.either(bDecoder)(c) }
              |}""".stripMargin)
+
+        intermediateType.source.source.toString() should be(
+          "sealed trait IntermediateType extends BaseType { def id: String }"
+        )
+        intermediateType.source.companion.map(_.toString()) should be(
+          Some(s"""object IntermediateType {
+             |  import io.circe.Decoder.Result
+             |  import io.circe._
+             |  implicit def decodeAll(implicit GrandchildTypeDecoder: Decoder[GrandchildType]): Decoder[IntermediateType] = new Decoder[IntermediateType] {
+             |    override def apply(c: HCursor): Result[IntermediateType] = c.downField("type").as[String] match {
+             |      case Right("grandchild") =>
+             |        GrandchildTypeDecoder(c)
+             |      case other =>
+             |        Left(DecodingFailure(s"unknown discriminator: $$other", c.history))
+             |    }
+             |  }
+             |  implicit def encodeAll(implicit GrandchildTypeEncoder: Encoder[GrandchildType]): Encoder[IntermediateType] = new Encoder[IntermediateType] {
+             |    override def apply(intermediatetype: IntermediateType): Json = intermediatetype match {
+             |      case grandchildtype: GrandchildType =>
+             |        GrandchildTypeEncoder(grandchildtype).mapObject(_.add("type", Json.fromString("grandchild")))
+             |    }
+             |  }
+             |}""".stripMargin)
+        )
+
+        grandchildType.source.source.toString() should be(
+          "final case class GrandchildType(id: String, foo: Option[String] = None, customTypeProp: scala.math.BigDecimal, customArrayTypeProp: Vector[scala.math.BigDecimal] = Vector.empty) extends IntermediateType"
+        )
+        grandchildType.source.companion.map(_.toString()) should be(Some(s"""object GrandchildType {
+             |  import io.circe._
+             |  import io.circe.generic.semiauto._
+             |  implicit lazy val json: Codec[GrandchildType] = deriveCodec[GrandchildType]
+             |}""".stripMargin))
     }
   }
 }
