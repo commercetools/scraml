@@ -377,13 +377,29 @@ object CirceJsonSupport extends LibrarySupport {
      """.stats
   }
 
-  private def deriveJson(objectType: ObjectType): List[Stat] =
+  private def deriveJson(objectType: ObjectType, discriminator: Option[String]): List[Stat] =
     q"""import io.circe._
         import io.circe.generic.semiauto._
 
+        ${discriminator
+      .filter(_ => objectType.getDiscriminatorValue ne null)
+      .fold(
+        q"""
         implicit lazy val json: Codec[${Type.Name(objectType.getName)}] = deriveCodec[${Type.Name(
-      objectType.getName
-    )}]
+          objectType.getName
+        )}]
+       """
+      ) { field =>
+        q"""
+        implicit lazy val json: Codec[${Type.Name(objectType.getName)}] =
+          Codec.from[${Type.Name(objectType.getName)}](
+            deriveDecoder[${Type.Name(objectType.getName)}],
+            deriveEncoder[${Type.Name(objectType.getName)}].mapJson(
+              _.mapObject(_.add($field, Json.fromString(${objectType.getDiscriminatorValue})))
+              )
+          )
+         """
+      }}
     """.stats
 
   private def mapTypeCodec(context: ModelGenContext): List[Stat] =
@@ -418,6 +434,17 @@ object CirceJsonSupport extends LibrarySupport {
     context match {
       case IgnoreThisType() =>
         super.modifyClass(classDef, companion)(context)
+      case UsesDiscriminator(property) =>
+        DefnWithCompanion(
+          appendClassStats(classDef, defineToJson(context)),
+          companion = companion.map(
+            appendObjectStats(
+              _,
+              if (context.isMapType.isDefined) mapTypeCodec(context)
+              else deriveJson(context.objectType, Some(property))
+            )
+          )
+        )
       case _ =>
         DefnWithCompanion(
           appendClassStats(classDef, defineToJson(context)),
@@ -425,7 +452,7 @@ object CirceJsonSupport extends LibrarySupport {
             appendObjectStats(
               _,
               if (context.isMapType.isDefined) mapTypeCodec(context)
-              else deriveJson(context.objectType)
+              else deriveJson(context.objectType, None)
             )
           )
         )

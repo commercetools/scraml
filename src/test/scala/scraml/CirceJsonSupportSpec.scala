@@ -74,7 +74,7 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers {
         dataType.source.companion.map(_.toString()) should be(Some(s"""object DataType {
              |  import io.circe._
              |  import io.circe.generic.semiauto._
-             |  implicit lazy val json: Codec[DataType] = deriveCodec[DataType]
+             |  implicit lazy val json: Codec[DataType] = Codec.from[DataType](deriveDecoder[DataType], deriveEncoder[DataType].mapJson(_.mapObject(_.add("type", Json.fromString("data")))))
              |}""".stripMargin))
 
         emptyBase.source.source.toString() should be(
