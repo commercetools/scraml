@@ -86,14 +86,14 @@ final case class ModelGenContext(
 
   lazy val anyTypeName: String = params.jsonSupport.map(_.jsonType).getOrElse("Any")
 
-  def getSubTypes: Iterator[AnyType] = {
+  lazy val getSubTypes: List[AnyType] = {
     objectType.getSubTypes.asScala.filter(_.getName != objectType.getName).iterator ++
       api.scalaExtends
         .find { case (_, typeValue) =>
           typeValue.getName == objectType.getName
         }
         .flatMap(entry => api.typesByName.get(entry._1))
-  }
+  }.toList
 
   lazy val typeProperties: Seq[Property] = RMFUtil.typeProperties(objectType).toSeq
   lazy val isSealed: Boolean = getSubTypes.forall(getPackageName(_).contains(packageName))

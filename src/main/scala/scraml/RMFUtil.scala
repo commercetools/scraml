@@ -18,9 +18,9 @@ object RMFUtil {
     from.getAnnotation(name)
   )
 
-  private def discriminators(aType: AnyType): List[String] = aType match {
+  def discriminators(aType: AnyType): List[String] = aType match {
     case objectType: ObjectType =>
-      List(objectType.getDiscriminator) ++ Option(aType.getType)
+      Option(objectType.getDiscriminator).toList ++ Option(aType.getType)
         .map(discriminators)
         .getOrElse(List.empty)
     case _ => List.empty
