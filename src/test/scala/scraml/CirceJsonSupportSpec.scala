@@ -97,7 +97,7 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers {
         noProps.source.source.toString() should be(
           """case object NoProps extends EmptyBase {
              |  import io.circe.Json
-             |  def toJson(): Json = Json.fromFields(Map("type" -> Json.fromString("NoProps")))
+             |  def toJson(): Json = Json.fromFields(Map("type" -> Json.fromString("nope")))
              |}""".stripMargin
         )
 

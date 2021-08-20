@@ -245,6 +245,8 @@ object CirceJsonSupport extends LibrarySupport {
       }
 
       implicit def decodeAll(..${subTypes match {
+      case Nil =>
+        throw new RuntimeException(s"no subtypes found: ${context.objectType.getName}")
       case one :: Nil =>
         List(
           Term.Param(
@@ -291,7 +293,9 @@ object CirceJsonSupport extends LibrarySupport {
             }}
                  """
           case (Nil, index) =>
-            q"""def ${Term.Name("chunk" + index)}() = Left(DecodingFailure("unknown"))"""
+            q"""def ${Term.Name(
+              "chunk" + index
+            )}() = Left(DecodingFailure("unknown payload: " + ${context.objectType.getName}))"""
         }.toList
 
         q"""
@@ -318,8 +322,8 @@ object CirceJsonSupport extends LibrarySupport {
     q"""
       import io.circe._
 
-      implicit val encodeAll: Encoder[${typeName}] = new Encoder[${typeName}] {
-        override def apply(instance: ${typeName}): Json = instance.toJson()
+      implicit val encodeAll: Encoder[$typeName] = new Encoder[$typeName] {
+        override def apply(instance: $typeName): Json = instance.toJson()
       }
 
       implicit def decodeAll(..${subTypes match {
@@ -441,7 +445,9 @@ object CirceJsonSupport extends LibrarySupport {
               q"import io.circe.Json",
               q"""
                 def toJson(): Json =
-                  Json.fromFields(Map($property -> Json.fromString(${context.objectType.getName})))
+                  Json.fromFields(Map($property -> Json.fromString(${Option(
+                context.objectType.getDiscriminatorValue
+              ).getOrElse(context.objectType.getName)})))
               """
             )
           ),
