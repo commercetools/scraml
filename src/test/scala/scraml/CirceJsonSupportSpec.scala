@@ -26,13 +26,13 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers {
           Some(s"""object NoDiscriminatorBase {
                   |  import io.circe.Decoder.Result
                   |  import io.circe._
-                  |  implicit def decodeAll(implicit NoDiscriminatorSub1Decoder: Decoder[NoDiscriminatorSub1], NoDiscriminatorSub2Decoder: Decoder[NoDiscriminatorSub2]): Decoder[NoDiscriminatorBase] = new Decoder[NoDiscriminatorBase] { override def apply(c: HCursor): Result[NoDiscriminatorBase] = NoDiscriminatorSub1Decoder.tryDecode(c).fold(_ => NoDiscriminatorSub2Decoder.tryDecode(c), Right(_)) }
-                  |  implicit def encodeAll(implicit NoDiscriminatorSub1Encoder: Encoder[NoDiscriminatorSub1], NoDiscriminatorSub2Encoder: Encoder[NoDiscriminatorSub2]): Encoder[NoDiscriminatorBase] = new Encoder[NoDiscriminatorBase] {
+                  |  implicit lazy val decoder: Decoder[NoDiscriminatorBase] = new Decoder[NoDiscriminatorBase] { override def apply(c: HCursor): Result[NoDiscriminatorBase] = NoDiscriminatorSub1.decoder.tryDecode(c).fold(_ => NoDiscriminatorSub2.decoder.tryDecode(c), Right(_)) }
+                  |  implicit lazy val encoder: Encoder[NoDiscriminatorBase] = new Encoder[NoDiscriminatorBase] {
                   |    override def apply(nodiscriminatorbase: NoDiscriminatorBase): Json = nodiscriminatorbase match {
                   |      case nodiscriminatorsub1: NoDiscriminatorSub1 =>
-                  |        NoDiscriminatorSub1Encoder(nodiscriminatorsub1)
+                  |        NoDiscriminatorSub1.encoder(nodiscriminatorsub1)
                   |      case nodiscriminatorsub2: NoDiscriminatorSub2 =>
-                  |        NoDiscriminatorSub2Encoder(nodiscriminatorsub2)
+                  |        NoDiscriminatorSub2.encoder(nodiscriminatorsub2)
                   |    }
                   |  }
                   |}""".stripMargin)
@@ -45,22 +45,22 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers {
         baseType.source.companion.map(_.toString()) should be(Some(s"""object BaseType {
                                                                       |  import io.circe.Decoder.Result
                                                                       |  import io.circe._
-                                                                      |  implicit def decodeAll(implicit IntermediateTypeDecoder: Decoder[IntermediateType], DataTypeDecoder: Decoder[DataType]): Decoder[BaseType] = new Decoder[BaseType] {
+                                                                      |  implicit lazy val decoder: Decoder[BaseType] = new Decoder[BaseType] {
                                                                       |    override def apply(c: HCursor): Result[BaseType] = c.downField("type").as[String] match {
                                                                       |      case Right("intermediatetype") =>
-                                                                      |        IntermediateTypeDecoder(c)
+                                                                      |        IntermediateType.decoder(c)
                                                                       |      case Right("data") =>
-                                                                      |        DataTypeDecoder(c)
+                                                                      |        DataType.decoder(c)
                                                                       |      case other =>
                                                                       |        Left(DecodingFailure(s"unknown discriminator: $$other", c.history))
                                                                       |    }
                                                                       |  }
-                                                                      |  implicit def encodeAll(implicit IntermediateTypeEncoder: Encoder[IntermediateType], DataTypeEncoder: Encoder[DataType]): Encoder[BaseType] = new Encoder[BaseType] {
+                                                                      |  implicit lazy val encoder: Encoder[BaseType] = new Encoder[BaseType] {
                                                                       |    override def apply(basetype: BaseType): Json = basetype match {
                                                                       |      case intermediatetype: IntermediateType =>
-                                                                      |        IntermediateTypeEncoder(intermediatetype).mapObject(_.add("type", Json.fromString("intermediatetype")))
+                                                                      |        IntermediateType.encoder(intermediatetype)
                                                                       |      case datatype: DataType =>
-                                                                      |        DataTypeEncoder(datatype).mapObject(_.add("type", Json.fromString("data")))
+                                                                      |        DataType.encoder(datatype)
                                                                       |    }
                                                                       |  }
                                                                       |}""".stripMargin))
@@ -74,55 +74,69 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers {
         )
         dataType.source.name should be("DataType")
         dataType.source.companion.map(_.toString()) should be(Some(s"""object DataType {
-             |  import io.circe._
-             |  import io.circe.generic.semiauto._
-             |  implicit lazy val json: Codec[DataType] = deriveCodec[DataType]
-             |}""".stripMargin))
+                                                                      |  import io.circe._
+                                                                      |  import io.circe.generic.semiauto._
+                                                                      |  implicit lazy val decoder: Decoder[DataType] = deriveDecoder[DataType]
+                                                                      |  implicit lazy val encoder: Encoder[DataType] = deriveEncoder[DataType].mapJsonObject(_.add("type", Json.fromString("data")))
+                                                                      |}""".stripMargin))
 
         emptyBase.source.source.toString() should be("sealed trait EmptyBase")
         emptyBase.source.companion.map(_.toString()) should be(Some(s"""object EmptyBase {
-             |  import io.circe.Decoder.Result
+                                                                       |  import io.circe.Decoder.Result
+                                                                       |  import io.circe._
+                                                                       |  implicit lazy val decoder: Decoder[EmptyBase] = new Decoder[EmptyBase] {
+                                                                       |    override def apply(c: HCursor): Result[EmptyBase] = c.downField("type").as[String] match {
+                                                                       |      case Right("nope") =>
+                                                                       |        NoProps.decoder(c)
+                                                                       |      case other =>
+                                                                       |        Left(DecodingFailure(s"unknown discriminator: $$other", c.history))
+                                                                       |    }
+                                                                       |  }
+                                                                       |  implicit lazy val encoder: Encoder[EmptyBase] = new Encoder[EmptyBase] {
+                                                                       |    override def apply(emptybase: EmptyBase): Json = emptybase match {
+                                                                       |      case noprops: NoProps.type =>
+                                                                       |        NoProps.encoder(noprops)
+                                                                       |    }
+                                                                       |  }
+                                                                       |}""".stripMargin))
+
+        noProps.source.source.toString() should be(
+          s"""case object NoProps extends EmptyBase {
              |  import io.circe._
-             |  implicit def decodeAll(): Decoder[EmptyBase] = new Decoder[EmptyBase] {
-             |    override def apply(c: HCursor): Result[EmptyBase] = c.downField("type").as[String] match {
+             |  import io.circe.generic.semiauto._
+             |  import io.circe.Decoder.Result
+             |  implicit lazy val decoder: Decoder[NoProps.type] = new Decoder[NoProps.type] {
+             |    override def apply(c: HCursor): Result[NoProps.type] = c.downField("type").as[String] match {
              |      case Right("nope") =>
              |        Right(NoProps)
              |      case other =>
-             |        Left(DecodingFailure(s"unknown discriminator: $$other", c.history))
+             |        Left(DecodingFailure(s"unknown type: $$other", c.history))
              |    }
              |  }
-             |  implicit def encodeAll(): Encoder[EmptyBase] = new Encoder[EmptyBase] {
-             |    override def apply(emptybase: EmptyBase): Json = emptybase match {
-             |      case NoProps =>
-             |        Json.obj("type" -> Json.fromString("nope"))
-             |    }
-             |  }
-             |}""".stripMargin))
-
-        noProps.source.source.toString() should be(
-          s"""case object NoProps extends EmptyBase""".stripMargin
+             |  implicit lazy val encoder: Encoder[NoProps.type] = new Encoder[NoProps.type] { override def apply(a: NoProps.type): Json = Json.obj("type" -> Json.fromString("nope")) }
+             |}""".stripMargin
         )
 
         noSealedBase.source.source.toString() should be("trait NoSealedBase")
         noSealedBase.source.companion.map(_.toString()) should be(Some(s"""object NoSealedBase {
                                                                           |  import io.circe.Decoder.Result
                                                                           |  import io.circe._
-                                                                          |  implicit def decodeAll(implicit OtherSubDecoder: Decoder[OtherSub], MapLikeDecoder: Decoder[MapLike]): Decoder[NoSealedBase] = new Decoder[NoSealedBase] {
+                                                                          |  implicit lazy val decoder: Decoder[NoSealedBase] = new Decoder[NoSealedBase] {
                                                                           |    override def apply(c: HCursor): Result[NoSealedBase] = c.downField("type").as[String] match {
                                                                           |      case Right("other-sub") =>
-                                                                          |        OtherSubDecoder(c)
+                                                                          |        OtherSub.decoder(c)
                                                                           |      case Right("map-like") =>
-                                                                          |        MapLikeDecoder(c)
+                                                                          |        MapLike.decoder(c)
                                                                           |      case other =>
                                                                           |        Left(DecodingFailure(s"unknown discriminator: $$other", c.history))
                                                                           |    }
                                                                           |  }
-                                                                          |  implicit def encodeAll(implicit OtherSubEncoder: Encoder[OtherSub], MapLikeEncoder: Encoder[MapLike]): Encoder[NoSealedBase] = new Encoder[NoSealedBase] {
+                                                                          |  implicit lazy val encoder: Encoder[NoSealedBase] = new Encoder[NoSealedBase] {
                                                                           |    override def apply(nosealedbase: NoSealedBase): Json = nosealedbase match {
                                                                           |      case othersub: OtherSub =>
-                                                                          |        OtherSubEncoder(othersub).mapObject(_.add("type", Json.fromString("other-sub")))
+                                                                          |        OtherSub.encoder(othersub)
                                                                           |      case maplike: MapLike =>
-                                                                          |        MapLikeEncoder(maplike).mapObject(_.add("type", Json.fromString("map-like")))
+                                                                          |        MapLike.encoder(maplike)
                                                                           |    }
                                                                           |  }
                                                                           |}""".stripMargin))
@@ -131,14 +145,13 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers {
         )
 
         mapLike.source.companion.map(_.toString()) should be(Some(s"""object MapLike {
-             |  import io.circe.syntax._
-             |  import io.circe._
-             |  import io.circe.Decoder.Result
-             |  implicit lazy val json: Codec[MapLike] = new Codec[MapLike] {
-             |    override def apply(a: MapLike): Json = a.values.asJson
-             |    override def apply(c: HCursor): Result[MapLike] = c.as[Map[String, String]].map(MapLike.apply)
-             |  }
-             |}""".stripMargin))
+                                                                     |  import io.circe._
+                                                                     |  import io.circe.syntax._
+                                                                     |  import io.circe.generic.semiauto._
+                                                                     |  import io.circe.Decoder.Result
+                                                                     |  implicit lazy val decoder: Decoder[MapLike] = new Decoder[MapLike] { override def apply(c: HCursor): Result[MapLike] = c.as[Map[String, String]].map(MapLike.apply) }
+                                                                     |  implicit lazy val encoder: Encoder[MapLike] = new Encoder[MapLike] { override def apply(a: MapLike): Json = a.values.asJson }
+                                                                     |}""".stripMargin))
 
         someEnum.source.source.toString() should be(
           s"""sealed trait SomeEnum""".stripMargin
@@ -148,11 +161,11 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers {
                                                                       |  case object A extends SomeEnum
                                                                       |  case object B extends SomeEnum
                                                                       |  import io.circe._
-                                                                      |  implicit val encode: Encoder[SomeEnum] = Encoder[String].contramap({
+                                                                      |  implicit lazy val encoder: Encoder[SomeEnum] = Encoder[String].contramap({
                                                                       |    case A => "A"
                                                                       |    case B => "B"
                                                                       |  })
-                                                                      |  implicit val decode: Decoder[SomeEnum] = Decoder[String].emap({
+                                                                      |  implicit lazy val decoder: Decoder[SomeEnum] = Decoder[String].emap({
                                                                       |    case "A" =>
                                                                       |      Right(A)
                                                                       |    case "B" =>
@@ -181,33 +194,34 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers {
         )
         intermediateType.source.companion.map(_.toString()) should be(
           Some(s"""object IntermediateType {
-             |  import io.circe.Decoder.Result
-             |  import io.circe._
-             |  implicit def decodeAll(implicit GrandchildTypeDecoder: Decoder[GrandchildType]): Decoder[IntermediateType] = new Decoder[IntermediateType] {
-             |    override def apply(c: HCursor): Result[IntermediateType] = c.downField("type").as[String] match {
-             |      case Right("grandchild") =>
-             |        GrandchildTypeDecoder(c)
-             |      case other =>
-             |        Left(DecodingFailure(s"unknown discriminator: $$other", c.history))
-             |    }
-             |  }
-             |  implicit def encodeAll(implicit GrandchildTypeEncoder: Encoder[GrandchildType]): Encoder[IntermediateType] = new Encoder[IntermediateType] {
-             |    override def apply(intermediatetype: IntermediateType): Json = intermediatetype match {
-             |      case grandchildtype: GrandchildType =>
-             |        GrandchildTypeEncoder(grandchildtype).mapObject(_.add("type", Json.fromString("grandchild")))
-             |    }
-             |  }
-             |}""".stripMargin)
+                  |  import io.circe.Decoder.Result
+                  |  import io.circe._
+                  |  implicit lazy val decoder: Decoder[IntermediateType] = new Decoder[IntermediateType] {
+                  |    override def apply(c: HCursor): Result[IntermediateType] = c.downField("type").as[String] match {
+                  |      case Right("grandchild") =>
+                  |        GrandchildType.decoder(c)
+                  |      case other =>
+                  |        Left(DecodingFailure(s"unknown discriminator: $$other", c.history))
+                  |    }
+                  |  }
+                  |  implicit lazy val encoder: Encoder[IntermediateType] = new Encoder[IntermediateType] {
+                  |    override def apply(intermediatetype: IntermediateType): Json = intermediatetype match {
+                  |      case grandchildtype: GrandchildType =>
+                  |        GrandchildType.encoder(grandchildtype)
+                  |    }
+                  |  }
+                  |}""".stripMargin)
         )
 
         grandchildType.source.source.toString() should be(
           "final case class GrandchildType(id: String, foo: Option[String] = None, customTypeProp: scala.math.BigDecimal, customArrayTypeProp: Vector[scala.math.BigDecimal] = Vector.empty) extends IntermediateType"
         )
         grandchildType.source.companion.map(_.toString()) should be(Some(s"""object GrandchildType {
-             |  import io.circe._
-             |  import io.circe.generic.semiauto._
-             |  implicit lazy val json: Codec[GrandchildType] = deriveCodec[GrandchildType]
-             |}""".stripMargin))
+                                                                            |  import io.circe._
+                                                                            |  import io.circe.generic.semiauto._
+                                                                            |  implicit lazy val decoder: Decoder[GrandchildType] = deriveDecoder[GrandchildType]
+                                                                            |  implicit lazy val encoder: Encoder[GrandchildType] = deriveEncoder[GrandchildType].mapJsonObject(_.add("type", Json.fromString("grandchild")))
+                                                                            |}""".stripMargin))
     }
   }
 }
