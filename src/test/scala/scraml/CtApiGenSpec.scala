@@ -14,7 +14,7 @@ class CtApiGenSpec extends AnyFlatSpec with Matchers {
       new File("src/sbt-test/sbt-scraml/ct-api/reference/api-specs/api/api.raml"),
       new File("target/scraml-test-ct"),
       "scraml",
-      jsonSupport = Some(Circe),
+      jsonSupport = Some(Circe()),
       Set.empty,
       None
     )

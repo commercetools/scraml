@@ -6,7 +6,7 @@ lazy val root = (project in file("."))
     version := "0.2",
     ramlFile := Some(file("api/json.raml")),
     basePackageName := "scraml",
-    jsonSupport := Some(scraml.Circe),
+    jsonSupport := Some(scraml.Circe()),
     libraryDependencies += "com.commercetools" %% "sphere-json" % "0.12.5",
     libraryDependencies ++= Seq(
         "io.circe" %% "circe-core",

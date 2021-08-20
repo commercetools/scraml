@@ -17,7 +17,7 @@ sealed trait JsonSupport {
 case object Sphere extends JsonSupport {
   override def jsonType: String = "org.json4s.JsonAST.JValue"
 }
-case object Circe extends JsonSupport {
+final case class Circe(private val additionalImports: Seq[String] = Nil) extends JsonSupport {
   override def jsonType: String = "io.circe.Json"
 }
 
@@ -32,8 +32,8 @@ final case class ModelGenParams(
 ) {
   def allLibraries: List[LibrarySupport] = jsonSupport
     .map {
-      case Sphere => List(SphereJsonSupport)
-      case Circe  => List(CirceJsonSupport)
+      case Sphere         => List(SphereJsonSupport)
+      case Circe(imports) => List(CirceJsonSupport(imports))
     }
     .getOrElse(Nil) ++ librarySupport.toList
 }

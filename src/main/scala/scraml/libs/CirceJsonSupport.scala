@@ -9,7 +9,8 @@ import scraml.RMFUtil.getAnnotation
 import scraml.{DefnWithCompanion, LibrarySupport, ModelGenContext, RMFUtil}
 import io.vrap.rmf.raml.model.types.{AnyType, ObjectType, Property, StringType}
 
-object CirceJsonSupport extends LibrarySupport {
+final case class CirceJsonSupport(private val additionalImports: Seq[String])
+    extends LibrarySupport {
   import scala.meta._
   import scala.collection.JavaConverters._
 
@@ -53,6 +54,41 @@ object CirceJsonSupport extends LibrarySupport {
       x.getName.compareTo(y.getName)
   }
 
+  private def mkImports: List[Stat] =
+    additionalImports.map { entry =>
+      entry.split('.').toList match {
+        case Nil =>
+          throw new RuntimeException("configuration error: empty additional import")
+        case topLevel :: Nil =>
+          throw new RuntimeException(s"configuration error: cannot import $topLevel")
+        case first :: sels :: Nil =>
+          Import(
+            Importer(
+              Term.Name(first),
+              Importee.Name(Name.Indeterminate(sels)) :: Nil
+            ) :: Nil
+          )
+        case first :: second :: multiple if multiple.last == "_" =>
+          Import(
+            Importer(
+              multiple.init.foldLeft(Term.Select(Term.Name(first), Term.Name(second))) { (a, b) =>
+                Term.Select(a, Term.Name(b))
+              },
+              Importee.Wildcard() :: Nil
+            ) :: Nil
+          )
+        case first :: second :: multiple =>
+          Import(
+            Importer(
+              multiple.init.foldLeft(Term.Select(Term.Name(first), Term.Name(second))) { (a, b) =>
+                Term.Select(a, Term.Name(b))
+              },
+              Importee.Name(Name(multiple.last)) :: Nil
+            ) :: Nil
+          )
+      }
+    }.toList
+
   private def expandLeafTypes(context: ModelGenContext): AnyType => TreeSet[AnyType] = {
     case subType: ObjectType if context.getSubTypes(subType).nonEmpty =>
       context
@@ -88,7 +124,7 @@ object CirceJsonSupport extends LibrarySupport {
     List[Stat](q"def toJson(): io.circe.Json")
 
   private def defineToJson(context: ModelGenContext): List[Stat] =
-    List[Stat](
+    mkImports ::: List[Stat](
       q"import io.circe.{ Codec, Json }",
       q"""
         def toJson(): Json = implicitly[Codec[${Type.Name(context.objectType.getName)}]].apply(this)
@@ -210,6 +246,7 @@ object CirceJsonSupport extends LibrarySupport {
           )
 
         q"""
+            ..$mkImports
               import io.circe.Decoder.Result
               import io.circe._
 
@@ -238,6 +275,7 @@ object CirceJsonSupport extends LibrarySupport {
       .reverse
 
     q"""
+        ..$mkImports
        import io.circe._
 
       implicit val encodeAll: Encoder[$typeName] = new Encoder[$typeName] {
@@ -320,6 +358,7 @@ object CirceJsonSupport extends LibrarySupport {
       }.toList
 
     q"""
+      ..$mkImports
       import io.circe._
 
       implicit val encodeAll: Encoder[$typeName] = new Encoder[$typeName] {
@@ -378,7 +417,9 @@ object CirceJsonSupport extends LibrarySupport {
   }
 
   private def deriveJson(objectType: ObjectType, discriminator: Option[String]): List[Stat] =
-    q"""import io.circe._
+    q"""
+        ..$mkImports
+        import io.circe._
         import io.circe.generic.semiauto._
 
         ${discriminator
@@ -411,7 +452,9 @@ object CirceJsonSupport extends LibrarySupport {
           Type.Apply(Type.Name("Option"), List(mapApply))
         } else mapApply
 
-        q"""import io.circe.syntax._
+        q"""
+        ..$mkImports
+        import io.circe.syntax._
         import io.circe._
         import io.circe.Decoder.Result
 
