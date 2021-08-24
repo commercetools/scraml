@@ -3,10 +3,12 @@ package scraml.libs
 import scraml.LibrarySupport._
 import scraml.MetaUtil.packageTerm
 import scraml.RMFUtil.getAnnotation
-import scraml.{DefnWithCompanion, LibrarySupport, ModelGen, ModelGenContext, RMFUtil}
+import scraml.{DefnWithCompanion, JsonSupport, LibrarySupport, ModelGen, ModelGenContext, RMFUtil}
 import io.vrap.rmf.raml.model.types.{AnyType, ObjectType, StringType}
 
-object CirceJsonSupport extends LibrarySupport {
+object CirceJsonSupport extends LibrarySupport with JsonSupport {
+  override def jsonType: String = "io.circe.Json"
+
   import scala.meta._
   import scala.collection.JavaConverters._
 

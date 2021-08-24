@@ -14,7 +14,6 @@ final class MonocleOpticsSupportSpec extends AnyWordSpec with Diagrams {
         new File("src/sbt-test/sbt-scraml/simple/api/simple.raml"),
         new File("target/scraml-monocle-test"),
         "scraml",
-        jsonSupport = None,
         librarySupport = Set(MonocleOpticsSupport),
         formatConfig = None,
         generateDateCreated = true
@@ -57,7 +56,6 @@ final class MonocleOpticsSupportSpec extends AnyWordSpec with Diagrams {
         new File("src/sbt-test/sbt-scraml/simple/api/simple.raml"),
         new File("target/scraml-monocle-test"),
         "scraml",
-        jsonSupport = None,
         librarySupport = Set(MonocleOpticsSupport),
         formatConfig = None,
         generateDateCreated = true

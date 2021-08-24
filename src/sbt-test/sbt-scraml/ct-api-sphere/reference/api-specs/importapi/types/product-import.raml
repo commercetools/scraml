@@ -1,0 +1,113 @@
+#%RAML 1.0 Library
+usage: Product import types.
+(annotations.package): products
+
+uses:
+  common: common.raml
+  annotations: ../annotationTypes/annotations.raml
+
+types:
+  SearchKeywords:
+    properties:
+      /^[a-z]{2}(-[A-Z]{2})?$/:
+        type: SearchKeyword[]
+    description: |
+      Search keywords are primarily used by the suggester but are also considered for the full-text search. SearchKeywords is a JSON object where the keys are of [IETF language tag](https://en.wikipedia.org/wiki/IETF_language_tag). The value to a language tag key is an array of SearchKeyword for the specific language.
+      ```json
+      {
+        "en": [
+          { "text": "Multi tool" },
+          { "text": "Swiss Army Knife", "suggestTokenizer": { "type": "whitespace" } }
+        ],
+        "de": [
+          {
+            "text": "Schweizer Messer",
+            "suggestTokenizer": {
+              "type": "custom",
+              "inputs": ["schweizer messer", "offiziersmesser", "sackmesser"]
+            }
+          }
+        ]
+      }
+      ```
+  SearchKeyword:
+    properties:
+      text:
+        type: string
+      suggestTokenizer?:
+        type: SuggestTokenizer
+        description: The tokenizer defines the tokens that are used to match against the [Suggest Query](/../products-suggestions#suggest-query) input.
+  SuggestTokenizer:
+    discriminator: type
+    properties:
+      type:
+        type: string
+    description: |
+      The tokenizer defines the tokens that are used to match against the [Suggest Query](/../products-suggestions#suggest-query) input.
+  CustomTokenizer:
+    type: SuggestTokenizer
+    discriminatorValue: custom
+    properties:
+      inputs:
+        type: string[]
+  WhitespaceTokenizer:
+    type: SuggestTokenizer
+    discriminatorValue: whitespace
+
+  ProductImport:
+    type: common.ImportResource
+    description: |
+      The data representation for a Product to be imported that is persisted as a [Product](/../api/projects/products#product) in the Project.
+
+      This is the minimal representation required for creating a [Product](/../api/projects/products#product) in commercetools.
+    additionalProperties: false
+    properties:
+      name:
+        description: |
+          Maps to `Product.name`.
+        type: common.LocalizedString
+      productType:
+        description: |
+          The `productType` of a [Product](/../api/projects/products#product).
+          Maps to `Product.productType`.
+          The Reference to the [ProductType](/../api/projects/productTypes#producttype) with which the Product is associated.
+          If referenced ProductType does not exist, the `state` of the [ImportOperation](/import-operation#importoperation) will be set to `Unresolved` until the necessary ProductType is created.
+        type: common.ProductTypeKeyReference
+      slug:
+        description: |
+          Human-readable identifiers usually used as deep-link URL to the related product. Each slug must be unique across a Project,
+          but a product can have the same slug for different languages. Allowed are alphabetic, numeric, underscore (_) and hyphen (-) characters.
+        type: common.LocalizedString
+      description?:
+        description: |
+          Maps to `Product.description`.
+        type: common.LocalizedString
+      categories?:
+        description: |
+          Maps to `Product.categories`.
+          The References to the [Categories](/../api/projects/categories#category) with which the Product is associated.
+          If referenced Categories do not exist, the `state` of the [ImportOperation](/import-operation#importoperation) will be set to `Unresolved` until the necessary Categories are created.
+        type: common.CategoryKeyReference[]
+      metaTitle?:
+        type: common.LocalizedString
+      metaDescription?:
+        type: common.LocalizedString
+      metaKeywords?:
+        type: common.LocalizedString
+      taxCategory?:
+        description: |
+          The Reference to the [TaxCategory](/../api/projects/taxCategories#taxcategory) with which the Product is associated.
+          If referenced TaxCategory does not exist, the `state` of the [ImportOperation](/import-operation#importoperation) will be set to `Unresolved` until the necessary TaxCategory is created.
+        type: common.TaxCategoryKeyReference
+      searchKeywords?:
+        type: SearchKeywords
+      state?:
+        description: |
+          The Reference to the [State](/../api/projects/states#state) with which the Product is associated.
+          If referenced State does not exist, the `state` of the [ImportOperation](/import-operation#importoperation) will be set to `Unresolved` until the necessary State is created.
+        type: common.StateKeyReference
+      publish?:
+        type: boolean
+        default: false
+        description: |
+          If there were updates, only the updates will be published to `staged` and `current` projection.
