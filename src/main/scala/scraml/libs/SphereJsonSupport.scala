@@ -34,7 +34,7 @@ object SphereJsonSupport extends LibrarySupport with JsonSupport {
 
   private def deriveWithFallback(context: ModelGenContext): List[Stat] =
     if (shouldDeriveJson(context.objectType)) {
-      val subTypes = context.getSubTypes.toList
+      val subTypes = context.getDirectSubTypes.toList
       val matchTypes = Term.Match(
         Term.Name("value"),
         cases = subTypes.map(subType => {

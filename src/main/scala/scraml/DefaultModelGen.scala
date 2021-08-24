@@ -208,7 +208,7 @@ object DefaultModelGen extends ModelGen {
               Some(companionObjectSource(objectType.getName))
             )(params.allLibraries, context)
 
-          case None if isAbstract || context.getSubTypes.nonEmpty =>
+          case None if isAbstract || context.getDirectSubTypes.nonEmpty =>
             LibrarySupport.applyTrait(
               traitSource(context),
               Some(companionObjectSource(objectType.getName))

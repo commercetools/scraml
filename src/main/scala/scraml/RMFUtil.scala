@@ -7,6 +7,7 @@ import io.vrap.rmf.raml.model.types.{Annotation, AnyType, ObjectType, Property}
 import org.eclipse.emf.common.util.URI
 
 import java.io.File
+import scala.collection.immutable.TreeSet
 
 object RMFUtil {
   import scala.jdk.CollectionConverters._
@@ -17,6 +18,20 @@ object RMFUtil {
   def getAnnotation(from: AnyType)(name: String): Option[Annotation] = Option(
     from.getAnnotation(name)
   )
+
+  implicit val anyTypeOrdering: Ordering[AnyType] = new Ordering[AnyType] {
+    override def compare(x: AnyType, y: AnyType): Int =
+      x.getName.compareTo(y.getName)
+  }
+
+  def subTypes(aType: AnyType): TreeSet[AnyType] =
+    TreeSet(aType.getSubTypes.asScala.filter(_.getName != aType.getName): _*)
+
+  def leafTypes(aType: AnyType): TreeSet[AnyType] =
+    subTypes(aType).foldLeft(TreeSet.empty[AnyType]) {
+      case (acc, subType) if subType.getSubTypes.isEmpty => (acc + subType)
+      case (acc, subType)                                => acc ++ leafTypes(subType)
+    }
 
   def discriminators(aType: AnyType): List[String] = aType match {
     case objectType: ObjectType =>

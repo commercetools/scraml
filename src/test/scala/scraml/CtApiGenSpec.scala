@@ -1,7 +1,6 @@
 package scraml
 
 import cats.effect.unsafe.implicits.global
-import io.circe.Decoder.Result
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 
