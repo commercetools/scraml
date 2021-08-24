@@ -8,6 +8,7 @@ import scraml.RMFUtil.{getAnnotation, getPackageName}
 import scraml.libs.{CirceJsonSupport, SphereJsonSupport}
 
 import java.io.File
+import scala.collection.immutable.TreeSet
 import scala.meta.{Decl, Defn, Member, Pkg, Stat, Term, Type}
 
 sealed trait JsonSupport {
@@ -79,24 +80,28 @@ final case class ModelGenContext(
     apiBaseType: Option[AnyType] = None,
     extendType: Option[Type] = None
 ) {
-  import scala.jdk.CollectionConverters._
+  import RMFUtil.anyTypeOrdering
 
   lazy val scalaBaseType: Option[TypeRef] =
     apiBaseType.flatMap(ModelGen.scalaTypeRef(_, false, None, anyTypeName))
 
   lazy val anyTypeName: String = params.jsonSupport.map(_.jsonType).getOrElse("Any")
 
-  lazy val getSubTypes: List[AnyType] = {
-    objectType.getSubTypes.asScala.filter(_.getName != objectType.getName).iterator ++
-      api.scalaExtends
-        .find { case (_, typeValue) =>
-          typeValue.getName == objectType.getName
-        }
-        .flatMap(entry => api.typesByName.get(entry._1))
-  }.toList
+  lazy val scalaExtends: TreeSet[AnyType] = api.scalaExtends
+    .foldLeft(TreeSet.empty[AnyType]) { case (acc, (key, typeValue)) =>
+      if (typeValue.getName == objectType.getName)
+        api.typesByName.get(key).map(acc + _).getOrElse(acc)
+      else acc
+    }
+
+  lazy val getDirectSubTypes: Set[AnyType] =
+    RMFUtil.subTypes(objectType) ++ scalaExtends
+
+  lazy val leafTypes: TreeSet[AnyType] =
+    RMFUtil.leafTypes(objectType)
 
   lazy val typeProperties: Seq[Property] = RMFUtil.typeProperties(objectType).toSeq
-  lazy val isSealed: Boolean = getSubTypes.forall(getPackageName(_).contains(packageName))
+  lazy val isSealed: Boolean = getDirectSubTypes.forall(getPackageName(_).contains(packageName))
   lazy val isMapType: Option[MapTypeSpec] = ModelGen.isMapType(objectType, anyTypeName)
   lazy val isSingleton: Boolean           = isMapType.isEmpty && typeProperties.isEmpty
 

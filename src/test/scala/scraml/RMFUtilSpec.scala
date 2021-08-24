@@ -22,8 +22,11 @@ class RMFUtilSpec extends AnyFlatSpec with Matchers {
           ModelGenParams(ramlFile, new File("target"), "base", None, Set.empty, None),
           ApiContext(api)
         )
-        context.getSubTypes.toList
-          .map(_.getName) should be(List("B", "C"))
+        context.getDirectSubTypes
+          .map(_.getName) should be(Set("B", "C"))
+
+        context.leafTypes
+          .map(_.getName) should be(Set("D"))
       case _ => fail("type for test not found")
     }
   }
