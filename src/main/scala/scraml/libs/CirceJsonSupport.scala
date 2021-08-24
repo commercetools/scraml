@@ -109,19 +109,45 @@ object CirceJsonSupport extends LibrarySupport {
     val typeName         = context.objectType.getName
     val discriminatorOpt = discriminator(context.objectType)
     val decode: Term = if (discriminatorOpt.isEmpty) {
-      val initRead: String =
-        q"""
-            ${packageTerm(s"${firstSubType.getName}.decoder")}.tryDecode(c)
+      // Sort by number of properties so that the first type tried has the most
+      // properties, the next has the same or less, etc.  Since there is no
+      // discriminator, this ensures types which have a subset of the fields
+      // other types have are tried later.
+      val sortedByProperties = subTypes
+        .collect { case obj: ObjectType =>
+          obj
+        }
+        .sortBy(RMFUtil.typeProperties(_).size)
+        .reverse
+
+      val chained: String = if (sortedByProperties.nonEmpty) {
+        val initRead: String =
+          q"""
+            ${packageTerm(s"${sortedByProperties.head.getName}.decoder")}.tryDecode(c)
             """.toString
 
-      val trySubtypes = subTypes.drop(1).foldLeft(initRead) { case (acc, next) =>
-        val nextRead = q"""fold(_ => ${packageTerm(
-          s"${next.getName}.decoder"
-        )}.tryDecode(c), Right(_))""".toString
-        s"$acc.$nextRead"
-      }
+        sortedByProperties.tail.foldLeft(initRead) { case (acc, next) =>
+          val nextRead = q"""fold(_ => ${packageTerm(
+            s"${next.getName}.decoder"
+          )}.tryDecode(c), Right(_))""".toString
+          s"$acc.$nextRead"
+        }
+      } else {
+        val initRead: String = q"""
+          ${packageTerm(s"${firstSubType.getName}.decoder")}.tryDecode(c)
+          """.toString
 
-      trySubtypes.parse[Term].get
+        RMFUtil
+          .subTypes(context.objectType)
+          .filter(_.getName != firstSubType.getName)
+          .foldLeft(initRead) { case (acc, next) =>
+            val nextRead = q"""fold(_ => ${packageTerm(
+              s"${next.getName}.decoder"
+            )}.tryDecode(c), Right(_))""".toString
+            s"$acc.$nextRead"
+          }
+      }
+      chained.parse[Term].get
     } else
       Term.Match(
         Term.ApplyType(

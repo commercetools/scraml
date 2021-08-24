@@ -26,7 +26,7 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers {
           Some(s"""object NoDiscriminatorBase {
                   |  import io.circe.Decoder.Result
                   |  import io.circe._
-                  |  implicit lazy val decoder: Decoder[NoDiscriminatorBase] = new Decoder[NoDiscriminatorBase] { override def apply(c: HCursor): Result[NoDiscriminatorBase] = NoDiscriminatorSub1.decoder.tryDecode(c).fold(_ => NoDiscriminatorSub2.decoder.tryDecode(c), Right(_)) }
+                  |  implicit lazy val decoder: Decoder[NoDiscriminatorBase] = new Decoder[NoDiscriminatorBase] { override def apply(c: HCursor): Result[NoDiscriminatorBase] = NoDiscriminatorSub2.decoder.tryDecode(c).fold(_ => NoDiscriminatorSub1.decoder.tryDecode(c), Right(_)) }
                   |  implicit lazy val encoder: Encoder[NoDiscriminatorBase] = new Encoder[NoDiscriminatorBase] {
                   |    override def apply(nodiscriminatorbase: NoDiscriminatorBase): Json = nodiscriminatorbase match {
                   |      case nodiscriminatorsub1: NoDiscriminatorSub1 =>
