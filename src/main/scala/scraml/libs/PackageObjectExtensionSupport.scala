@@ -1,15 +1,10 @@
 package scraml.libs
 
-import io.vrap.rmf.raml.model.types.StringType
-import scraml.{DefnWithCompanion, LibrarySupport, ModelGenContext}
+import scraml.LibrarySupport
 
-import scala.meta.{Defn, Import, Importee, Importer, Name, Pkg, Stat, Term}
+import scala.meta.{Import, Importee, Importer, Name, Pkg, Stat, Term}
 
-case class PackageObjectExtensionSupport(
-    wrapped: LibrarySupport,
-    baseTypeFullQualifiedName: String,
-    additionalImports: Seq[String]
-) extends LibrarySupport {
+case class PackageObjectExtensionSupport(additionalImports: Seq[String]) extends LibrarySupport {
   private def mkImports: List[Stat] =
     additionalImports.map { entry =>
       entry.split('.').toList match {
@@ -45,26 +40,6 @@ case class PackageObjectExtensionSupport(
       }
     }.toList
 
-  override def modifyClass(classDef: Defn.Class, companion: Option[Defn.Object])(
-      context: ModelGenContext
-  ): DefnWithCompanion[Defn.Class] =
-    wrapped.modifyClass(classDef, companion)(context)
-
-  override def modifyObject(objectDef: Defn.Object)(
-      context: ModelGenContext
-  ): DefnWithCompanion[Defn.Object] =
-    wrapped.modifyObject(objectDef)(context)
-
-  override def modifyTrait(traitDef: Defn.Trait, companion: Option[Defn.Object])(
-      context: ModelGenContext
-  ): DefnWithCompanion[Defn.Trait] =
-    wrapped.modifyTrait(traitDef, companion)(context)
-
   override def modifyPackageObject: Pkg.Object => Pkg.Object = packageObject =>
-    wrapped.modifyPackageObject(LibrarySupport.appendPkgObjectStats(packageObject, mkImports))
-
-  override def modifyEnum(
-      enumType: StringType
-  )(enumTrait: Defn.Trait, companion: Option[Defn.Object]): DefnWithCompanion[Defn.Trait] =
-    wrapped.modifyEnum(enumType)(enumTrait, companion)
+    LibrarySupport.appendPkgObjectStats(packageObject, mkImports)
 }

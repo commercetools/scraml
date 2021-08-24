@@ -5,37 +5,27 @@ import io.vrap.rmf.raml.model.modules.Api
 import io.vrap.rmf.raml.model.types._
 import scraml.MetaUtil.{packageTerm, typeFromName}
 import scraml.RMFUtil.{getAnnotation, getPackageName}
-import scraml.libs.{CirceJsonSupport, SphereJsonSupport}
 
 import java.io.File
 import scala.meta.{Decl, Defn, Member, Pkg, Stat, Term, Type}
 
-sealed trait JsonSupport {
-  def jsonType: String
-}
+trait JsonSupport { self: LibrarySupport =>
+  // Json support should usually be one of the first to be applied
+  // but should still be customizable if you know what you are doing
+  override def order: Double = 0.1
 
-case object Sphere extends JsonSupport {
-  override def jsonType: String = "org.json4s.JsonAST.JValue"
-}
-case object Circe extends JsonSupport {
-  override def jsonType: String = "io.circe.Json"
+  def jsonType: String
 }
 
 final case class ModelGenParams(
     raml: File,
     targetDir: File,
     basePackage: String,
-    jsonSupport: Option[JsonSupport],
     librarySupport: Set[LibrarySupport],
-    formatConfig: Option[File],
+    formatConfig: Option[File] = None,
     generateDateCreated: Boolean = false
 ) {
-  def allLibraries: List[LibrarySupport] = jsonSupport
-    .map {
-      case Sphere => List(SphereJsonSupport)
-      case Circe  => List(CirceJsonSupport)
-    }
-    .getOrElse(Nil) ++ librarySupport.toList
+  lazy val allLibraries: List[LibrarySupport] = librarySupport.toList.sorted
 }
 
 final case class GeneratedModel(files: Seq[GeneratedFile]) {
@@ -84,7 +74,11 @@ final case class ModelGenContext(
   lazy val scalaBaseType: Option[TypeRef] =
     apiBaseType.flatMap(ModelGen.scalaTypeRef(_, false, None, anyTypeName))
 
-  lazy val anyTypeName: String = params.jsonSupport.map(_.jsonType).getOrElse("Any")
+  lazy val anyTypeName: String = params.allLibraries
+    .collectFirst { case jsonSupport: JsonSupport =>
+      jsonSupport.jsonType
+    }
+    .getOrElse("Any")
 
   lazy val getSubTypes: List[AnyType] = {
     objectType.getSubTypes.asScala.filter(_.getName != objectType.getName).iterator ++
@@ -131,6 +125,9 @@ final case class ModelGenContext(
 final case class DefnWithCompanion[T <: Defn with Member](defn: T, companion: Option[Defn.Object])
 
 trait LibrarySupport {
+  // number between 0 and 1 to define the order of library support applications
+  def order: Double = 0.5
+
   case object HasAnyProperties {
     def unapply(defn: Defn.Class): Boolean =
       defn.ctor.paramss.exists(_.nonEmpty)
@@ -185,6 +182,9 @@ trait LibrarySupport {
 }
 
 object LibrarySupport {
+  implicit val ordering: Ordering[LibrarySupport] =
+    (x: LibrarySupport, y: LibrarySupport) => x.order.compare(y.order)
+
   def applyClass(
       defn: Defn.Class,
       companion: Option[Defn.Object]

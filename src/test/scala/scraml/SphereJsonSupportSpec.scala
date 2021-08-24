@@ -3,6 +3,7 @@ package scraml
 import cats.effect.unsafe.implicits.global
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
+import scraml.libs.SphereJsonSupport
 
 import java.io.File
 
@@ -12,8 +13,7 @@ class SphereJsonSupportSpec extends AnyFlatSpec with Matchers {
       new File("src/sbt-test/sbt-scraml/json/api/json.raml"),
       new File("target/scraml-sphere-json-test"),
       "scraml",
-      jsonSupport = Some(Sphere),
-      librarySupport = Set.empty,
+      librarySupport = Set(SphereJsonSupport),
       None
     )
 

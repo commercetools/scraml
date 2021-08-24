@@ -14,7 +14,6 @@ final class CatsShowSupportSpec extends AnyWordSpec with Diagrams {
         new File("src/sbt-test/sbt-scraml/simple/api/simple.raml"),
         new File("target/scraml-cats-show-test"),
         "scraml",
-        jsonSupport = None,
         librarySupport = Set(CatsShowSupport),
         formatConfig = None,
         generateDateCreated = false
@@ -71,7 +70,6 @@ final class CatsShowSupportSpec extends AnyWordSpec with Diagrams {
         new File("src/sbt-test/sbt-scraml/simple/api/simple.raml"),
         new File("target/scraml-cats-show-test"),
         "scraml",
-        jsonSupport = None,
         librarySupport = Set(CatsShowSupport),
         formatConfig = None
       )

@@ -3,6 +3,7 @@ package scraml
 import cats.effect.unsafe.implicits.global
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
+import scraml.libs.CirceJsonSupport
 
 import java.io.File
 
@@ -12,8 +13,7 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers {
       new File("src/sbt-test/sbt-scraml/json/api/json.raml"),
       new File("target/scraml-circe-json-test"),
       "scraml",
-      jsonSupport = Some(Circe),
-      librarySupport = Set.empty,
+      librarySupport = Set(CirceJsonSupport),
       None
     )
 

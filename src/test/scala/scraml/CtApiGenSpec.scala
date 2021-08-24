@@ -7,6 +7,7 @@ import org.scalatest.matchers.should.Matchers
 
 import java.io.File
 import io.circe._
+import scraml.libs.CirceJsonSupport
 
 class CtApiGenSpec extends AnyFlatSpec with Matchers {
   "Default model gen" should "generate ct API" in {
@@ -14,8 +15,7 @@ class CtApiGenSpec extends AnyFlatSpec with Matchers {
       new File("src/sbt-test/sbt-scraml/ct-api/reference/api-specs/api/api.raml"),
       new File("target/scraml-test-ct"),
       "scraml",
-      jsonSupport = Some(Circe),
-      Set.empty,
+      librarySupport = Set(CirceJsonSupport),
       None
     )
 
