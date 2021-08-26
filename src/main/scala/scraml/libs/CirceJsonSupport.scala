@@ -12,8 +12,7 @@ object CirceJsonSupport extends LibrarySupport with JsonSupport {
   import scala.meta._
   import scala.collection.JavaConverters._
 
-  private def shouldDeriveJson(objectType: ObjectType): Boolean =
-    getAnnotation(objectType)("scala-derive-json").forall(_.getValue.getValue.toString.toBoolean)
+  private val decoderChunkThreshold = 50
 
   private val eitherCodec: List[Stat] =
     q"""
@@ -35,6 +34,9 @@ object CirceJsonSupport extends LibrarySupport with JsonSupport {
       }
      """.stats
 
+  private def shouldDeriveJson(objectType: ObjectType): Boolean =
+    getAnnotation(objectType)("scala-derive-json").forall(_.getValue.getValue.toString.toBoolean)
+
   private def discriminator(aType: ObjectType): Option[String] =
     RMFUtil.discriminators(aType) match {
       case Nil           => None
@@ -49,7 +51,7 @@ object CirceJsonSupport extends LibrarySupport with JsonSupport {
     Option(aType.getDiscriminatorValue)
 
   private def typeEncoder(context: ModelGenContext): Defn.Val = {
-    val subTypes = context.getDirectSubTypes.toList
+    val subTypes = context.leafTypes.toList
     val typeName = context.objectType.getName
 
     Defn.Val(
@@ -122,34 +124,34 @@ object CirceJsonSupport extends LibrarySupport with JsonSupport {
         .sortBy(RMFUtil.typeProperties(_).size)
         .reverse
 
-      val chained: String = if (sortedByProperties.nonEmpty) {
-        val initRead: String =
+      sortedByProperties match {
+        case Nil =>
           q"""
-            ${packageTerm(s"${sortedByProperties.head.getName}.decoder")}.tryDecode(c)
+             Left(DecodingFailure("no concrete types exist for: " + $typeName))
+             """
+        case single :: Nil =>
+          q"""
+            ${packageTerm(s"${single.getName}.decoder")}.tryDecode(c)
+            """
+        case head :: tail if tail.length < decoderChunkThreshold =>
+          val initRead: String =
+            q"""
+            ${packageTerm(s"${head.getName}.decoder")}.tryDecode(c)
             """.toString
 
-        sortedByProperties.tail.foldLeft(initRead) { case (acc, next) =>
-          val nextRead = q"""fold(_ => ${packageTerm(
-            s"${next.getName}.decoder"
-          )}.tryDecode(c), Right(_))""".toString
-          s"$acc.$nextRead"
-        }
-      } else {
-        val initRead: String = q"""
-          ${packageTerm(s"${firstSubType.getName}.decoder")}.tryDecode(c)
-          """.toString
-
-        RMFUtil
-          .subTypes(context.objectType)
-          .filter(_.getName != firstSubType.getName)
-          .foldLeft(initRead) { case (acc, next) =>
+          val decoderCalls = tail.foldLeft(initRead) { case (acc, next) =>
             val nextRead = q"""fold(_ => ${packageTerm(
               s"${next.getName}.decoder"
             )}.tryDecode(c), Right(_))""".toString
             s"$acc.$nextRead"
           }
+          decoderCalls.parse[Term].get
+        // For situations where there are a large number of leaf types, a
+        // "chunked" type decoder is generated so that we do not have a
+        // stack overflow in `scala.meta`.
+        case large =>
+          chunkedTypeDecoder(context, large)
       }
-      chained.parse[Term].get
     } else
       Term.Match(
         Term.ApplyType(
@@ -223,6 +225,38 @@ object CirceJsonSupport extends LibrarySupport with JsonSupport {
           Nil
         )
       )
+    )
+  }
+
+  private def chunkedTypeDecoder(context: ModelGenContext, leaves: List[ObjectType]): Term.Block = {
+    val localDefs: List[Defn.Def] = leaves.grouped(decoderChunkThreshold).zipWithIndex.map {
+      case (last :: Nil, index) =>
+        q"""
+          @scala.inline
+          def ${Term.Name("chunk" + index)}() = ${Term.Name(last.getName)}.decoder.tryDecode(c)
+          """
+      case (head :: tail, index) =>
+        q"""
+          @scala.inline
+          def ${Term.Name("chunk" + index)}() = ${
+            tail.foldLeft(q"""${Term.Name(head.getName)}.decoder.tryDecode(c)""") { case (accum, decoder) =>
+              q"""
+                $accum.fold( _ => ${Term.Name(decoder.getName)}.decoder.tryDecode(c), Right(_) )
+                """
+          }}
+          """
+      case (Nil, index) =>
+        q"""
+          @scala.inline
+          def ${Term.Name("chunk" + index)}() =
+            Left(DecodingFailure("unknown payload: " + ${context.objectType.getName}))
+          """
+    }.toList
+
+    Term.Block(
+      localDefs :+ localDefs.map(d => q"${d.name}()").reduce { (a, b) =>
+        q"$a.fold(_ => $b, Right(_))"
+      }
     )
   }
 

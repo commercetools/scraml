@@ -59,8 +59,8 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers {
                                                                       |    override def apply(basetype: BaseType): Json = basetype match {
                                                                       |      case datatype: DataType =>
                                                                       |        DataType.encoder(datatype)
-                                                                      |      case intermediatetype: IntermediateType =>
-                                                                      |        IntermediateType.encoder(intermediatetype)
+                                                                      |      case grandchildtype: GrandchildType =>
+                                                                      |        GrandchildType.encoder(grandchildtype)
                                                                       |    }
                                                                       |  }
                                                                       |}""".stripMargin))
