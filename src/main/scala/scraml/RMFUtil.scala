@@ -25,25 +25,25 @@ object RMFUtil {
   }
 
   /** get all sub-types of '''aType''', excluding '''aType'''.
-   */
+    */
   def subTypes(aType: AnyType): TreeSet[AnyType] =
     filterSubTypes(aType)(_.getName != aType.getName)
 
-  /** get all sub-types of '''aType''' which are '''allowed''' by the given
-   * functor.  note that it is up to the '''allow''' functor to decide whether
-   * or not '''aType''' is included in the `TreeSet`.
-   */
+  /** get all sub-types of '''aType''' which are '''allowed''' by the given functor. note that it is
+    * up to the '''allow''' functor to decide whether or not '''aType''' is included in the
+    * `TreeSet`.
+    */
   def filterSubTypes(aType: AnyType)(allow: AnyType => Boolean): TreeSet[AnyType] =
     TreeSet(aType.getSubTypes.asScala.filter(allow): _*)
 
   /** find all terminal, or "leaf", types of '''aType'''.
-   */
+    */
   def leafTypes(aType: AnyType): TreeSet[AnyType] = {
     def expand(child: AnyType): TreeSet[AnyType] =
       filterSubTypes(child)(_.getName != aType.getName).foldLeft(TreeSet.empty[AnyType]) {
         case (acc, subType) if subType.getSubTypes.isEmpty => (acc + subType)
         case (acc, subType)                                => acc ++ expand(subType)
-    }
+      }
 
     expand(aType)
   }

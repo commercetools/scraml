@@ -229,29 +229,34 @@ object CirceJsonSupport extends LibrarySupport with JsonSupport {
   }
 
   private def chunkedTypeDecoder(context: ModelGenContext, leaves: List[ObjectType]): Term.Block = {
-    val localDefs: List[Defn.Def] = leaves.grouped(decoderChunkThreshold).zipWithIndex.map {
-      case (last :: Nil, index) =>
-        q"""
+    val localDefs: List[Defn.Def] = leaves
+      .grouped(decoderChunkThreshold)
+      .zipWithIndex
+      .map {
+        case (last :: Nil, index) =>
+          q"""
           @scala.inline
           def ${Term.Name("chunk" + index)}() = ${Term.Name(last.getName)}.decoder.tryDecode(c)
           """
-      case (head :: tail, index) =>
-        q"""
+        case (head :: tail, index) =>
+          q"""
           @scala.inline
-          def ${Term.Name("chunk" + index)}() = ${
-            tail.foldLeft(q"""${Term.Name(head.getName)}.decoder.tryDecode(c)""") { case (accum, decoder) =>
-              q"""
+          def ${Term.Name("chunk" + index)}() = ${tail.foldLeft(
+            q"""${Term.Name(head.getName)}.decoder.tryDecode(c)"""
+          ) { case (accum, decoder) =>
+            q"""
                 $accum.fold( _ => ${Term.Name(decoder.getName)}.decoder.tryDecode(c), Right(_) )
                 """
           }}
           """
-      case (Nil, index) =>
-        q"""
+        case (Nil, index) =>
+          q"""
           @scala.inline
           def ${Term.Name("chunk" + index)}() =
             Left(DecodingFailure("unknown payload: " + ${context.objectType.getName}))
           """
-    }.toList
+      }
+      .toList
 
     Term.Block(
       localDefs :+ localDefs.map(d => q"${d.name}()").reduce { (a, b) =>
