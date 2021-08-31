@@ -13,6 +13,8 @@ object ScramlPlugin extends AutoPlugin {
     val librarySupport  = settingKey[Set[LibrarySupport]]("additional library support")
     val formatConfig =
       settingKey[Option[File]]("config to be used for formatting, no formatting if not set")
+
+    val runScraml = taskKey[Seq[File]]("generate Scala from RAML definitions")
   }
 
   import autoImport._
@@ -23,8 +25,12 @@ object ScramlPlugin extends AutoPlugin {
     formatConfig    := None
   )
 
+  /// Here, the runScraml task is defined but not automatically added to
+  /// the `sourceGenerators`.  This way, builds control when the code is
+  /// generated.  One reason for doing this is to ensure that RAML definitions
+  /// can be copied as needed before attempting to generate code.
   override lazy val projectSettings: Seq[Setting[_]] = Seq(
-    Compile / sourceGenerators += Def.task {
+    runScraml := {
       val targetDir: File = (Compile / sourceManaged).value
       // adapted from https://stackoverflow.com/questions/33897874/sbt-sourcegenerators-task-execute-only-if-a-file-changes
       val cachedGeneration = FileFunction.cached(
@@ -56,6 +62,6 @@ object ScramlPlugin extends AutoPlugin {
           cachedGeneration(inputFiles).toSeq
         case None => Seq.empty
       }
-    }.taskValue
+    }
   )
 }
