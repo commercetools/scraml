@@ -10,25 +10,27 @@ object ScramlPlugin extends AutoPlugin {
   object autoImport {
     val ramlFile        = settingKey[Option[File]]("RAML file to be used by the sbt-scraml plugin")
     val basePackageName = settingKey[String]("base package name to be used for generated types")
-    val jsonSupport = settingKey[Option[JsonSupport]](
-      "if set, JSON support will be generated for the selected library"
-    )
-    val librarySupport = settingKey[Set[LibrarySupport]]("additional library support")
+    val librarySupport  = settingKey[Set[LibrarySupport]]("additional library support")
     val formatConfig =
       settingKey[Option[File]]("config to be used for formatting, no formatting if not set")
+
+    val runScraml = taskKey[Seq[File]]("generate Scala from RAML definitions")
   }
 
   import autoImport._
   override lazy val globalSettings: Seq[Setting[_]] = Seq(
     ramlFile        := None,
     basePackageName := "scraml",
-    jsonSupport     := None,
     librarySupport  := Set.empty,
     formatConfig    := None
   )
 
+  /// Here, the runScraml task is defined but not automatically added to
+  /// the `sourceGenerators`.  This way, builds control when the code is
+  /// generated.  One reason for doing this is to ensure that RAML definitions
+  /// can be copied as needed before attempting to generate code.
   override lazy val projectSettings: Seq[Setting[_]] = Seq(
-    Compile / sourceGenerators += Def.task {
+    runScraml := {
       val targetDir: File = (Compile / sourceManaged).value
       // adapted from https://stackoverflow.com/questions/33897874/sbt-sourcegenerators-task-execute-only-if-a-file-changes
       val cachedGeneration = FileFunction.cached(
@@ -40,7 +42,6 @@ object ScramlPlugin extends AutoPlugin {
               file,
               targetDir,
               basePackageName.value,
-              jsonSupport.value,
               librarySupport.value,
               formatConfig.value
             )
@@ -61,6 +62,6 @@ object ScramlPlugin extends AutoPlugin {
           cachedGeneration(inputFiles).toSeq
         case None => Seq.empty
       }
-    }.taskValue
+    }
   )
 }

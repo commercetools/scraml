@@ -7,6 +7,7 @@ import io.vrap.rmf.raml.model.types.{Annotation, AnyType, ObjectType, Property}
 import org.eclipse.emf.common.util.URI
 
 import java.io.File
+import scala.collection.immutable.TreeSet
 
 object RMFUtil {
   import scala.jdk.CollectionConverters._
@@ -18,9 +19,38 @@ object RMFUtil {
     from.getAnnotation(name)
   )
 
-  private def discriminators(aType: AnyType): List[String] = aType match {
+  implicit val anyTypeOrdering: Ordering[AnyType] = new Ordering[AnyType] {
+    override def compare(x: AnyType, y: AnyType): Int =
+      x.getName.compareTo(y.getName)
+  }
+
+  /** get all sub-types of '''aType''', excluding '''aType'''.
+    */
+  def subTypes(aType: AnyType): TreeSet[AnyType] =
+    filterSubTypes(aType)(_.getName != aType.getName)
+
+  /** get all sub-types of '''aType''' which are '''allowed''' by the given functor. note that it is
+    * up to the '''allow''' functor to decide whether or not '''aType''' is included in the
+    * `TreeSet`.
+    */
+  def filterSubTypes(aType: AnyType)(allow: AnyType => Boolean): TreeSet[AnyType] =
+    TreeSet(aType.getSubTypes.asScala.filter(allow): _*)
+
+  /** find all terminal, or "leaf", types of '''aType'''.
+    */
+  def leafTypes(aType: AnyType): TreeSet[AnyType] = {
+    def expand(child: AnyType): TreeSet[AnyType] =
+      filterSubTypes(child)(_.getName != aType.getName).foldLeft(TreeSet.empty[AnyType]) {
+        case (acc, subType) if subType.getSubTypes.isEmpty => (acc + subType)
+        case (acc, subType)                                => acc ++ expand(subType)
+      }
+
+    expand(aType)
+  }
+
+  def discriminators(aType: AnyType): List[String] = aType match {
     case objectType: ObjectType =>
-      List(objectType.getDiscriminator) ++ Option(aType.getType)
+      Option(objectType.getDiscriminator).toList ++ Option(aType.getType)
         .map(discriminators)
         .getOrElse(List.empty)
     case _ => List.empty

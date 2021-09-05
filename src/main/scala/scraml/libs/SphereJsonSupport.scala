@@ -4,11 +4,13 @@ import _root_.io.vrap.rmf.raml.model.types.ObjectType
 import scraml.LibrarySupport.appendObjectStats
 import scraml.MetaUtil.typeFromName
 import scraml.RMFUtil.getAnnotation
-import scraml.{DefnWithCompanion, LibrarySupport, ModelGenContext}
+import scraml.{DefnWithCompanion, JsonSupport, LibrarySupport, ModelGenContext}
 
 import scala.meta._
 
-object SphereJsonSupport extends LibrarySupport {
+object SphereJsonSupport extends LibrarySupport with JsonSupport {
+  override def jsonType: String = "org.json4s.JsonAST.JValue"
+
   private def shouldDeriveJson(objectType: ObjectType): Boolean =
     getAnnotation(objectType)("scala-derive-json").exists(_.getValue.getValue.toString.toBoolean)
 
@@ -32,7 +34,7 @@ object SphereJsonSupport extends LibrarySupport {
 
   private def deriveWithFallback(context: ModelGenContext): List[Stat] =
     if (shouldDeriveJson(context.objectType)) {
-      val subTypes = context.getSubTypes.toList
+      val subTypes = context.getDirectSubTypes.toList
       val matchTypes = Term.Match(
         Term.Name("value"),
         cases = subTypes.map(subType => {

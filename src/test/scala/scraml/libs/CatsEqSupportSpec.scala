@@ -14,7 +14,6 @@ final class CatsEqSupportSpec extends AnyWordSpec with Diagrams {
         new File("src/sbt-test/sbt-scraml/simple/api/simple.raml"),
         new File("target/scraml-cats-eq-test"),
         "scraml",
-        jsonSupport = None,
         librarySupport = Set(CatsEqSupport),
         formatConfig = None,
         generateDateCreated = true

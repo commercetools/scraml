@@ -9,6 +9,7 @@ lazy val root = (project in file("."))
       scraml.libs.CatsShowSupport,
       scraml.libs.MonocleOpticsSupport
     ),
+    Compile / sourceGenerators += runScraml,
     libraryDependencies ++= Seq(
       "org.typelevel" %% "cats-core" % "2.6.1",
       "dev.optics" %% "monocle-core" % "3.0.0",

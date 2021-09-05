@@ -3,6 +3,7 @@ package scraml
 import cats.effect.unsafe.implicits.global
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
+import scraml.libs.SphereJsonSupport
 
 import java.io.File
 
@@ -12,15 +13,14 @@ class SphereJsonSupportSpec extends AnyFlatSpec with Matchers {
       new File("src/sbt-test/sbt-scraml/json/api/json.raml"),
       new File("target/scraml-sphere-json-test"),
       "scraml",
-      jsonSupport = Some(Sphere),
-      librarySupport = Set.empty,
+      librarySupport = Set(SphereJsonSupport),
       None
     )
 
     val generated = ModelGenRunner.run(DefaultModelGen)(params).unsafeRunSync()
 
     generated.files match {
-      case noDiscBase :: _ :: _ :: baseType :: dataType :: emptyBase :: noProps :: _ :: _ :: _ :: _ :: _ :: Nil =>
+      case noDiscBase :: _ :: _ :: baseType :: _ :: _ :: dataType :: emptyBase :: noProps :: _ :: _ :: _ :: _ :: _ :: Nil =>
         noDiscBase.source.source.toString() should be("sealed trait NoDiscriminatorBase")
         noDiscBase.source.companion.map(_.toString()) should be(
           Some(s"""object NoDiscriminatorBase {
