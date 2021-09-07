@@ -1,5 +1,6 @@
 package scraml.libs
 
+import io.vrap.rmf.raml.model.modules.Api
 import scraml.LibrarySupport._
 import scraml.MetaUtil.packageTerm
 import scraml.RMFUtil.getAnnotation
@@ -431,7 +432,7 @@ object CirceJsonSupport extends LibrarySupport with JsonSupport {
       }
       .getOrElse(DefnWithCompanion(objectDef, None))
 
-  override def modifyPackageObject: Pkg.Object => Pkg.Object =
+  override def modifyPackageObject(api: Api): Pkg.Object => Pkg.Object =
     appendPkgObjectStats(_, eitherCodec)
 
   override def modifyEnum(

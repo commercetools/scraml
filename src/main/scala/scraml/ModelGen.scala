@@ -125,7 +125,7 @@ final case class ModelGenContext(
           if (mapTypeSpec.optional) Some(Term.Name("None")) else None
         )
       )
-    case None => typeProperties.flatMap(ModelGen.scalaProperty(this)(_)).toList
+    case None => typeProperties.flatMap(ModelGen.scalaProperty(_)(this.anyTypeName)).toList
   }
 }
 
@@ -331,13 +331,13 @@ object ModelGen {
     } else Some(TypeRef(typeRef.baseType, typeRef.packageName, typeRef.defaultValue))
   }
 
-  def scalaProperty(context: ModelGenContext)(prop: Property): Option[Term.Param] = {
+  def scalaProperty(prop: TypedElement)(fallbackType: String): Option[Term.Param] = {
     lazy val optional = !prop.getRequired
     val scalaTypeAnnotation =
       Option(prop.getAnnotation("scala-type")).map(_.getValue.getValue.toString)
 
     ModelGen
-      .scalaTypeRef(prop.getType, optional, scalaTypeAnnotation, context.anyTypeName)
+      .scalaTypeRef(prop.getType, optional, scalaTypeAnnotation, fallbackType)
       .map(ref => Term.Param(Nil, Term.Name(prop.getName), Some(ref.scalaType), ref.defaultValue))
   }
 

@@ -10,12 +10,11 @@ import org.scalatest.matchers.should.Matchers
 
 final class TapirSupportSpec extends AnyWordSpec with Diagrams with Matchers {
   "TapirSupport" must {
-    "generate endpoints" in {
+    "generate simple endpoints" in {
       val params = ModelGenParams(
         new File("src/sbt-test/sbt-scraml/simple/api/simple.raml"),
         new File("target/scraml-tapir-test"),
         "scraml",
-        jsonSupport = None,
         librarySupport = Set(TapirSupport("Endpoints")),
         formatConfig = None,
         generateDateCreated = true
@@ -29,6 +28,19 @@ final class TapirSupportSpec extends AnyWordSpec with Diagrams with Matchers {
            |    val greeting = endpoint.in("greeting")
            |  }
            |}""".stripMargin)
+    }
+
+    "generate ct api endpoints" in {
+      val params = ModelGenParams(
+        new File("src/sbt-test/sbt-scraml/ct-api/reference/api-specs/api/api.raml"),
+        new File("target/scraml-tapir-ct-api-test"),
+        "scraml",
+        librarySupport = Set(TapirSupport("Endpoints")),
+        formatConfig = None,
+        generateDateCreated = true
+      )
+
+      ModelGenRunner.run(DefaultModelGen)(params).unsafeRunSync()
     }
   }
 }
