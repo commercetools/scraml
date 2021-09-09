@@ -154,7 +154,7 @@ trait LibrarySupport {
   def modifyClass(classDef: Defn.Class, companion: Option[Defn.Object])(
       context: ModelGenContext
   ): DefnWithCompanion[Defn.Class] =
-    DefnWithCompanion(classDef, None)
+    DefnWithCompanion(classDef, companion)
 
   def modifyObject(objectDef: Defn.Object)(
       context: ModelGenContext
@@ -166,7 +166,7 @@ trait LibrarySupport {
   ): DefnWithCompanion[Defn.Trait] =
     DefnWithCompanion(traitDef, companion)
 
-  def modifyPackageObject(api: Api): Pkg.Object => Pkg.Object = identity
+  def modifyPackageObject(libs: List[LibrarySupport], api: Api): Pkg.Object => Pkg.Object = identity
 
   def modifyEnum(
       enumType: StringType
@@ -216,7 +216,7 @@ object LibrarySupport {
       packageObject: Pkg.Object
   )(libs: List[LibrarySupport], api: Api): Pkg.Object =
     libs.foldLeft(packageObject: Pkg.Object) { case (acc, lib) =>
-      lib.modifyPackageObject(api)(acc)
+      lib.modifyPackageObject(libs, api)(acc)
     }
   def applyEnum(enumType: StringType)(enumTrait: Defn.Trait, companion: Defn.Object)(
       libs: List[LibrarySupport]

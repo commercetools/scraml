@@ -23,4 +23,13 @@ object MetaUtil {
 
   def typeFromName(fullQualifiedName: String): Type.Ref =
     typeFromNameParts(fullQualifiedName.split("\\.").toList.reverse, fullQualifiedName)
+
+  def isTypeApply(scalaType: Type, typeName: String): Boolean = scalaType match {
+    case typeApply: Type.Apply =>
+      typeApply.tpe match {
+        case Type.Name(name) if name == typeName => true
+        case _                                   => false
+      }
+    case _ => false
+  }
 }

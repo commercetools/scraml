@@ -15,19 +15,46 @@ final class TapirSupportSpec extends AnyWordSpec with Diagrams with Matchers {
         new File("src/sbt-test/sbt-scraml/simple/api/simple.raml"),
         new File("target/scraml-tapir-test"),
         "scraml",
-        librarySupport = Set(TapirSupport("Endpoints")),
-        formatConfig = None,
-        generateDateCreated = true
+        librarySupport = Set(CirceJsonSupport, TapirSupport("Endpoints")),
+        formatConfig = None
       )
 
       val generated = ModelGenRunner.run(DefaultModelGen)(params).unsafeRunSync()
 
       generated.packageObject.source.source.toString should be(s"""package object scraml {
-           |  object Endpoints {
-           |    import sttp.tapir._
-           |    val greeting = endpoint.in("greeting")
-           |  }
-           |}""".stripMargin)
+                                                                  |  import io.circe.Decoder.Result
+                                                                  |  import io.circe.{ HCursor, Json, Decoder, Encoder }
+                                                                  |  implicit def eitherEncoder[A, B](implicit aEncoder: Encoder[A], bEncoder: Encoder[B]): Encoder[Either[A, B]] = new Encoder[Either[A, B]] {
+                                                                  |    override def apply(a: Either[A, B]): Json = a match {
+                                                                  |      case Right(b) =>
+                                                                  |        bEncoder(b)
+                                                                  |      case Left(a) =>
+                                                                  |        aEncoder(a)
+                                                                  |    }
+                                                                  |  }
+                                                                  |  implicit def eitherDecoder[A, B](implicit aDecoder: Decoder[A], bDecoder: Decoder[B]): Decoder[Either[A, B]] = new Decoder[Either[A, B]] { override def apply(c: HCursor): Result[Either[A, B]] = aDecoder.either(bDecoder)(c) }
+                                                                  |  import sttp.tapir._
+                                                                  |  import sttp.model._
+                                                                  |  import sttp.tapir.CodecFormat.TextPlain
+                                                                  |  import sttp.tapir.json.circe._
+                                                                  |  private implicit def anySchema[T]: Schema[T] = Schema[T](SchemaType.SCoproduct(Nil, None)(_ => None), None)
+                                                                  |  implicit lazy val matchType: sttp.tapir.typelevel.MatchType[io.circe.Json] = {
+                                                                  |    case _: io.circe.Json => true
+                                                                  |    case _ => false
+                                                                  |  }
+                                                                  |  private implicit val queryOptionalListCodec: Codec[List[String], Option[List[String]], TextPlain] = new Codec[List[String], Option[List[String]], TextPlain] {
+                                                                  |    override def rawDecode(l: List[String]): DecodeResult[Option[List[String]]] = DecodeResult.Value(Some(l))
+                                                                  |    override def encode(h: Option[List[String]]): List[String] = h.getOrElse(List.empty)
+                                                                  |    override lazy val schema: Schema[Option[List[String]]] = Schema.binary
+                                                                  |    override lazy val format: TextPlain = TextPlain()
+                                                                  |  }
+                                                                  |  object Endpoints {
+                                                                  |    object Greeting {
+                                                                  |      final case class GetGreetingParams(allParams: QueryParams)
+                                                                  |      val getGreeting = endpoint.in("greeting").in(queryParams).mapInTo[GetGreetingParams].get.out(oneOf(oneOfMapping(StatusCode(200), jsonBody[DataType])))
+                                                                  |    }
+                                                                  |  }
+                                                                  |}""".stripMargin)
     }
 
     "generate ct api endpoints" in {
@@ -35,9 +62,8 @@ final class TapirSupportSpec extends AnyWordSpec with Diagrams with Matchers {
         new File("src/sbt-test/sbt-scraml/ct-api/reference/api-specs/api/api.raml"),
         new File("target/scraml-tapir-ct-api-test"),
         "scraml",
-        librarySupport = Set(TapirSupport("Endpoints")),
-        formatConfig = None,
-        generateDateCreated = true
+        librarySupport = Set(scraml.libs.CirceJsonSupport, TapirSupport("Endpoints")),
+        formatConfig = None
       )
 
       ModelGenRunner.run(DefaultModelGen)(params).unsafeRunSync()

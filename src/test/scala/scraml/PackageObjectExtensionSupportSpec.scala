@@ -13,7 +13,7 @@ class PackageObjectExtensionSupportSpec extends AnyFlatSpec with Matchers {
     }
 
     PackageObjectExtensionSupport(additionalImports = Seq("scala.mutable._"))
-      .modifyPackageObject(new ModulesFactoryImpl().createApi())(
+      .modifyPackageObject(List.empty, new ModulesFactoryImpl().createApi())(
         packageObject
       )
       .templ

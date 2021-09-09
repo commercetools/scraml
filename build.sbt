@@ -42,7 +42,8 @@ lazy val root = (project in file("."))
       "io.circe" %% "circe-generic",
       "io.circe" %% "circe-parser"
     ).map(_ % circeVersion % Test),
-    libraryDependencies += "com.softwaremill.sttp.tapir" %% "tapir-core" % "0.19.0-M5" % Test,
+    libraryDependencies += "com.softwaremill.sttp.tapir" %% "tapir-core" % "0.19.0-M8" % Test,
+    libraryDependencies += "com.softwaremill.sttp.tapir" %% "tapir-json-circe" % "0.19.0-M8" % Test,
     pluginCrossBuild / sbtVersion := {
       scalaBinaryVersion.value match {
         case "2.12" => "1.5.0" // set minimum sbt version

@@ -41,6 +41,6 @@ case class PackageObjectExtensionSupport(additionalImports: Seq[String]) extends
       }
     }.toList
 
-  override def modifyPackageObject(api: Api): Pkg.Object => Pkg.Object = packageObject =>
-    LibrarySupport.appendPkgObjectStats(packageObject, mkImports)
+  override def modifyPackageObject(libs: List[LibrarySupport], api: Api): Pkg.Object => Pkg.Object =
+    packageObject => LibrarySupport.appendPkgObjectStats(packageObject, mkImports)
 }

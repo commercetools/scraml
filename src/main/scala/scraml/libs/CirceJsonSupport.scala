@@ -432,7 +432,7 @@ object CirceJsonSupport extends LibrarySupport with JsonSupport {
       }
       .getOrElse(DefnWithCompanion(objectDef, None))
 
-  override def modifyPackageObject(api: Api): Pkg.Object => Pkg.Object =
+  override def modifyPackageObject(libs: List[LibrarySupport], api: Api): Pkg.Object => Pkg.Object =
     appendPkgObjectStats(_, eitherCodec)
 
   override def modifyEnum(
