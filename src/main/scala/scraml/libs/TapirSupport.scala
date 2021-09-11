@@ -1,8 +1,9 @@
 package scraml.libs
 
+import com.google.common.net.MediaType
 import io.vrap.rmf.raml.model.resources.Resource
 import io.vrap.rmf.raml.model.modules.Api
-import io.vrap.rmf.raml.model.resources.Method
+import io.vrap.rmf.raml.model.types.TypedElement
 import io.vrap.rmf.raml.model.responses.Body
 import scraml.LibrarySupport.appendObjectStats
 import scraml.{DefnWithCompanion, JsonSupport, LibrarySupport, MetaUtil, ModelGen, ModelGenContext}
@@ -64,20 +65,19 @@ final class TapirSupport(endpointsObjectName: String) extends LibrarySupport {
     pathMatcherString.parse[Term].get
   }
 
-  private def queryParamsFromMethod(method: Method): List[Term.Param] =
-    method.getQueryParameters.asScala.flatMap { queryParam =>
+  private def paramTypes(elements: Seq[TypedElement]): List[Term.Param] =
+    elements.flatMap { queryParam =>
       if (Option(queryParam.getPattern).isDefined) None
       else ModelGen.scalaProperty(queryParam)(fallbackType = "String")
     }.toList
 
-  private def queryMatcher(queryParams: List[Term.Param]): Term = queryParams
-    .foldLeft("queryParams") { case (acc, queryParam) =>
-      acc ++ queryParam.decltpe
-        .map(theType => s""" and query[$theType]("${queryParam.name.value}")""")
-        .getOrElse("")
+  private def paramMatcher(params: List[Term.Param])(function: String): Option[Term] =
+    params.flatMap(param => param.decltpe.map(theType =>
+      q"""
+        ${Term.Name(function)}[$theType](${param.name.value})
+       """)).reduceOption[Term] {
+      case (left, right) => q""" $left and $right """
     }
-    .parse[Term]
-    .get
 
   private def pathParamsFromResource(resource: Resource): List[Term.Param] =
     resource.getFullUriParameters.asScala.map { uriParam =>
@@ -129,22 +129,45 @@ final class TapirSupport(endpointsObjectName: String) extends LibrarySupport {
     val resourceMethodStats = resource.getMethods.asScala.flatMap { method =>
       val resourceMethodName            = s"${method.getMethodName}$fullResourceName"
       val pathParams                    = pathParamsFromResource(resource)
-      val queryParams: List[Term.Param] = queryParamsFromMethod(method)
+      val queryParams: List[Term.Param] = paramTypes(method.getQueryParameters.asScala)
+      val headerParams: List[Term.Param] = paramTypes(method.getHeaders.asScala)
 
       val paramsTypeName = Type.Name(s"${upperCaseFirst(resourceMethodName)}Params")
       val paramTypeDef: Defn.Class =
         q"""
-            final case class $paramsTypeName(..$pathParams, allParams: QueryParams, ..$queryParams)
+            final case class $paramsTypeName(..$headerParams, ..$pathParams, ..$queryParams)
          """
 
-      val endpointMethodValue: Term =
+      val endpointWithHeaderMatcher: Term = paramMatcher(headerParams)("header").map(matcher =>
         q"""
-           endpoint
-            .in(${pathMatcher(templateWithoutSlash)})
-            .in(${queryMatcher(queryParams)})
+           endpoint.in($matcher)
+         """)getOrElse(q"""endpoint""")
+
+      val endpointWithPathMatcher: Term =
+        q"""
+           $endpointWithHeaderMatcher.in(${pathMatcher(templateWithoutSlash)})
+         """
+
+      val endpointWithQueryMatcher: Term = paramMatcher(queryParams)("query").map(matcher =>
+        q"""
+           $endpointWithPathMatcher.in($matcher)
+         """).getOrElse(endpointWithPathMatcher)
+
+      val endpointWithInputMappedAndMethod: Term =
+        q"""
+           $endpointWithQueryMatcher
             .mapInTo[$paramsTypeName]
             .${Term.Name(method.getMethodName)}
          """
+
+      val endpointWithInputBody: Term = method.getBodies.asScala
+        .headOption
+        .filter(_.getContentType.contains("application/json"))
+        .flatMap(body => ModelGen.scalaTypeRef(body.getType, false, None, jsonSupport.jsonType))
+        .map(typeRef =>
+        q"""
+           $endpointWithInputMappedAndMethod.in(jsonBody[${typeRef.scalaType}])
+         """).getOrElse(endpointWithInputMappedAndMethod)
 
       val (successMappings, errorMappings) =
         method.getResponses.asScala.foldLeft((List.empty[Term.Apply], List.empty[Term.Apply])) {
@@ -173,9 +196,9 @@ final class TapirSupport(endpointsObjectName: String) extends LibrarySupport {
       val endpointWithOut =
         if (successMappings.nonEmpty)
           q"""
-          $endpointMethodValue.out(oneOf(..$successMappings))
+          $endpointWithInputBody.out(oneOf(..$successMappings))
          """
-        else endpointMethodValue
+        else endpointWithInputBody
 
       val endpointWithErrorOut =
         if (errorMappings.nonEmpty)

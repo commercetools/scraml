@@ -275,7 +275,7 @@ object ModelGen {
       // we would need to generate types for property types otherwise
       case _: StringType if apiType.eContainer().eClass().getName == "Property" =>
         TypeRefDetails(Type.Name("String"))
-      case stringEnum: StringType if Option(stringEnum.getEnum).forall(!_.isEmpty) =>
+      case stringEnum: StringType if Option(stringEnum.getEnum).forall(!_.isEmpty) && stringEnum.getName != "string" =>
         TypeRefDetails(Type.Name(stringEnum.getName))
       case _: StringType =>
         TypeRefDetails(Type.Name("String"))

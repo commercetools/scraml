@@ -8,6 +8,7 @@ import java.io.File
 import cats.effect.unsafe.implicits.global
 import org.scalatest.matchers.should.Matchers
 
+
 final class TapirSupportSpec extends AnyWordSpec with Diagrams with Matchers {
   "TapirSupport" must {
     "generate simple endpoints" in {
@@ -50,8 +51,8 @@ final class TapirSupportSpec extends AnyWordSpec with Diagrams with Matchers {
                                                                   |  }
                                                                   |  object Endpoints {
                                                                   |    object Greeting {
-                                                                  |      final case class GetGreetingParams(allParams: QueryParams)
-                                                                  |      val getGreeting = endpoint.in("greeting").in(queryParams).mapInTo[GetGreetingParams].get.out(oneOf(oneOfMapping(StatusCode(200), jsonBody[DataType])))
+                                                                  |      final case class GetGreetingParams()
+                                                                  |      val getGreeting = endpoint.in("greeting").mapInTo[GetGreetingParams].get.out(oneOf(oneOfMapping(StatusCode(200), jsonBody[DataType])))
                                                                   |    }
                                                                   |  }
                                                                   |}""".stripMargin)
