@@ -67,10 +67,10 @@ object GreetingRequestResponseApp extends IOApp {
 
   override def run(args: List[String]): IO[ExitCode] = for {
     binding <- GreetingServer.startServer
-    (created) <- GreetingClient(
+    (clientWithBackend) <- GreetingClient(
       apiUrl = s"http://${binding.localAddress.getHostName}:${binding.localAddress.getPort}"
     )
-    (client, clientBackend) = created
+    (client, clientBackend) = clientWithBackend
     result <- client.getGreeting(GetGreetingParams(name = Some("world"))).attempt
     _ <- IO(println(result))
     _ <-
