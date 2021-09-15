@@ -1,5 +1,5 @@
 val circeVersion = "0.14.1"
-val tapirVersion = "0.19.0-M8"
+val tapirVersion = "0.19.0-M9"
 
 lazy val root = (project in file("."))
   .settings(
