@@ -7,7 +7,11 @@ import scraml.RMFUtil.getAnnotation
 import scraml.{DefnWithCompanion, JsonSupport, LibrarySupport, ModelGen, ModelGenContext, RMFUtil}
 import io.vrap.rmf.raml.model.types.{AnyType, ObjectType, StringType}
 
-object CirceJsonSupport extends LibrarySupport with JsonSupport {
+object CirceJsonSupport {
+  def apply(formats: Map[String, String] = Map.empty) = new CirceJsonSupport(formats)
+}
+
+class CirceJsonSupport(formats: Map[String, String]) extends LibrarySupport with JsonSupport {
   override def jsonType: String = "io.circe.Json"
 
   import scala.meta._
@@ -286,7 +290,8 @@ object CirceJsonSupport extends LibrarySupport with JsonSupport {
         .getOrElse(List.empty) // no subtypes
     } else List.empty          // should not derive
 
-  private def deriveJson(objectType: ObjectType): List[Stat] =
+  private def deriveJson(context: ModelGenContext): List[Stat] = {
+    val objectType = context.objectType
     if (shouldDeriveJson(objectType)) {
       val encoderDef: Defn.Val = discriminator(objectType)
         .flatMap(_ => discriminatorValue(objectType))
@@ -324,16 +329,22 @@ object CirceJsonSupport extends LibrarySupport with JsonSupport {
          """
         )
 
-      q"""import io.circe._
-          import io.circe.generic.semiauto._
+      lazy val packageObjectRef = packageTerm(context.params.basePackage)
 
+      val importStats: List[Stat] = q"""import io.circe._
+          import io.circe.generic.semiauto._
+          """.stats ++ formats.headOption.map(_ => q"import $packageObjectRef.Formats._").toList
+
+      importStats ++ q"""
           implicit lazy val decoder: Decoder[${Type.Name(
         objectType.getName
       )}] = deriveDecoder[${Type.Name(
         objectType.getName
       )}]
-      """.stats ++ List(encoderDef)
+         $encoderDef
+      """.stats
     } else List.empty
+  }
 
   private def mapTypeCodec(context: ModelGenContext): List[Stat] =
     if (shouldDeriveJson(context.objectType)) {
@@ -380,7 +391,7 @@ object CirceJsonSupport extends LibrarySupport with JsonSupport {
       companion = companion.map(
         appendObjectStats(
           _,
-          if (context.isMapType.isDefined) mapTypeCodec(context) else deriveJson(context.objectType)
+          if (context.isMapType.isDefined) mapTypeCodec(context) else deriveJson(context)
         )
       )
     )
@@ -432,8 +443,21 @@ object CirceJsonSupport extends LibrarySupport with JsonSupport {
       }
       .getOrElse(DefnWithCompanion(objectDef, None))
 
-  override def modifyPackageObject(libs: List[LibrarySupport], api: Api): Pkg.Object => Pkg.Object =
-    appendPkgObjectStats(_, eitherCodec)
+  override def modifyPackageObject(libs: List[LibrarySupport], api: Api): Pkg.Object => Pkg.Object = {
+    val formatStats: List[Stat] = formats.map { case (alias, fullQualifiedName) =>
+      q"""implicit lazy val ${Pat.Var(Term.Name(alias))} = ${packageTerm(fullQualifiedName)}"""
+    }.toList
+
+    val formatsObject = formatStats.headOption.map { _ =>
+      q"""
+         object Formats {
+           ..$formatStats
+         }
+       """
+    }
+
+    appendPkgObjectStats(_, eitherCodec ++ formatsObject.toList)
+  }
 
   override def modifyEnum(
       enumType: StringType

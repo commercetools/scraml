@@ -3,6 +3,7 @@ package examples
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import cats.effect.{ExitCode, IO, IOApp}
+import io.circe.{Encoder, Json}
 import scraml.examples.{DataType, Endpoints}
 import scraml.examples.Endpoints.Greeting.GetGreetingParams
 import sttp.client3.SttpBackend
@@ -37,6 +38,13 @@ class GreetingClient(apiUrl: String)(backend: SttpBackend[IO, Any])(implicit wsT
 object GreetingClient {
   def apply(apiUrl: String): IO[(GreetingClient, SttpBackend[IO, Any])] =
     AsyncHttpClientCatsBackend[IO]().flatMap(backend => IO((new GreetingClient(apiUrl)(backend), backend)))
+}
+
+object GreetingFormats {
+  // example to show overriding default encodings, also see build.sbt
+  val someEncoder: Encoder[BigDecimal] = new Encoder[BigDecimal] {
+    override def apply(a: BigDecimal): Json = Json.fromBigDecimal(a.setScale(2))
+  }
 }
 
 object GreetingServer {

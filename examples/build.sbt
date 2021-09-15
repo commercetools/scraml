@@ -23,6 +23,6 @@ lazy val examples = (project in file("."))
 
     ramlFile := Some(file("../src/sbt-test/sbt-scraml/simple/api/simple.raml")),
     basePackageName := "scraml.examples",
-    librarySupport := Set(scraml.libs.CirceJsonSupport, scraml.libs.TapirSupport("Endpoints")),
+    librarySupport := Set(scraml.libs.CirceJsonSupport(Map("someEncoder" -> "_root_.examples.GreetingFormats.someEncoder")), scraml.libs.TapirSupport("Endpoints")),
     Compile / sourceGenerators += runScraml
   )

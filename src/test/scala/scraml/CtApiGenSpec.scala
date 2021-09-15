@@ -5,7 +5,6 @@ import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 
 import java.io.File
-import io.circe._
 import scraml.libs.CirceJsonSupport
 
 class CtApiGenSpec extends AnyFlatSpec with Matchers {
@@ -14,7 +13,7 @@ class CtApiGenSpec extends AnyFlatSpec with Matchers {
       new File("src/sbt-test/sbt-scraml/ct-api/reference/api-specs/api/api.raml"),
       new File("target/scraml-test-ct"),
       "scraml",
-      librarySupport = Set(CirceJsonSupport),
+      librarySupport = Set(CirceJsonSupport()),
       None
     )
 

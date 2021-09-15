@@ -13,7 +13,9 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers {
       new File("src/sbt-test/sbt-scraml/json/api/json.raml"),
       new File("target/scraml-circe-json-test"),
       "scraml",
-      librarySupport = Set(CirceJsonSupport),
+      librarySupport = Set(
+        CirceJsonSupport(formats = Map("localDateTime" -> "io.circe.Decoder.decodeLocalDateTime"))
+      ),
       None
     )
 
@@ -76,6 +78,7 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers {
         dataType.source.companion.map(_.toString()) should be(Some(s"""object DataType {
                                                                       |  import io.circe._
                                                                       |  import io.circe.generic.semiauto._
+                                                                      |  import scraml.Formats._
                                                                       |  implicit lazy val decoder: Decoder[DataType] = deriveDecoder[DataType]
                                                                       |  implicit lazy val encoder: Encoder[DataType] = deriveEncoder[DataType].mapJsonObject(_.add("type", Json.fromString("data")))
                                                                       |}""".stripMargin))
@@ -187,6 +190,7 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers {
              |    }
              |  }
              |  implicit def eitherDecoder[A, B](implicit aDecoder: Decoder[A], bDecoder: Decoder[B]): Decoder[Either[A, B]] = new Decoder[Either[A, B]] { override def apply(c: HCursor): Result[Either[A, B]] = aDecoder.either(bDecoder)(c) }
+             |  object Formats { implicit lazy val localDateTime = io.circe.Decoder.decodeLocalDateTime }
              |}""".stripMargin)
 
         intermediateType.source.source.toString() should be(
@@ -219,6 +223,7 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers {
         grandchildType.source.companion.map(_.toString()) should be(Some(s"""object GrandchildType {
                                                                             |  import io.circe._
                                                                             |  import io.circe.generic.semiauto._
+                                                                            |  import scraml.Formats._
                                                                             |  implicit lazy val decoder: Decoder[GrandchildType] = deriveDecoder[GrandchildType]
                                                                             |  implicit lazy val encoder: Encoder[GrandchildType] = deriveEncoder[GrandchildType].mapJsonObject(_.add("type", Json.fromString("grandchild")))
                                                                             |}""".stripMargin))
