@@ -8,7 +8,10 @@ lazy val root = (project in file("."))
     version := "0.1",
     ramlFile := Some(file("reference/api-specs/api/api.raml")),
     basePackageName := "de.commercetools.api",
-    librarySupport := Set(scraml.libs.CirceJsonSupport, scraml.libs.TapirSupport("Endpoints")),
+    librarySupport := Set(
+      scraml.libs.CirceJsonSupport(),
+      scraml.libs.TapirSupport("Endpoints")
+    ),
     Compile / sourceGenerators += runScraml,
     libraryDependencies ++= Seq(
         "io.circe" %% "circe-core",

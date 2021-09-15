@@ -15,7 +15,7 @@ final class TapirSupportSpec extends AnyWordSpec with Diagrams with Matchers {
         new File("src/sbt-test/sbt-scraml/simple/api/simple.raml"),
         new File("target/scraml-tapir-test"),
         "scraml",
-        librarySupport = Set(CirceJsonSupport, TapirSupport("Endpoints")),
+        librarySupport = Set(CirceJsonSupport(), TapirSupport("Endpoints")),
         formatConfig = None
       )
 
@@ -59,7 +59,7 @@ final class TapirSupportSpec extends AnyWordSpec with Diagrams with Matchers {
         new File("src/sbt-test/sbt-scraml/ct-api/reference/api-specs/api/api.raml"),
         new File("target/scraml-tapir-ct-api-test"),
         "scraml",
-        librarySupport = Set(scraml.libs.CirceJsonSupport, TapirSupport("Endpoints")),
+        librarySupport = Set(scraml.libs.CirceJsonSupport(), TapirSupport("Endpoints")),
         formatConfig = None
       )
 
