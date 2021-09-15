@@ -7,6 +7,9 @@ types: !include types.raml
 
 /greeting: # optional resource
   get: # HTTP method declaration
+    queryParameters:
+      name?:
+        type: string
     responses: # declare a response
       200: # HTTP status code
         body: # declare content of response

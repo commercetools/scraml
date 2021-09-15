@@ -1,5 +1,6 @@
 package scraml.libs
 
+import io.vrap.rmf.raml.model.modules.Api
 import scraml.LibrarySupport
 
 import scala.meta.{Import, Importee, Importer, Name, Pkg, Stat, Term}
@@ -40,6 +41,6 @@ case class PackageObjectExtensionSupport(additionalImports: Seq[String]) extends
       }
     }.toList
 
-  override def modifyPackageObject: Pkg.Object => Pkg.Object = packageObject =>
-    LibrarySupport.appendPkgObjectStats(packageObject, mkImports)
+  override def modifyPackageObject(libs: List[LibrarySupport], api: Api): Pkg.Object => Pkg.Object =
+    packageObject => LibrarySupport.appendPkgObjectStats(packageObject, mkImports)
 }

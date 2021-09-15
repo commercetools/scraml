@@ -29,7 +29,9 @@ final case class ModelGenParams(
   lazy val allLibraries: List[LibrarySupport] = librarySupport.toList.sorted
 }
 
-final case class GeneratedModel(files: Seq[GeneratedFile]) {
+final case class GeneratedModel(sourceFiles: Seq[GeneratedFile], packageObject: GeneratedFile) {
+  def files: Seq[GeneratedFile] = sourceFiles ++ List(packageObject)
+
   override def toString: String = {
     files
       .map(generatedFile => s"${generatedFile.source.name} (${generatedFile.file.getPath})")
@@ -123,7 +125,7 @@ final case class ModelGenContext(
           if (mapTypeSpec.optional) Some(Term.Name("None")) else None
         )
       )
-    case None => typeProperties.flatMap(ModelGen.scalaProperty(this)(_)).toList
+    case None => typeProperties.flatMap(ModelGen.scalaProperty(_)(this.anyTypeName)).toList
   }
 }
 
@@ -152,7 +154,7 @@ trait LibrarySupport {
   def modifyClass(classDef: Defn.Class, companion: Option[Defn.Object])(
       context: ModelGenContext
   ): DefnWithCompanion[Defn.Class] =
-    DefnWithCompanion(classDef, None)
+    DefnWithCompanion(classDef, companion)
 
   def modifyObject(objectDef: Defn.Object)(
       context: ModelGenContext
@@ -164,7 +166,7 @@ trait LibrarySupport {
   ): DefnWithCompanion[Defn.Trait] =
     DefnWithCompanion(traitDef, companion)
 
-  def modifyPackageObject: Pkg.Object => Pkg.Object = identity
+  def modifyPackageObject(libs: List[LibrarySupport], api: Api): Pkg.Object => Pkg.Object = identity
 
   def modifyEnum(
       enumType: StringType
@@ -210,8 +212,12 @@ object LibrarySupport {
     libs.foldLeft(DefnWithCompanion(defn, companion)) { case (acc, lib) =>
       lib.modifyTrait(acc.defn, acc.companion)(context)
     }
-  def applyPackageObject(packageObject: Pkg.Object)(libs: List[LibrarySupport]): Pkg.Object =
-    libs.foldLeft(packageObject: Pkg.Object) { case (acc, lib) => lib.modifyPackageObject(acc) }
+  def applyPackageObject(
+      packageObject: Pkg.Object
+  )(libs: List[LibrarySupport], api: Api): Pkg.Object =
+    libs.foldLeft(packageObject: Pkg.Object) { case (acc, lib) =>
+      lib.modifyPackageObject(libs, api)(acc)
+    }
   def applyEnum(enumType: StringType)(enumTrait: Defn.Trait, companion: Defn.Object)(
       libs: List[LibrarySupport]
   ): DefnWithCompanion[Defn.Trait] =
@@ -269,7 +275,8 @@ object ModelGen {
       // we would need to generate types for property types otherwise
       case _: StringType if apiType.eContainer().eClass().getName == "Property" =>
         TypeRefDetails(Type.Name("String"))
-      case stringEnum: StringType if Option(stringEnum.getEnum).forall(!_.isEmpty) =>
+      case stringEnum: StringType
+          if Option(stringEnum.getEnum).forall(!_.isEmpty) && stringEnum.getName != "string" =>
         TypeRefDetails(Type.Name(stringEnum.getName))
       case _: StringType =>
         TypeRefDetails(Type.Name("String"))
@@ -325,13 +332,13 @@ object ModelGen {
     } else Some(TypeRef(typeRef.baseType, typeRef.packageName, typeRef.defaultValue))
   }
 
-  def scalaProperty(context: ModelGenContext)(prop: Property): Option[Term.Param] = {
+  def scalaProperty(prop: TypedElement)(fallbackType: String): Option[Term.Param] = {
     lazy val optional = !prop.getRequired
     val scalaTypeAnnotation =
       Option(prop.getAnnotation("scala-type")).map(_.getValue.getValue.toString)
 
     ModelGen
-      .scalaTypeRef(prop.getType, optional, scalaTypeAnnotation, context.anyTypeName)
+      .scalaTypeRef(prop.getType, optional, scalaTypeAnnotation, fallbackType)
       .map(ref => Term.Param(Nil, Term.Name(prop.getName), Some(ref.scalaType), ref.defaultValue))
   }
 
