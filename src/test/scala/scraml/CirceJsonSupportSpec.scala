@@ -22,7 +22,21 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers {
     val generated = ModelGenRunner.run(DefaultModelGen)(params).unsafeRunSync()
 
     generated.files match {
-      case noDiscBase :: _ :: _ :: baseType :: intermediateType :: grandchildType :: dataType :: emptyBase :: noProps :: noSealedBase :: someEnum :: _ :: mapLike :: packageObject :: Nil =>
+      case noDiscBase ::
+          _ ::
+          _ ::
+          baseType ::
+          intermediateType ::
+          grandchildType ::
+          dataType ::
+          emptyBase ::
+          noProps ::
+          noSealedBase ::
+          someEnum ::
+          otherSub ::
+          mapLike ::
+          packageObject ::
+          Nil =>
         noDiscBase.source.source.toString() should be("sealed trait NoDiscriminatorBase")
         noDiscBase.source.companion.map(_.toString()) should be(
           Some(s"""object NoDiscriminatorBase {
@@ -125,7 +139,7 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers {
                                                                           |  import io.circe.Decoder.Result
                                                                           |  import io.circe._
                                                                           |  implicit lazy val decoder: Decoder[NoSealedBase] = new Decoder[NoSealedBase] {
-                                                                          |    override def apply(c: HCursor): Result[NoSealedBase] = c.downField("type").as[String] match {
+                                                                          |    override def apply(c: HCursor): Result[NoSealedBase] = c.downField("typeId").as[String] match {
                                                                           |      case Right("map-like") =>
                                                                           |        MapLike.decoder(c)
                                                                           |      case Right("other-sub") =>
@@ -177,6 +191,22 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers {
                                                                       |      Left(s"invalid enum value: $$other")
                                                                       |  })
                                                                       |}""".stripMargin))
+
+        otherSub.source.source.toString() should be(
+          """final case class OtherSub(id: String) extends NoSealedBase"""
+        )
+
+        otherSub.source.companion.map(_.toString()) should be(
+          Some(
+            """object OtherSub {
+            |  import io.circe._
+            |  import io.circe.generic.semiauto._
+            |  import scraml.Formats._
+            |  implicit lazy val decoder: Decoder[OtherSub] = deriveDecoder[OtherSub]
+            |  implicit lazy val encoder: Encoder[OtherSub] = deriveEncoder[OtherSub].mapJsonObject(_.add("typeId", Json.fromString("other-sub")))
+            |}""".stripMargin
+          )
+        )
 
         packageObject.source.source.toString should be(s"""package object scraml {
              |  import io.circe.Decoder.Result
