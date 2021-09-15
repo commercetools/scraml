@@ -60,7 +60,7 @@ object GreetingServer {
     IO.fromFuture(IO(Http().newServerAt("localhost", 8080).bind(greetingRoute)))
 }
 
-object GreetingRequestResponseApp extends IOApp {
+object GreetingApp extends IOApp {
   implicit class FutureOps[T](future: Future[T]) {
     def toIO: IO[T] = IO.fromFuture(IO(future))
   }
