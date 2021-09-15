@@ -1,24 +1,25 @@
 package scraml.libs
 
-import com.google.common.net.MediaType
-import io.vrap.rmf.raml.model.resources.Resource
 import io.vrap.rmf.raml.model.modules.Api
-import io.vrap.rmf.raml.model.types.TypedElement
+import io.vrap.rmf.raml.model.resources.Resource
 import io.vrap.rmf.raml.model.responses.Body
-import scraml.LibrarySupport.appendObjectStats
-import scraml.{DefnWithCompanion, JsonSupport, LibrarySupport, MetaUtil, ModelGen, ModelGenContext}
+import io.vrap.rmf.raml.model.types.TypedElement
+import scraml.{JsonSupport, LibrarySupport, ModelGen}
 
+import scala.collection.immutable.TreeSet
 import scala.jdk.CollectionConverters._
 import scala.meta._
 import scala.util.matching.Regex
 
 final case class ResourceDefinitions(
     baseResourceName: Option[String],
-    paramTypeDef: Defn.Class,
+    paramTypeDef: Option[Defn.Class],
     endpointValueDef: Defn.Val
 )
 
 final class TapirSupport(endpointsObjectName: String) extends LibrarySupport {
+  private val jsonContentType = "application/json"
+
   private def upperCaseFirst(string: String): String =
     string.take(1).toUpperCase.concat(string.drop(1))
 
@@ -72,12 +73,13 @@ final class TapirSupport(endpointsObjectName: String) extends LibrarySupport {
     }.toList
 
   private def paramMatcher(params: List[Term.Param])(function: String): Option[Term] =
-    params.flatMap(param => param.decltpe.map(theType =>
-      q"""
+    params
+      .flatMap(param => param.decltpe.map(theType => q"""
         ${Term.Name(function)}[$theType](${param.name.value})
-       """)).reduceOption[Term] {
-      case (left, right) => q""" $left and $right """
-    }
+       """))
+      .reduceOption[Term] { case (left, right) =>
+        q""" $left and $right """
+      }
 
   private def pathParamsFromResource(resource: Resource): List[Term.Param] =
     resource.getFullUriParameters.asScala.map { uriParam =>
@@ -98,25 +100,24 @@ final class TapirSupport(endpointsObjectName: String) extends LibrarySupport {
     }
     .map(_.split("-").map(upperCaseFirst).mkString)
 
-  private def bodyMappings(
-      statusCode: Int,
-      bodies: Seq[Body],
-      jsonSupport: JsonSupport
-  ): List[Term.Apply] =
-    if (bodies.isEmpty) {
-      List(q"""oneOfMapping(StatusCode($statusCode), emptyOutput)""")
-    } else
-      bodies.flatMap { body =>
-        ModelGen.scalaTypeRef(body.getType, false, None, jsonSupport.jsonType).map { typeRef =>
-          val mappingFunction = if (MetaUtil.isTypeApply(typeRef.scalaType, "Either")) {
-            "oneOfMappingFromMatchType"
-          } else "oneOfMapping"
+  case class BodyWithMediaType(mediaType: String, bodyType: Type)
 
-          q"""${Term.Name(
-            mappingFunction
-          )}(StatusCode(${statusCode}), jsonBody[${typeRef.scalaType}])"""
-        }
-      }.toList
+  implicit val bodyOrder = new Ordering[BodyWithMediaType] {
+    override def compare(x: BodyWithMediaType, y: BodyWithMediaType): Int =
+      s"${x.mediaType}${x.bodyType.toString}".compare(s"${y.mediaType}${y.bodyType.toString()}")
+  }
+
+  private def bodyTypes(
+      bodies: Iterable[Body],
+      jsonSupport: JsonSupport,
+      optional: Boolean
+  ): List[BodyWithMediaType] =
+    bodies.flatMap { body =>
+      ModelGen
+        .scalaTypeRef(body.getType, optional, None, jsonSupport.jsonType)
+        .map(_.scalaType)
+        .map(BodyWithMediaType(body.getContentType, _))
+    }.toList
 
   private def resourceEndpointsDefinitions(
       resource: Resource,
@@ -127,57 +128,80 @@ final class TapirSupport(endpointsObjectName: String) extends LibrarySupport {
     val fullResourceName = resourceNameFromTemplate(templateWithoutSlash.replaceAll("-", "/"))
 
     val resourceMethodStats = resource.getMethods.asScala.flatMap { method =>
-      val resourceMethodName            = s"${method.getMethodName}$fullResourceName"
-      val pathParams                    = pathParamsFromResource(resource)
-      val queryParams: List[Term.Param] = paramTypes(method.getQueryParameters.asScala)
+      val resourceMethodName             = s"${method.getMethodName}$fullResourceName"
+      val pathParams: List[Term.Param]   = pathParamsFromResource(resource)
+      val queryParams: List[Term.Param]  = paramTypes(method.getQueryParameters.asScala)
       val headerParams: List[Term.Param] = paramTypes(method.getHeaders.asScala)
+      val hasParams = pathParams.nonEmpty || queryParams.nonEmpty || headerParams.nonEmpty
 
-      val paramsTypeName = Type.Name(s"${upperCaseFirst(resourceMethodName)}Params")
-      val paramTypeDef: Defn.Class =
-        q"""
-            final case class $paramsTypeName(..$headerParams, ..$pathParams, ..$queryParams)
-         """
-
-      val endpointWithHeaderMatcher: Term = paramMatcher(headerParams)("header").map(matcher =>
-        q"""
+      val endpointWithHeaderMatcher: Term = paramMatcher(headerParams)("header").map(matcher => q"""
            endpoint.in($matcher)
-         """)getOrElse(q"""endpoint""")
+         """) getOrElse (q"""endpoint""")
 
       val endpointWithPathMatcher: Term =
         q"""
            $endpointWithHeaderMatcher.in(${pathMatcher(templateWithoutSlash)})
          """
 
-      val endpointWithQueryMatcher: Term = paramMatcher(queryParams)("query").map(matcher =>
-        q"""
+      val endpointWithQueryMatcher: Term = paramMatcher(queryParams)("query")
+        .map(matcher => q"""
            $endpointWithPathMatcher.in($matcher)
-         """).getOrElse(endpointWithPathMatcher)
+         """)
+        .getOrElse(endpointWithPathMatcher)
+
+      val paramsTypeName = Type.Name(s"${upperCaseFirst(resourceMethodName)}Params")
+
+      val paramTypeDef: Option[Defn.Class] =
+        if (hasParams) Some(q"""
+            final case class $paramsTypeName(..$headerParams, ..$pathParams, ..$queryParams)
+         """) else None
 
       val endpointWithInputMappedAndMethod: Term =
-        q"""
+        if (hasParams) {
+          q"""
            $endpointWithQueryMatcher
             .mapInTo[$paramsTypeName]
             .${Term.Name(method.getMethodName)}
          """
+        } else endpointWithQueryMatcher
 
-      val endpointWithInputBody: Term = method.getBodies.asScala
-        .headOption
-        .filter(_.getContentType.contains("application/json"))
-        .flatMap(body => ModelGen.scalaTypeRef(body.getType, false, None, jsonSupport.jsonType))
-        .map(typeRef =>
-        q"""
-           $endpointWithInputMappedAndMethod.in(jsonBody[${typeRef.scalaType}])
-         """).getOrElse(endpointWithInputMappedAndMethod)
+      val endpointWithInputBody: Term = method.getBodies.asScala.headOption
+        .flatMap(body =>
+          ModelGen
+            .scalaTypeRef(body.getType, optional = false, None, jsonSupport.jsonType)
+            .map((_, body))
+        )
+        .map { case (typeRef, body) =>
+          val inputBody: Term = body.getContentType.toLowerCase match {
+            case json if json.contains(jsonContentType) || json.contains("application/graphql") =>
+              q"""
+                 jsonBody[${typeRef.scalaType}]
+               """
+            case form if form.contains("application/x-www-form-urlencoded") =>
+              q"""
+                 formBody[Map[String, String]]
+               """
+            case other =>
+              throw new IllegalArgumentException(s"unsupported input media type: $other")
+          }
 
-      val (successMappings, errorMappings) =
-        method.getResponses.asScala.foldLeft((List.empty[Term.Apply], List.empty[Term.Apply])) {
+          q"""
+             $endpointWithInputMappedAndMethod.in($inputBody)
+           """
+        }
+        .getOrElse(endpointWithInputMappedAndMethod)
+
+      val (successTypes, errorTypes) =
+        method.getResponses.asScala.foldLeft(
+          (List.empty[BodyWithMediaType], List.empty[BodyWithMediaType])
+        ) {
           // successes
           case ((successes, errors), response) if (response.getStatusCode.toInt / 100) == 2 =>
             (
-              successes ++ bodyMappings(
-                response.getStatusCode.toInt,
+              successes ++ bodyTypes(
                 response.getBodies.asScala,
-                jsonSupport
+                jsonSupport,
+                optional = false
               ),
               errors
             )
@@ -185,27 +209,39 @@ final class TapirSupport(endpointsObjectName: String) extends LibrarySupport {
           case ((successes, errors), response) =>
             (
               successes,
-              errors ++ bodyMappings(
-                response.getStatusCode.toInt,
+              errors ++ bodyTypes(
                 response.getBodies.asScala,
-                jsonSupport
+                jsonSupport,
+                optional = true // allow empty bodies on error
               )
             )
         }
 
+      require(
+        successTypes.forall(
+          _.mediaType.toLowerCase.contains(jsonContentType) ||
+            errorTypes.forall(_.mediaType.toLowerCase.contains(jsonContentType))
+        ),
+        s"only json return types supported right now, buf found $successTypes, $errorTypes"
+      )
+
+      def unionType(types: Iterable[Type]): Option[Type] = types.reduceOption[Type] { case (a, b) =>
+        Type.ApplyInfix(a, Type.Name("|"), b)
+      }
+
       val endpointWithOut =
-        if (successMappings.nonEmpty)
-          q"""
-          $endpointWithInputBody.out(oneOf(..$successMappings))
-         """
-        else endpointWithInputBody
+        unionType(TreeSet(successTypes: _*).map(_.bodyType))
+          .map(theType => q"""
+        $endpointWithInputBody.out(jsonBody[$theType])
+         """)
+          .getOrElse(endpointWithInputBody)
 
       val endpointWithErrorOut =
-        if (errorMappings.nonEmpty)
-          q"""
-           $endpointWithOut.errorOut(oneOf(..$errorMappings))
-         """
-        else endpointWithOut
+        unionType(TreeSet(errorTypes: _*).map(_.bodyType))
+          .map(theType => q"""
+        $endpointWithOut.errorOut(jsonBody[$theType])
+         """)
+          .getOrElse(endpointWithOut)
 
       val endpointValueDef: Defn.Val =
         q"""
@@ -229,19 +265,6 @@ final class TapirSupport(endpointsObjectName: String) extends LibrarySupport {
       )
      """
 
-  // Either body types have issues with type erasure
-  // see https://tapir.softwaremill.com/en/latest/endpoint/statuscodes.html#one-of-mapping-and-type-erasure
-  // for those we are going for a `oneOfMappingFromMatchType` which can not de derived for circes Json type and others
-  // so we need to provide instances
-  private def matchJsonType(typeName: String) =
-    q"""
-      implicit lazy val matchType: sttp.tapir.typelevel.MatchType[${MetaUtil
-      .typeFromName(typeName)}] = {
-        case _: ${MetaUtil.typeFromName(typeName)} => true
-        case _ => false
-      }
-     """
-
   // the query matchers were not happy with Option[List[String]] types
   // TODO: why do we need that in the first place, could be simplified with an already defined codec?
   private val queryListParamEncoder: Defn.Val =
@@ -253,19 +276,6 @@ final class TapirSupport(endpointsObjectName: String) extends LibrarySupport {
           override lazy val format: TextPlain = TextPlain()
         }
      """
-
-  override def modifyClass(classDef: Defn.Class, companion: Option[Defn.Object])(
-      context: ModelGenContext
-  ): DefnWithCompanion[Defn.Class] =
-    DefnWithCompanion(
-      classDef,
-      companion = companion.map(
-        appendObjectStats(
-          _,
-          List(matchJsonType(classDef.name.value))
-        )
-      )
-    )
 
   override def modifyPackageObject(libs: List[LibrarySupport], api: Api): Pkg.Object => Pkg.Object =
     packageObject => {
@@ -284,10 +294,10 @@ final class TapirSupport(endpointsObjectName: String) extends LibrarySupport {
       // putting everything in the endpoint object can create errors like:
       // "Method too large: de/commercetools/api/package$Endpoints$.<clinit> ()V"
       // when compiling big APIs
-      val endpointsGrouped =
+      val endpointsGrouped: List[Stat] =
         resourceDefinitions.groupBy(_.baseResourceName).toList.sortBy(_._1.getOrElse("")).flatMap {
           case (None, resources) =>
-            resources.map(_.paramTypeDef) ++ resources.map(_.endpointValueDef)
+            resources.flatMap(_.paramTypeDef) ++ resources.map(_.endpointValueDef)
           case (Some(baseName), resources) =>
             List(
               Defn.Object(
@@ -297,7 +307,7 @@ final class TapirSupport(endpointsObjectName: String) extends LibrarySupport {
                   early = Nil,
                   inits = Nil,
                   Self(Name(""), None),
-                  stats = resources.map(_.paramTypeDef) ++ resources.map(_.endpointValueDef),
+                  stats = resources.flatMap(_.paramTypeDef) ++ resources.map(_.endpointValueDef),
                   derives = Nil
                 )
               )
@@ -323,8 +333,9 @@ final class TapirSupport(endpointsObjectName: String) extends LibrarySupport {
         import sttp.tapir.CodecFormat.TextPlain
         import sttp.tapir.json.circe._
 
+        type |[+A1, +A2] = Either[A1, A2]
+
         $anySchema
-        ${matchJsonType(circeJsonSupport.jsonType)}
         $queryListParamEncoder
        """.stats
 

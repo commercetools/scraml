@@ -8,7 +8,6 @@ import java.io.File
 import cats.effect.unsafe.implicits.global
 import org.scalatest.matchers.should.Matchers
 
-
 final class TapirSupportSpec extends AnyWordSpec with Diagrams with Matchers {
   "TapirSupport" must {
     "generate simple endpoints" in {
@@ -38,11 +37,8 @@ final class TapirSupportSpec extends AnyWordSpec with Diagrams with Matchers {
                                                                   |  import sttp.model._
                                                                   |  import sttp.tapir.CodecFormat.TextPlain
                                                                   |  import sttp.tapir.json.circe._
+                                                                  |  type |[+A1, +A2] = Either[A1, A2]
                                                                   |  private implicit def anySchema[T]: Schema[T] = Schema[T](SchemaType.SCoproduct(Nil, None)(_ => None), None)
-                                                                  |  implicit lazy val matchType: sttp.tapir.typelevel.MatchType[io.circe.Json] = {
-                                                                  |    case _: io.circe.Json => true
-                                                                  |    case _ => false
-                                                                  |  }
                                                                   |  private implicit val queryOptionalListCodec: Codec[List[String], Option[List[String]], TextPlain] = new Codec[List[String], Option[List[String]], TextPlain] {
                                                                   |    override def rawDecode(l: List[String]): DecodeResult[Option[List[String]]] = DecodeResult.Value(Some(l))
                                                                   |    override def encode(h: Option[List[String]]): List[String] = h.getOrElse(List.empty)
@@ -51,8 +47,8 @@ final class TapirSupportSpec extends AnyWordSpec with Diagrams with Matchers {
                                                                   |  }
                                                                   |  object Endpoints {
                                                                   |    object Greeting {
-                                                                  |      final case class GetGreetingParams()
-                                                                  |      val getGreeting = endpoint.in("greeting").mapInTo[GetGreetingParams].get.out(oneOf(oneOfMapping(StatusCode(200), jsonBody[DataType])))
+                                                                  |      final case class GetGreetingParams(name: Option[String] = None)
+                                                                  |      val getGreeting = endpoint.in("greeting").in(query[Option[String]]("name")).mapInTo[GetGreetingParams].get.out(jsonBody[DataType])
                                                                   |    }
                                                                   |  }
                                                                   |}""".stripMargin)

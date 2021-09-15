@@ -327,10 +327,6 @@ object DefaultModelGen extends ModelGen {
     packageObjectFile
   )
 
-  private def generateEndpoints(api: Api): IO[Unit] = IO {
-    api.getResources
-  }
-
   override def generate(api: Api, params: ModelGenParams): IO[GeneratedModel] = for {
     _             <- FileUtil.deleteRecursively(new File(params.targetDir, params.basePackage))
     packageObject <- generatePackageObject(api, params)

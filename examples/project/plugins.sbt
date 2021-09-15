@@ -1,0 +1,1 @@
+addSbtPlugin("com.commercetools" % "sbt-scraml" % "0.8.5+5-e3f907e8+20210915-1002-SNAPSHOT")
