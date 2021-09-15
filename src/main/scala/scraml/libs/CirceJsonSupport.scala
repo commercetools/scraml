@@ -7,7 +7,11 @@ import scraml.RMFUtil.getAnnotation
 import scraml.{DefnWithCompanion, JsonSupport, LibrarySupport, ModelGen, ModelGenContext, RMFUtil}
 import io.vrap.rmf.raml.model.types.{AnyType, ObjectType, StringType}
 
-object CirceJsonSupport extends LibrarySupport with JsonSupport {
+object CirceJsonSupport {
+  def apply(formats: Map[String, String] = Map.empty) = new CirceJsonSupport(formats)
+}
+
+class CirceJsonSupport(formats: Map[String, String]) extends LibrarySupport with JsonSupport {
   override def jsonType: String = "io.circe.Json"
 
   import scala.meta._
@@ -50,6 +54,9 @@ object CirceJsonSupport extends LibrarySupport with JsonSupport {
 
   private def discriminatorValue(aType: ObjectType): Option[String] =
     Option(aType.getDiscriminatorValue)
+
+  private def discriminatorAndValue(aType: ObjectType): Option[(String, String)] =
+    discriminator(aType).zip(discriminatorValue(aType)).headOption
 
   private def typeEncoder(context: ModelGenContext): Defn.Val = {
     val subTypes = context.leafTypes.toList
@@ -286,11 +293,11 @@ object CirceJsonSupport extends LibrarySupport with JsonSupport {
         .getOrElse(List.empty) // no subtypes
     } else List.empty          // should not derive
 
-  private def deriveJson(objectType: ObjectType): List[Stat] =
+  private def deriveJson(context: ModelGenContext): List[Stat] = {
+    val objectType = context.objectType
     if (shouldDeriveJson(objectType)) {
-      val encoderDef: Defn.Val = discriminator(objectType)
-        .flatMap(_ => discriminatorValue(objectType))
-        .map { discriminatorValueString =>
+      val encoderDef: Defn.Val = discriminatorAndValue(objectType)
+        .map { case (discriminatorPropertyName, discriminatorValueString) =>
           Defn.Val(
             List(Mod.Implicit(), Mod.Lazy()),
             List(Pat.Var(Term.Name("encoder"))),
@@ -304,7 +311,7 @@ object CirceJsonSupport extends LibrarySupport with JsonSupport {
                 Term.Apply(
                   Term.Select(Term.Placeholder(), Term.Name("add")),
                   List(
-                    Lit.String("type"),
+                    Lit.String(discriminatorPropertyName),
                     Term.Apply(
                       Term.Select(Term.Name("Json"), Term.Name("fromString")),
                       List(Lit.String(discriminatorValueString))
@@ -324,16 +331,22 @@ object CirceJsonSupport extends LibrarySupport with JsonSupport {
          """
         )
 
-      q"""import io.circe._
-          import io.circe.generic.semiauto._
+      lazy val packageObjectRef = packageTerm(context.params.basePackage)
 
+      val importStats: List[Stat] = q"""import io.circe._
+          import io.circe.generic.semiauto._
+          """.stats ++ formats.headOption.map(_ => q"import $packageObjectRef.Formats._").toList
+
+      importStats ++ q"""
           implicit lazy val decoder: Decoder[${Type.Name(
         objectType.getName
       )}] = deriveDecoder[${Type.Name(
         objectType.getName
       )}]
-      """.stats ++ List(encoderDef)
+         $encoderDef
+      """.stats
     } else List.empty
+  }
 
   private def mapTypeCodec(context: ModelGenContext): List[Stat] =
     if (shouldDeriveJson(context.objectType)) {
@@ -380,7 +393,7 @@ object CirceJsonSupport extends LibrarySupport with JsonSupport {
       companion = companion.map(
         appendObjectStats(
           _,
-          if (context.isMapType.isDefined) mapTypeCodec(context) else deriveJson(context.objectType)
+          if (context.isMapType.isDefined) mapTypeCodec(context) else deriveJson(context)
         )
       )
     )
@@ -396,8 +409,8 @@ object CirceJsonSupport extends LibrarySupport with JsonSupport {
   override def modifyObject(objectDef: Defn.Object)(
       context: ModelGenContext
   ): DefnWithCompanion[Defn.Object] =
-    discriminatorValue(context.objectType)
-      .map { discriminatorValueString =>
+    discriminatorAndValue(context.objectType)
+      .map { case (discriminatorPropertyName, discriminatorValueString) =>
         DefnWithCompanion(
           appendObjectStats(
             objectDef,
@@ -411,8 +424,8 @@ object CirceJsonSupport extends LibrarySupport with JsonSupport {
             )}] = new Decoder[${Type.Singleton(Term.Name(context.objectType.getName))}] {
           override def apply(c: HCursor): Result[${Type.Singleton(
               Term.Name(context.objectType.getName)
-            )}] = c.downField("type").as[String] match {
-            case Right(${discriminatorValueString}) =>
+            )}] = c.downField($discriminatorPropertyName).as[String] match {
+            case Right($discriminatorValueString) =>
               Right(${Term.Name(context.objectType.getName)})
             case other =>
               Left(DecodingFailure(s"unknown type: $$other", c.history))
@@ -421,9 +434,8 @@ object CirceJsonSupport extends LibrarySupport with JsonSupport {
         implicit lazy val encoder: Encoder[${Type.Singleton(
               Term.Name(context.objectType.getName)
             )}] = new Encoder[${Type.Singleton(Term.Name(context.objectType.getName))}] {
-          override def apply(a: ${Type.Singleton(
-              Term.Name(context.objectType.getName)
-            )}): Json = Json.obj("type" -> Json.fromString(${discriminatorValueString}))
+          override def apply(a: ${Type
+              .Singleton(Term.Name(context.objectType.getName))}): Json = Json.obj($discriminatorPropertyName -> Json.fromString($discriminatorValueString))
         }
          """.stats
           ),
@@ -432,8 +444,24 @@ object CirceJsonSupport extends LibrarySupport with JsonSupport {
       }
       .getOrElse(DefnWithCompanion(objectDef, None))
 
-  override def modifyPackageObject(libs: List[LibrarySupport], api: Api): Pkg.Object => Pkg.Object =
-    appendPkgObjectStats(_, eitherCodec)
+  override def modifyPackageObject(
+      libs: List[LibrarySupport],
+      api: Api
+  ): Pkg.Object => Pkg.Object = {
+    val formatStats: List[Stat] = formats.map { case (alias, fullQualifiedName) =>
+      q"""implicit lazy val ${Pat.Var(Term.Name(alias))} = ${packageTerm(fullQualifiedName)}"""
+    }.toList
+
+    val formatsObject = formatStats.headOption.map { _ =>
+      q"""
+         object Formats {
+           ..$formatStats
+         }
+       """
+    }
+
+    appendPkgObjectStats(_, eitherCodec ++ formatsObject.toList)
+  }
 
   override def modifyEnum(
       enumType: StringType

@@ -53,6 +53,6 @@ Next, run:
 
 ```shell
 cd ./examples
-sbt -D9.9.9 compile    # where '9.9.9' is the version found above
+sbt -Dplugin.version=9.9.9 compile    # where '9.9.9' is the version found above
 ```
 

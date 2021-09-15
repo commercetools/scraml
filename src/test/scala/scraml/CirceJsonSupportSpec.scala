@@ -13,14 +13,30 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers {
       new File("src/sbt-test/sbt-scraml/json/api/json.raml"),
       new File("target/scraml-circe-json-test"),
       "scraml",
-      librarySupport = Set(CirceJsonSupport),
+      librarySupport = Set(
+        CirceJsonSupport(formats = Map("localDateTime" -> "io.circe.Decoder.decodeLocalDateTime"))
+      ),
       None
     )
 
     val generated = ModelGenRunner.run(DefaultModelGen)(params).unsafeRunSync()
 
     generated.files match {
-      case noDiscBase :: _ :: _ :: baseType :: intermediateType :: grandchildType :: dataType :: emptyBase :: noProps :: noSealedBase :: someEnum :: _ :: mapLike :: packageObject :: Nil =>
+      case noDiscBase ::
+          _ ::
+          _ ::
+          baseType ::
+          intermediateType ::
+          grandchildType ::
+          dataType ::
+          emptyBase ::
+          noProps ::
+          noSealedBase ::
+          someEnum ::
+          otherSub ::
+          mapLike ::
+          packageObject ::
+          Nil =>
         noDiscBase.source.source.toString() should be("sealed trait NoDiscriminatorBase")
         noDiscBase.source.companion.map(_.toString()) should be(
           Some(s"""object NoDiscriminatorBase {
@@ -76,6 +92,7 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers {
         dataType.source.companion.map(_.toString()) should be(Some(s"""object DataType {
                                                                       |  import io.circe._
                                                                       |  import io.circe.generic.semiauto._
+                                                                      |  import scraml.Formats._
                                                                       |  implicit lazy val decoder: Decoder[DataType] = deriveDecoder[DataType]
                                                                       |  implicit lazy val encoder: Encoder[DataType] = deriveEncoder[DataType].mapJsonObject(_.add("type", Json.fromString("data")))
                                                                       |}""".stripMargin))
@@ -122,7 +139,7 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers {
                                                                           |  import io.circe.Decoder.Result
                                                                           |  import io.circe._
                                                                           |  implicit lazy val decoder: Decoder[NoSealedBase] = new Decoder[NoSealedBase] {
-                                                                          |    override def apply(c: HCursor): Result[NoSealedBase] = c.downField("type").as[String] match {
+                                                                          |    override def apply(c: HCursor): Result[NoSealedBase] = c.downField("typeId").as[String] match {
                                                                           |      case Right("map-like") =>
                                                                           |        MapLike.decoder(c)
                                                                           |      case Right("other-sub") =>
@@ -175,6 +192,22 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers {
                                                                       |  })
                                                                       |}""".stripMargin))
 
+        otherSub.source.source.toString() should be(
+          """final case class OtherSub(id: String) extends NoSealedBase"""
+        )
+
+        otherSub.source.companion.map(_.toString()) should be(
+          Some(
+            """object OtherSub {
+            |  import io.circe._
+            |  import io.circe.generic.semiauto._
+            |  import scraml.Formats._
+            |  implicit lazy val decoder: Decoder[OtherSub] = deriveDecoder[OtherSub]
+            |  implicit lazy val encoder: Encoder[OtherSub] = deriveEncoder[OtherSub].mapJsonObject(_.add("typeId", Json.fromString("other-sub")))
+            |}""".stripMargin
+          )
+        )
+
         packageObject.source.source.toString should be(s"""package object scraml {
              |  import io.circe.Decoder.Result
              |  import io.circe.{ HCursor, Json, Decoder, Encoder }
@@ -187,6 +220,7 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers {
              |    }
              |  }
              |  implicit def eitherDecoder[A, B](implicit aDecoder: Decoder[A], bDecoder: Decoder[B]): Decoder[Either[A, B]] = new Decoder[Either[A, B]] { override def apply(c: HCursor): Result[Either[A, B]] = aDecoder.either(bDecoder)(c) }
+             |  object Formats { implicit lazy val localDateTime = io.circe.Decoder.decodeLocalDateTime }
              |}""".stripMargin)
 
         intermediateType.source.source.toString() should be(
@@ -219,6 +253,7 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers {
         grandchildType.source.companion.map(_.toString()) should be(Some(s"""object GrandchildType {
                                                                             |  import io.circe._
                                                                             |  import io.circe.generic.semiauto._
+                                                                            |  import scraml.Formats._
                                                                             |  implicit lazy val decoder: Decoder[GrandchildType] = deriveDecoder[GrandchildType]
                                                                             |  implicit lazy val encoder: Encoder[GrandchildType] = deriveEncoder[GrandchildType].mapJsonObject(_.add("type", Json.fromString("grandchild")))
                                                                             |}""".stripMargin))

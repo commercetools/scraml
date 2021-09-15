@@ -280,8 +280,8 @@ final class TapirSupport(endpointsObjectName: String) extends LibrarySupport {
   override def modifyPackageObject(libs: List[LibrarySupport], api: Api): Pkg.Object => Pkg.Object =
     packageObject => {
       val circeJsonSupport: JsonSupport = libs
-        .collectFirst { case CirceJsonSupport =>
-          CirceJsonSupport
+        .collectFirst { case instance: CirceJsonSupport =>
+          instance
         }
         .getOrElse(throw new IllegalStateException("tapir support requires circe support"))
 
