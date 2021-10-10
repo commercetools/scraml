@@ -8,7 +8,10 @@ object ScramlPlugin extends AutoPlugin {
   override def trigger = allRequirements
 
   object autoImport {
-    val ramlFile        = settingKey[Option[File]]("RAML file to be used by the sbt-scraml plugin")
+    val ramlFile = settingKey[Option[File]]("RAML file to be used by the sbt-scraml plugin")
+    val scramlTargetDir = settingKey[Option[File]](
+      "target dir to use for generation, otherwise 'Compile / sourceManaged' is used"
+    )
     val basePackageName = settingKey[String]("base package name to be used for generated types")
     val librarySupport  = settingKey[Set[LibrarySupport]]("additional library support")
     val formatConfig =
@@ -22,7 +25,8 @@ object ScramlPlugin extends AutoPlugin {
     ramlFile        := None,
     basePackageName := "scraml",
     librarySupport  := Set.empty,
-    formatConfig    := None
+    formatConfig    := None,
+    scramlTargetDir := None
   )
 
   /// Here, the runScraml task is defined but not automatically added to
@@ -31,7 +35,7 @@ object ScramlPlugin extends AutoPlugin {
   /// can be copied as needed before attempting to generate code.
   override lazy val projectSettings: Seq[Setting[_]] = Seq(
     runScraml := {
-      val targetDir: File = (Compile / sourceManaged).value
+      val targetDir: File = scramlTargetDir.value.getOrElse((Compile / sourceManaged).value)
       // adapted from https://stackoverflow.com/questions/33897874/sbt-sourcegenerators-task-execute-only-if-a-file-changes
       val cachedGeneration = FileFunction.cached(
         streams.value.cacheDirectory / "scraml"
