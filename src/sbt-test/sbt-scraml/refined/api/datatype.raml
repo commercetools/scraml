@@ -1,0 +1,40 @@
+#%RAML 1.0 DataType
+(package): DataTypes
+(docs-uri): "https://example.org/data-type"
+displayName: DataType
+type: BaseType
+(scala-derive-json): true
+discriminatorValue: data
+properties:
+  foo?:
+    type: string
+  bar?:
+    type: string
+    pattern: ^[A-z]+$
+  numberProp:
+    type: number
+    minimum: 0
+    maximum: 99.99999
+  customNumberProp:
+    (scala-type): "scala.math.BigDecimal"
+    type: number
+    maximum: 99.99999
+  customArrayTypeProp:
+    (scala-array-type): "Vector"
+    (scala-type): "scala.math.BigDecimal"
+    type: array
+    items:
+      type: number
+      minimum: 1.23
+      maximum: 4.56
+    maxItems: 100
+    uniqueItems: true
+  optionalStringArray?:
+    type: array
+    items:
+      type: string
+      minLength: 5
+      maxLength: 42
+    minItems: 1
+    maxItems: 100
+    uniqueItems: true

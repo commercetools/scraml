@@ -9,11 +9,12 @@ import scraml.RMFUtil.{getAnnotation, getPackageName}
 import java.io.File
 import scala.collection.immutable.TreeSet
 import scala.meta.{Decl, Defn, Member, Pkg, Stat, Term, Type}
+import scala.reflect.ClassTag
 
 trait JsonSupport { self: LibrarySupport =>
   // Json support should usually be one of the first to be applied
   // but should still be customizable if you know what you are doing
-  override def order: Double = 0.1
+  override def order: Double = 0.2
 
   def jsonType: String
 }
@@ -101,6 +102,9 @@ final case class ModelGenContext(
   lazy val isMapType: Option[MapTypeSpec] = ModelGen.isMapType(objectType, anyTypeName)
   lazy val isSingleton: Boolean           = isMapType.isEmpty && typeProperties.isEmpty
 
+  def isLibraryEnabled[A <: LibrarySupport : ClassTag](): Boolean =
+    params.allLibraries.exists(ls => implicitly[ClassTag[A]].runtimeClass.isAssignableFrom(ls.getClass))
+
   def typeParams: List[Term.Param] = isMapType match {
     case Some(mapTypeSpec) =>
       val mapApply = Type.Apply(
@@ -135,12 +139,13 @@ trait LibrarySupport {
   // number between 0 and 1 to define the order of library support applications
   def order: Double = 0.5
 
-  case object HasAnyProperties {
+  object HasAnyProperties {
     def unapply(defn: Defn.Class): Boolean =
       defn.ctor.paramss.exists(_.nonEmpty)
 
     def unapply(defn: Defn.Trait): Boolean =
       defn.templ.stats.exists {
+        // a declaration without parameters is considered a property
         case prop: Decl.Def if prop.paramss.isEmpty => true
         case _                                      => false
       }
@@ -267,10 +272,19 @@ object ModelGen {
       typeName: Option[String] = None,
       defaultAnyTypeName: String
   ): Option[TypeRef] = {
+    def overrideTypeOr(anyType: AnyType, default: => Type.Ref) = {
+      val typeOverride = getAnnotation(anyType)("scala-type")
+          .map(_.getValue.getValue.toString)
+          .map(MetaUtil.typeFromName)
+      TypeRefDetails(typeOverride.getOrElse(default))
+    }
+
     lazy val mappedType = apiType match {
       case _: BooleanType     => TypeRefDetails(Type.Name("Boolean"))
-      case _: IntegerType     => TypeRefDetails(Type.Name("Int"))
-      case number: NumberType => TypeRefDetails(Type.Name(numberTypeString(number)))
+      case integer: IntegerType     =>
+        overrideTypeOr(integer, Type.Name("Int"))
+      case number: NumberType =>
+        overrideTypeOr(number, Type.Name(numberTypeString(number)))
       // only use enum type names on top-level defined enums
       // we would need to generate types for property types otherwise
       case _: StringType if apiType.eContainer().eClass().getName == "Property" =>
@@ -310,9 +324,12 @@ object ModelGen {
               .toList
           )
         )
-      case _: DateTimeType => TypeRefDetails(dateTimeType)
-      case _: DateOnlyType => TypeRefDetails(dateOnlyType)
-      case _: TimeOnlyType => TypeRefDetails(timeOnlyType)
+      case dateTime: DateTimeType =>
+        overrideTypeOr(dateTime, dateTimeType)
+      case date: DateOnlyType =>
+        overrideTypeOr(date, dateOnlyType)
+      case time: TimeOnlyType =>
+        overrideTypeOr(time, timeOnlyType)
       case _               => TypeRefDetails(typeFromName(defaultAnyTypeName))
     }
 
