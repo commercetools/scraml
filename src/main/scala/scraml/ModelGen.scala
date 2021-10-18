@@ -307,7 +307,7 @@ object ModelGen {
     def overrideTypeOr(anyType: AnyType, default: => String) = {
       val typeOverride = getAnnotation(anyType)("scala-type")
         .map(_.getValue.getValue.toString)
-        .map(MetaUtil.typeFromName)
+        .map(typeFromName)
       TypeRefDetails(typeOverride.getOrElse(typeFromName(default)))
     }
 
@@ -416,7 +416,7 @@ object ModelGen {
           keyType   <- properties.find(_.getName == "key").map(_.getValue.getValue.toString)
           valueType <- properties.find(_.getName == "value").map(_.getValue.getValue.toString)
         } yield MapTypeSpec(
-          MetaUtil.typeFromName(context.params.defaultTypes.map),
+          typeFromName(context.params.defaultTypes.map),
           mapTypeToScala(anyTypeName)(keyType),
           mapTypeToScala(anyTypeName)(valueType)
         )
@@ -438,11 +438,11 @@ object ModelGen {
             ModelGen.scalaTypeRef(prop.getType, optional, scalaTypeAnnotation, anyTypeName).map {
               valueType =>
                 MapTypeSpec(
-                  MetaUtil.typeFromName(context.params.defaultTypes.map),
-                    Type.Name("String"),
-                    valueType.scalaType,
-                    isSingle,
-                    !scalaMapRequired
+                  typeFromName(context.params.defaultTypes.map),
+                  Type.Name("String"),
+                  valueType.scalaType,
+                  isSingle,
+                  !scalaMapRequired
                 )
             }
           }
