@@ -352,7 +352,7 @@ class CirceJsonSupport(formats: Map[String, String]) extends LibrarySupport with
     if (shouldDeriveJson(context.objectType)) {
       context.isMapType match {
         case Some(mapType) =>
-          val mapApply = Type.Apply(Type.Name("Map"), List(mapType.keyType, mapType.valueType))
+          val mapApply = Type.Apply(mapType.mapType, List(mapType.keyType, mapType.valueType))
 
           val decodeType: Type.Apply = if (mapType.optional) {
             Type.Apply(Type.Name("Option"), List(mapApply))

@@ -87,7 +87,7 @@ class DefaultModelGenSpec extends AnyFlatSpec with Matchers {
       new File(getClass.getClassLoader.getResource("maptype/maptype.raml").toURI),
       new File("target/scraml-maptype-test"),
       "scraml",
-      DefaultTypes(),
+      DefaultTypes(map = "scala.collection.immutable.TreeMap"),
       Set.empty,
       None
     )
@@ -97,10 +97,10 @@ class DefaultModelGenSpec extends AnyFlatSpec with Matchers {
     generated.files.toList match {
       case someMapType :: someMapTypeOpt :: _ :: Nil =>
         someMapType.source.source.toString() should be(
-          "final case class SomeMapType(values: Map[String, String])"
+          "final case class SomeMapType(values: scala.collection.immutable.TreeMap[String, String])"
         )
         someMapTypeOpt.source.source.toString() should be(
-          "final case class SomeMapTypeOpt(values: Option[Map[String, String]] = None)"
+          "final case class SomeMapTypeOpt(values: Option[scala.collection.immutable.TreeMap[String, String]] = None)"
         )
       case _ => fail()
     }

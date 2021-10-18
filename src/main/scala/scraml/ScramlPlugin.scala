@@ -46,6 +46,7 @@ object ScramlPlugin extends AutoPlugin {
               basePackageName.value,
               defaultTypes.value,
               librarySupport.value,
+              CrossVersion.partialVersion(scalaVersion.value),
               formatConfig.value
             )
 

@@ -28,6 +28,7 @@ final case class DefaultTypes(
     float: String = "Float",
     integer: String = "Int",
     long: String = "Long",
+    map: String = "scala.collection.immutable.Map",
     number: String = "Float",
     string: String = "String",
     time: String = "java.time.LocalTime"
@@ -39,6 +40,7 @@ final case class ModelGenParams(
     basePackage: String,
     defaultTypes: DefaultTypes,
     librarySupport: Set[LibrarySupport],
+    scalaVersion: Option[(Long, Long)] = Some((2, 12)),
     formatConfig: Option[File] = None,
     generateDateCreated: Boolean = false
 ) {
@@ -74,6 +76,7 @@ final case class ApiContext(private val api: Api) {
 }
 
 final case class MapTypeSpec(
+    mapType: Type.Ref,
     keyType: Type,
     valueType: Type,
     singleValue: Boolean = false,
@@ -139,7 +142,7 @@ final case class ModelGenContext(
   def typeParams: List[Term.Param] = isMapType match {
     case Some(mapTypeSpec) =>
       val mapApply = Type.Apply(
-        Type.Name("Map"),
+        mapTypeSpec.mapType,
         List(mapTypeSpec.keyType, mapTypeSpec.valueType)
       )
 
@@ -413,6 +416,7 @@ object ModelGen {
           keyType   <- properties.find(_.getName == "key").map(_.getValue.getValue.toString)
           valueType <- properties.find(_.getName == "value").map(_.getValue.getValue.toString)
         } yield MapTypeSpec(
+          MetaUtil.typeFromName(context.params.defaultTypes.map),
           mapTypeToScala(anyTypeName)(keyType),
           mapTypeToScala(anyTypeName)(valueType)
         )
@@ -433,7 +437,13 @@ object ModelGen {
 
             ModelGen.scalaTypeRef(prop.getType, optional, scalaTypeAnnotation, anyTypeName).map {
               valueType =>
-                MapTypeSpec(Type.Name("String"), valueType.scalaType, isSingle, !scalaMapRequired)
+                MapTypeSpec(
+                  MetaUtil.typeFromName(context.params.defaultTypes.map),
+                    Type.Name("String"),
+                    valueType.scalaType,
+                    isSingle,
+                    !scalaMapRequired
+                )
             }
           }
           .find(_ => true)

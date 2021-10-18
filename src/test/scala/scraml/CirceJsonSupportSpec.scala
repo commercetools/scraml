@@ -164,7 +164,7 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers {
                                                                           |  }
                                                                           |}""".stripMargin))
         mapLike.source.source.toString() should be(
-          s"""final case class MapLike(values: Map[String, String]) extends NoSealedBase""".stripMargin
+          s"""final case class MapLike(values: scala.collection.immutable.Map[String, String]) extends NoSealedBase""".stripMargin
         )
 
         mapLike.source.companion.map(_.toString()) should be(Some(s"""object MapLike {
@@ -172,7 +172,7 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers {
                                                                      |  import io.circe.syntax._
                                                                      |  import io.circe.generic.semiauto._
                                                                      |  import io.circe.Decoder.Result
-                                                                     |  implicit lazy val decoder: Decoder[MapLike] = new Decoder[MapLike] { override def apply(c: HCursor): Result[MapLike] = c.as[Map[String, String]].map(MapLike.apply) }
+                                                                     |  implicit lazy val decoder: Decoder[MapLike] = new Decoder[MapLike] { override def apply(c: HCursor): Result[MapLike] = c.as[scala.collection.immutable.Map[String, String]].map(MapLike.apply) }
                                                                      |  implicit lazy val encoder: Encoder[MapLike] = new Encoder[MapLike] { override def apply(a: MapLike): Json = a.values.asJson }
                                                                      |}""".stripMargin))
 

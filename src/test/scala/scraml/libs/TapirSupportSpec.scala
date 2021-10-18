@@ -41,8 +41,8 @@ final class TapirSupportSpec extends AnyWordSpec with Diagrams with Matchers {
                                                                   |  type |[+A1, +A2] = Either[A1, A2]
                                                                   |  private implicit def anySchema[T]: Schema[T] = Schema[T](SchemaType.SCoproduct(Nil, None)(_ => None), None)
                                                                   |  private implicit val queryOptionalCollectionCodec: Codec[List[String], Option[scala.collection.immutable.List[String]], TextPlain] = new Codec[List[String], Option[scala.collection.immutable.List[String]], TextPlain] {
-                                                                  |    override def rawDecode(l: List[String]): DecodeResult[Option[scala.collection.immutable.List[String]]] = DecodeResult.Value(Some(l.to(scala.collection.immutable.List)))
-                                                                  |    override def encode(h: Option[scala.collection.immutable.List[String]]): List[String] = h.map(_.to(List)).getOrElse(Nil)
+                                                                  |    override def rawDecode(l: List[String]): DecodeResult[Option[scala.collection.immutable.List[String]]] = DecodeResult.Value(Some(l.to[scala.collection.immutable.List]))
+                                                                  |    override def encode(h: Option[scala.collection.immutable.List[String]]): List[String] = h.map(_.to[List]).getOrElse(Nil)
                                                                   |    override lazy val schema: Schema[Option[scala.collection.immutable.List[String]]] = Schema.binary
                                                                   |    override lazy val format: TextPlain = TextPlain()
                                                                   |  }

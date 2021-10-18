@@ -258,29 +258,7 @@ final class TapirSupport(endpointsObjectName: String) extends LibrarySupport {
       .toList
   }
 
-  private def anySchema(implicit context: ModelGenContext) =
-    q"""
-          private implicit def anySchema[T]: Schema[T] = Schema[T](
-            SchemaType.SCoproduct(Nil, None)(_ => None),
-            None
-          )
-        """
-
-  // the query matchers were not happy with Option[List[String]] types
-  // TODO: why do we need that in the first place, could be simplified with an already defined codec?
-  private def queryCollectionParamEncoder(implicit context: ModelGenContext): Defn.Val = {
-    val arrayType = MetaUtil.typeFromName(context.params.defaultTypes.array)
-    val arrayTerm = MetaUtil.termFromName(context.params.defaultTypes.array)
-
-    q"""
-        private implicit val queryOptionalCollectionCodec: Codec[List[String], Option[$arrayType[String]], TextPlain] = new Codec[List[String], Option[$arrayType[String]], TextPlain] {
-          override def rawDecode(l: List[String]): DecodeResult[Option[$arrayType[String]]] = DecodeResult.Value(Some(l.to($arrayTerm)))
-          override def encode(h: Option[$arrayType[String]]): List[String] = h.map(_.to(List)).getOrElse(Nil)
-          override lazy val schema: Schema[Option[$arrayType[String]]] = Schema.binary
-          override lazy val format: TextPlain = TextPlain()
-        }
-      """
-  }
+  private def tapirDefinitions(context: ModelGenContext) = new TapirPackageDefinitions(context)
 
   override def modifyPackageObject(libs: List[LibrarySupport], api: Api)(implicit
       context: ModelGenContext
@@ -342,8 +320,8 @@ final class TapirSupport(endpointsObjectName: String) extends LibrarySupport {
 
         type |[+A1, +A2] = Either[A1, A2]
 
-        $anySchema
-        $queryCollectionParamEncoder
+        ..${tapirDefinitions(context)()}
+
        """.stats
 
       LibrarySupport.appendPkgObjectStats(packageObject, tapirImports ++ List(endpointsObject))
