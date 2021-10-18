@@ -7,6 +7,9 @@ import scraml.libs.PackageObjectExtensionSupport
 
 class PackageObjectExtensionSupportSpec extends AnyFlatSpec with Matchers {
   "Package Object Extension" should "add imports" in {
+    pending
+
+    /*
     val packageObject = {
       import scala.meta._
       q"""package object ${Term.Name("test")}"""
@@ -19,5 +22,6 @@ class PackageObjectExtensionSupportSpec extends AnyFlatSpec with Matchers {
       .templ
       .stats
       .mkString should be("import scala.mutable._")
+     */
   }
 }

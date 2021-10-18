@@ -13,6 +13,7 @@ class LibrarySupportSpec extends AnyFlatSpec with Matchers {
       new File("doesnotexist.raml"),
       new File("target"),
       "scraml",
+      DefaultTypes(),
       Set(
         TestLib(0.1),
         TestLib(0.3),

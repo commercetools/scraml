@@ -1,13 +1,15 @@
 package scraml
+
 import cats.effect.IO
 import cats.implicits.toTraverseOps
 import io.vrap.rmf.raml.model.modules.Api
 import io.vrap.rmf.raml.model.types._
 import org.scalafmt.interfaces.Scalafmt
-
 import java.io.File
 import java.time.LocalDateTime
 import scala.meta._
+
+import _root_.io.vrap.rmf.raml.model.types.impl.ObjectTypeImpl
 
 sealed trait GeneratedSource {
   def name: String
@@ -48,7 +50,13 @@ object DefaultModelGen extends ModelGen {
   import MetaUtil._
   import RMFUtil._
 
-  private def caseClassSource(context: ModelGenContext): Defn.Class = {
+  /** This type is needed so that the `package object` can be generated. Since there is no
+    * [[_root_.io.vrap.rmf.raml.model.types.ObjectType]] for the `package object`, an empty one will
+    * suffice.
+    */
+  private class EmptyObjectType extends ObjectTypeImpl
+
+  private def caseClassSource(implicit context: ModelGenContext): Defn.Class = {
     Defn.Class(
       mods = List(Mod.Final(), Mod.Case()),
       name = Type.Name(context.objectType.getName),
@@ -91,7 +99,7 @@ object DefaultModelGen extends ModelGen {
     )
   }
 
-  private def caseObjectSource(context: ModelGenContext): Defn.Object = {
+  private def caseObjectSource(implicit context: ModelGenContext): Defn.Object = {
     Defn.Object(
       mods = List(Mod.Case()),
       Term.Name(context.objectType.getName),
@@ -107,11 +115,11 @@ object DefaultModelGen extends ModelGen {
     )
   }
 
-  private def traitSource(context: ModelGenContext): Defn.Trait = {
+  private def traitSource(implicit context: ModelGenContext): Defn.Trait = {
     val objectType = context.objectType
     val defs = context.typeProperties.flatMap { property =>
-      ModelGen
-        .scalaTypeRef(property.getType, !property.getRequired, None, context.anyTypeName)
+      context
+        .scalaTypeRef(property.getType, !property.getRequired)
         .map { scalaType =>
           Decl.Def(
             Nil,
@@ -313,9 +321,11 @@ object DefaultModelGen extends ModelGen {
     packageName =
       if (packageParts.size <= 1) None else Some(packageParts.dropRight(1).mkString("."))
     packageObjectWithSource <- IO {
+      val context =
+        ModelGenContext(params.basePackage, new EmptyObjectType, params, ApiContext(api))
       val packageObject = LibrarySupport.applyPackageObject(
         q"""package object ${Term.Name(objectName)}"""
-      )(params.allLibraries, api)
+      )(params.allLibraries, context, api)
 
       val packageStatement = packageName.map(pkg => s"package $pkg\n").getOrElse("")
       (packageObject, s"$packageStatement${packageObject.toString}")

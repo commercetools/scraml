@@ -5,7 +5,7 @@ import scraml.{DefnWithCompanion, LibrarySupport, ModelGenContext}
 import scala.meta._
 
 object CatsShowSupport extends LibrarySupport {
-  override def modifyClass(classDef: Defn.Class, companion: Option[Defn.Object])(
+  override def modifyClass(classDef: Defn.Class, companion: Option[Defn.Object])(implicit
       context: ModelGenContext
   ): DefnWithCompanion[Defn.Class] =
     DefnWithCompanion(
@@ -13,7 +13,7 @@ object CatsShowSupport extends LibrarySupport {
       companion.map(appendObjectStats(_, generateShow(classDef)))
     )
 
-  override def modifyTrait(traitDef: Defn.Trait, companion: Option[Defn.Object])(
+  override def modifyTrait(traitDef: Defn.Trait, companion: Option[Defn.Object])(implicit
       context: ModelGenContext
   ): DefnWithCompanion[Defn.Trait] =
     traitDef match {

@@ -19,10 +19,25 @@ trait JsonSupport { self: LibrarySupport =>
   def jsonType: String
 }
 
+final case class DefaultTypes(
+    array: String = "scala.collection.immutable.List",
+    boolean: String = "Boolean",
+    date: String = "java.time.LocalDate",
+    dateTime: String = "java.time.LocalDateTime",
+    double: String = "Double",
+    float: String = "Float",
+    integer: String = "Int",
+    long: String = "Long",
+    number: String = "Float",
+    string: String = "String",
+    time: String = "java.time.LocalTime"
+)
+
 final case class ModelGenParams(
     raml: File,
     targetDir: File,
     basePackage: String,
+    defaultTypes: DefaultTypes,
     librarySupport: Set[LibrarySupport],
     formatConfig: Option[File] = None,
     generateDateCreated: Boolean = false
@@ -76,7 +91,7 @@ final case class ModelGenContext(
   import RMFUtil.anyTypeOrdering
 
   lazy val scalaBaseType: Option[TypeRef] =
-    apiBaseType.flatMap(ModelGen.scalaTypeRef(_, false, None, anyTypeName))
+    apiBaseType.flatMap(scalaTypeRef(_, false))
 
   lazy val anyTypeName: String = params.allLibraries
     .collectFirst { case jsonSupport: JsonSupport =>
@@ -99,11 +114,27 @@ final case class ModelGenContext(
 
   lazy val typeProperties: Seq[Property] = RMFUtil.typeProperties(objectType).toSeq
   lazy val isSealed: Boolean = getDirectSubTypes.forall(getPackageName(_).contains(packageName))
-  lazy val isMapType: Option[MapTypeSpec] = ModelGen.isMapType(objectType, anyTypeName)
+  lazy val isMapType: Option[MapTypeSpec] = ModelGen.isMapType(objectType, anyTypeName)(this)
   lazy val isSingleton: Boolean           = isMapType.isEmpty && typeProperties.isEmpty
 
-  def isLibraryEnabled[A <: LibrarySupport : ClassTag](): Boolean =
-    params.allLibraries.exists(ls => implicitly[ClassTag[A]].runtimeClass.isAssignableFrom(ls.getClass))
+  def isLibraryEnabled[A <: LibrarySupport: ClassTag](): Boolean =
+    params.allLibraries.exists(ls =>
+      implicitly[ClassTag[A]].runtimeClass.isAssignableFrom(ls.getClass)
+    )
+
+  def scalaTypeRef(
+      apiType: AnyType,
+      optional: Boolean
+  ): Option[TypeRef] =
+    ModelGen.scalaTypeRef(apiType, optional, None, anyTypeName)(this)
+
+  def scalaTypeRef(
+      apiType: AnyType,
+      optional: Boolean,
+      typeName: Option[String] = None,
+      defaultAnyTypeName: String
+  ): Option[TypeRef] =
+    ModelGen.scalaTypeRef(apiType, optional, typeName, defaultAnyTypeName)(this)
 
   def typeParams: List[Term.Param] = isMapType match {
     case Some(mapTypeSpec) =>
@@ -129,7 +160,7 @@ final case class ModelGenContext(
           if (mapTypeSpec.optional) Some(Term.Name("None")) else None
         )
       )
-    case None => typeProperties.flatMap(ModelGen.scalaProperty(_)(this.anyTypeName)).toList
+    case None => typeProperties.flatMap(ModelGen.scalaProperty(_)(this.anyTypeName)(this)).toList
   }
 }
 
@@ -156,22 +187,24 @@ trait LibrarySupport {
       names.forall(n => defn.ctor.paramss.head.exists(_.name.value == n))
   }
 
-  def modifyClass(classDef: Defn.Class, companion: Option[Defn.Object])(
+  def modifyClass(classDef: Defn.Class, companion: Option[Defn.Object])(implicit
       context: ModelGenContext
   ): DefnWithCompanion[Defn.Class] =
     DefnWithCompanion(classDef, companion)
 
-  def modifyObject(objectDef: Defn.Object)(
+  def modifyObject(objectDef: Defn.Object)(implicit
       context: ModelGenContext
   ): DefnWithCompanion[Defn.Object] =
     DefnWithCompanion(objectDef, None)
 
-  def modifyTrait(traitDef: Defn.Trait, companion: Option[Defn.Object])(
+  def modifyTrait(traitDef: Defn.Trait, companion: Option[Defn.Object])(implicit
       context: ModelGenContext
   ): DefnWithCompanion[Defn.Trait] =
     DefnWithCompanion(traitDef, companion)
 
-  def modifyPackageObject(libs: List[LibrarySupport], api: Api): Pkg.Object => Pkg.Object = identity
+  def modifyPackageObject(libs: List[LibrarySupport], api: Api)(implicit
+      context: ModelGenContext
+  ): Pkg.Object => Pkg.Object = identity
 
   def modifyEnum(
       enumType: StringType
@@ -219,9 +252,9 @@ object LibrarySupport {
     }
   def applyPackageObject(
       packageObject: Pkg.Object
-  )(libs: List[LibrarySupport], api: Api): Pkg.Object =
+  )(libs: List[LibrarySupport], context: ModelGenContext, api: Api): Pkg.Object =
     libs.foldLeft(packageObject: Pkg.Object) { case (acc, lib) =>
-      lib.modifyPackageObject(libs, api)(acc)
+      lib.modifyPackageObject(libs, api)(context)(acc)
     }
   def applyEnum(enumType: StringType)(enumTrait: Defn.Trait, companion: Defn.Object)(
       libs: List[LibrarySupport]
@@ -247,17 +280,13 @@ trait ModelGen {
 object ModelGen {
   import scala.jdk.CollectionConverters._
 
-  lazy val defaultArrayTypeName = "List"
-
-  lazy val dateTimeType: Type.Ref = typeFromName("java.time.LocalDateTime")
-  lazy val dateOnlyType: Type.Ref = typeFromName("java.time.LocalDate")
-  lazy val timeOnlyType: Type.Ref = typeFromName("java.time.LocalTime")
-
-  private def numberTypeString(numberType: NumberType): String = numberType.getFormat match {
-    case NumberFormat.INT64 | NumberFormat.LONG => "Long"
-    case NumberFormat.FLOAT                     => "Float"
-    case NumberFormat.DOUBLE                    => "Double"
-    case _                                      => "Int"
+  private def numberTypeString(numberType: NumberType)(implicit
+      context: ModelGenContext
+  ): String = numberType.getFormat match {
+    case NumberFormat.INT64 | NumberFormat.LONG => context.params.defaultTypes.long
+    case NumberFormat.FLOAT                     => context.params.defaultTypes.float
+    case NumberFormat.DOUBLE                    => context.params.defaultTypes.double
+    case _                                      => context.params.defaultTypes.integer
   }
 
   private case class TypeRefDetails(
@@ -271,20 +300,21 @@ object ModelGen {
       optional: Boolean,
       typeName: Option[String] = None,
       defaultAnyTypeName: String
-  ): Option[TypeRef] = {
-    def overrideTypeOr(anyType: AnyType, default: => Type.Ref) = {
+  )(implicit context: ModelGenContext): Option[TypeRef] = {
+    def overrideTypeOr(anyType: AnyType, default: => String) = {
       val typeOverride = getAnnotation(anyType)("scala-type")
-          .map(_.getValue.getValue.toString)
-          .map(MetaUtil.typeFromName)
-      TypeRefDetails(typeOverride.getOrElse(default))
+        .map(_.getValue.getValue.toString)
+        .map(MetaUtil.typeFromName)
+      TypeRefDetails(typeOverride.getOrElse(typeFromName(default)))
     }
 
     lazy val mappedType = apiType match {
-      case _: BooleanType     => TypeRefDetails(Type.Name("Boolean"))
-      case integer: IntegerType     =>
-        overrideTypeOr(integer, Type.Name("Int"))
+      case boolean: BooleanType =>
+        overrideTypeOr(boolean, context.params.defaultTypes.boolean)
+      case integer: IntegerType =>
+        overrideTypeOr(integer, context.params.defaultTypes.integer)
       case number: NumberType =>
-        overrideTypeOr(number, Type.Name(numberTypeString(number)))
+        overrideTypeOr(number, numberTypeString(number))
       // only use enum type names on top-level defined enums
       // we would need to generate types for property types otherwise
       case _: StringType if apiType.eContainer().eClass().getName == "Property" =>
@@ -292,12 +322,12 @@ object ModelGen {
       case stringEnum: StringType
           if Option(stringEnum.getEnum).forall(!_.isEmpty) && stringEnum.getName != "string" =>
         TypeRefDetails(Type.Name(stringEnum.getName))
-      case _: StringType =>
-        TypeRefDetails(Type.Name("String"))
+      case string: StringType =>
+        overrideTypeOr(string, context.params.defaultTypes.string)
       case array: ArrayType =>
         val arrayType = getAnnotation(array)("scala-array-type")
           .map(_.getValue.getValue.toString)
-          .getOrElse(defaultArrayTypeName)
+          .getOrElse(context.params.defaultTypes.array)
         val itemTypeOverride = getAnnotation(array)("scala-type").map(_.getValue.getValue.toString)
         // we do not need to be optional inside an collection, hence setting it to false
         TypeRefDetails(
@@ -325,12 +355,12 @@ object ModelGen {
           )
         )
       case dateTime: DateTimeType =>
-        overrideTypeOr(dateTime, dateTimeType)
+        overrideTypeOr(dateTime, context.params.defaultTypes.dateTime)
       case date: DateOnlyType =>
-        overrideTypeOr(date, dateOnlyType)
+        overrideTypeOr(date, context.params.defaultTypes.date)
       case time: TimeOnlyType =>
-        overrideTypeOr(time, timeOnlyType)
-      case _               => TypeRefDetails(typeFromName(defaultAnyTypeName))
+        overrideTypeOr(time, context.params.defaultTypes.time)
+      case _ => TypeRefDetails(typeFromName(defaultAnyTypeName))
     }
 
     val typeRef = typeName match {
@@ -349,7 +379,9 @@ object ModelGen {
     } else Some(TypeRef(typeRef.baseType, typeRef.packageName, typeRef.defaultValue))
   }
 
-  def scalaProperty(prop: TypedElement)(fallbackType: String): Option[Term.Param] = {
+  def scalaProperty(prop: TypedElement)(fallbackType: String)(implicit
+      context: ModelGenContext
+  ): Option[Term.Param] = {
     lazy val optional = !prop.getRequired
     val scalaTypeAnnotation =
       Option(prop.getAnnotation("scala-type")).map(_.getValue.getValue.toString)
@@ -365,11 +397,15 @@ object ModelGen {
     case "any"    => typeFromName(anyTypeName)
   }
 
-  def isSingleton(objectType: ObjectType, anyTypeName: String): Boolean =
+  def isSingleton(objectType: ObjectType, anyTypeName: String)(implicit
+      context: ModelGenContext
+  ): Boolean =
     ModelGen.isMapType(objectType, anyTypeName).isEmpty &&
       RMFUtil.typeProperties(objectType).isEmpty
 
-  def isMapType(objectType: ObjectType, anyTypeName: String): Option[MapTypeSpec] = {
+  def isMapType(objectType: ObjectType, anyTypeName: String)(implicit
+      context: ModelGenContext
+  ): Option[MapTypeSpec] = {
     getAnnotation(objectType)("asMap").map(_.getValue) match {
       case Some(asMap: ObjectInstance) =>
         val properties = asMap.getValue.asScala

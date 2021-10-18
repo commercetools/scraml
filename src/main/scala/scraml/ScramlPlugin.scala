@@ -10,6 +10,7 @@ object ScramlPlugin extends AutoPlugin {
   object autoImport {
     val ramlFile        = settingKey[Option[File]]("RAML file to be used by the sbt-scraml plugin")
     val basePackageName = settingKey[String]("base package name to be used for generated types")
+    val defaultTypes    = settingKey[DefaultTypes]("Scala types to use for RAML built-in types")
     val librarySupport  = settingKey[Set[LibrarySupport]]("additional library support")
     val formatConfig =
       settingKey[Option[File]]("config to be used for formatting, no formatting if not set")
@@ -21,6 +22,7 @@ object ScramlPlugin extends AutoPlugin {
   override lazy val globalSettings: Seq[Setting[_]] = Seq(
     ramlFile        := None,
     basePackageName := "scraml",
+    defaultTypes    := DefaultTypes(),
     librarySupport  := Set.empty,
     formatConfig    := None
   )
@@ -42,6 +44,7 @@ object ScramlPlugin extends AutoPlugin {
               file,
               targetDir,
               basePackageName.value,
+              defaultTypes.value,
               librarySupport.value,
               formatConfig.value
             )

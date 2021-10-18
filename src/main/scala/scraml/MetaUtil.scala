@@ -13,6 +13,9 @@ object MetaUtil {
   def packageTerm(packageName: String): Term.Ref =
     termSelect(packageName.split("\\.").toList.reverse, packageName)
 
+  def termFromName(fullyQualifiedName: String): Term.Ref =
+    termSelect(fullyQualifiedName.split('.').toList.reverse, fullyQualifiedName)
+
   def typeFromNameParts(parts: List[String], default: String): Type.Ref =
     parts match {
       case Nil                    => Type.Name(default)

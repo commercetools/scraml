@@ -2,9 +2,9 @@ package scraml.libs
 
 import org.scalatest.diagrams.Diagrams
 import org.scalatest.wordspec.AnyWordSpec
-import scraml.{DefaultModelGen, ModelGenParams, ModelGenRunner}
-
+import scraml.{DefaultModelGen, DefaultTypes, ModelGenParams, ModelGenRunner}
 import java.io.File
+
 import cats.effect.unsafe.implicits.global
 import org.scalatest.matchers.should.Matchers
 
@@ -15,6 +15,7 @@ final class TapirSupportSpec extends AnyWordSpec with Diagrams with Matchers {
         new File("src/sbt-test/sbt-scraml/simple/api/simple.raml"),
         new File("target/scraml-tapir-test"),
         "scraml",
+        DefaultTypes(),
         librarySupport = Set(CirceJsonSupport(), TapirSupport("Endpoints")),
         formatConfig = None
       )
@@ -39,10 +40,10 @@ final class TapirSupportSpec extends AnyWordSpec with Diagrams with Matchers {
                                                                   |  import sttp.tapir.json.circe._
                                                                   |  type |[+A1, +A2] = Either[A1, A2]
                                                                   |  private implicit def anySchema[T]: Schema[T] = Schema[T](SchemaType.SCoproduct(Nil, None)(_ => None), None)
-                                                                  |  private implicit val queryOptionalListCodec: Codec[List[String], Option[List[String]], TextPlain] = new Codec[List[String], Option[List[String]], TextPlain] {
-                                                                  |    override def rawDecode(l: List[String]): DecodeResult[Option[List[String]]] = DecodeResult.Value(Some(l))
-                                                                  |    override def encode(h: Option[List[String]]): List[String] = h.getOrElse(List.empty)
-                                                                  |    override lazy val schema: Schema[Option[List[String]]] = Schema.binary
+                                                                  |  private implicit val queryOptionalCollectionCodec: Codec[List[String], Option[scala.collection.immutable.List[String]], TextPlain] = new Codec[List[String], Option[scala.collection.immutable.List[String]], TextPlain] {
+                                                                  |    override def rawDecode(l: List[String]): DecodeResult[Option[scala.collection.immutable.List[String]]] = DecodeResult.Value(Some(l.to(scala.collection.immutable.List)))
+                                                                  |    override def encode(h: Option[scala.collection.immutable.List[String]]): List[String] = h.map(_.to(List)).getOrElse(Nil)
+                                                                  |    override lazy val schema: Schema[Option[scala.collection.immutable.List[String]]] = Schema.binary
                                                                   |    override lazy val format: TextPlain = TextPlain()
                                                                   |  }
                                                                   |  object Endpoints {
@@ -59,6 +60,7 @@ final class TapirSupportSpec extends AnyWordSpec with Diagrams with Matchers {
         new File("src/sbt-test/sbt-scraml/ct-api/reference/api-specs/api/api.raml"),
         new File("target/scraml-tapir-ct-api-test"),
         "scraml",
+        DefaultTypes(),
         librarySupport = Set(scraml.libs.CirceJsonSupport(), TapirSupport("Endpoints")),
         formatConfig = None
       )

@@ -19,7 +19,14 @@ class RMFUtilSpec extends AnyFlatSpec with Matchers {
         val context = ModelGenContext(
           "test",
           baseType,
-          ModelGenParams(ramlFile, new File("target"), "base", Set.empty, None),
+          ModelGenParams(
+            ramlFile,
+            new File("target"),
+            "base",
+            DefaultTypes(),
+            Set.empty,
+            None
+          ),
           ApiContext(api)
         )
         context.getDirectSubTypes

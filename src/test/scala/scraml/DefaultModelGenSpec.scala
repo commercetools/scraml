@@ -14,6 +14,7 @@ class DefaultModelGenSpec extends AnyFlatSpec with Matchers {
       new File("src/sbt-test/sbt-scraml/simple/api/simple.raml"),
       new File("target/scraml-test"),
       "scraml",
+      DefaultTypes(),
       Set.empty,
       None
     )
@@ -86,6 +87,7 @@ class DefaultModelGenSpec extends AnyFlatSpec with Matchers {
       new File(getClass.getClassLoader.getResource("maptype/maptype.raml").toURI),
       new File("target/scraml-maptype-test"),
       "scraml",
+      DefaultTypes(),
       Set.empty,
       None
     )

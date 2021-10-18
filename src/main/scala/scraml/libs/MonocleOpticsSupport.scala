@@ -6,7 +6,7 @@ import scraml.{DefnWithCompanion, LibrarySupport, ModelGenContext}
 import scala.meta._
 
 object MonocleOpticsSupport extends LibrarySupport {
-  override def modifyClass(classDef: Defn.Class, companion: Option[Defn.Object])(
+  override def modifyClass(classDef: Defn.Class, companion: Option[Defn.Object])(implicit
       context: ModelGenContext
   ): DefnWithCompanion[Defn.Class] =
     classDef match {
@@ -15,7 +15,7 @@ object MonocleOpticsSupport extends LibrarySupport {
       case _ => super.modifyClass(classDef, companion)(context)
     }
 
-  override def modifyTrait(traitDef: Defn.Trait, companion: Option[Defn.Object])(
+  override def modifyTrait(traitDef: Defn.Trait, companion: Option[Defn.Object])(implicit
       context: ModelGenContext
   ): DefnWithCompanion[Defn.Trait] =
     traitDef match {

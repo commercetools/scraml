@@ -13,6 +13,12 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers {
       new File("src/sbt-test/sbt-scraml/json/api/json.raml"),
       new File("target/scraml-circe-json-test"),
       "scraml",
+      DefaultTypes(
+        float = "scala.math.BigDecimal",
+        double = "scala.math.BigDecimal",
+        number = "scala.math.BigDecimal",
+        long = "scala.math.BigInt"
+      ),
       librarySupport = Set(
         CirceJsonSupport(formats = Map("localDateTime" -> "io.circe.Decoder.decodeLocalDateTime"))
       ),
@@ -248,7 +254,7 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers {
         )
 
         grandchildType.source.source.toString() should be(
-          "final case class GrandchildType(id: String, foo: Option[String] = None, customTypeProp: scala.math.BigDecimal, customArrayTypeProp: Vector[scala.math.BigDecimal] = Vector.empty) extends IntermediateType"
+          "final case class GrandchildType(id: String, foo: Option[String] = None, aDouble: scala.math.BigDecimal, aFloat: scala.math.BigDecimal, anInt: Int, aLong: scala.math.BigInt, customTypeProp: scala.math.BigDecimal, customArrayTypeProp: Vector[scala.math.BigDecimal] = Vector.empty) extends IntermediateType"
         )
         grandchildType.source.companion.map(_.toString()) should be(Some(s"""object GrandchildType {
                                                                             |  import io.circe._
