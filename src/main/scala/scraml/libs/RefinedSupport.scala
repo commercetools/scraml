@@ -27,7 +27,8 @@ object RefinedSupport extends LibrarySupport {
     final def hasFacets(at: ArrayType): Boolean =
       (at.getMaxItems ne null) ||
         (at.getMinItems ne null) ||
-        (at.getUniqueItems ne null)
+        (at.getUniqueItems ne null) ||
+        hasItemFacets(at)
 
     final def hasFacets(nt: NumberType): Boolean =
       (nt.getMaximum ne null) ||
@@ -37,6 +38,13 @@ object RefinedSupport extends LibrarySupport {
       (st.getPattern ne null) ||
         (st.getMaxLength ne null) ||
         (st.getMinLength ne null)
+
+    final def hasItemFacets(at: ArrayType): Boolean =
+      Option(at.getItems).exists {
+        case nt: NumberType if hasFacets(nt) => true
+        case st: StringType if hasFacets(st) => true
+        case _                               => false
+      }
 
     final def unapply(declaration: Decl.Def)(implicit
         context: ModelGenContext
@@ -148,14 +156,9 @@ object RefinedSupport extends LibrarySupport {
     override protected def array(name: Name, descriptor: ArrayType, optional: Boolean)(implicit
         context: ModelGenContext
     ): Option[(Type, Option[Term])] = {
-      val hasDefault = optional || Option(descriptor.getMinItems).exists(_.intValue() == 0)
-
       Some(
-        mkDeclType(context.objectType, name.value) -> defaultValue(hasDefault) {
-          if (optional)
-            q"None"
-          else
-            q"${MetaUtil.termFromName(context.params.defaultTypes.array)}.empty"
+        mkDeclType(context.objectType, name.value) -> defaultValue(optional) {
+          q"None"
         }
       )
     }
@@ -212,7 +215,8 @@ object RefinedSupport extends LibrarySupport {
 
         case Some(st: StringType) if hasFacets(st) =>
           Some(
-            collectionBounds(Option(st.getMinLength), Option(st.getMaxLength))
+            collectionBounds(Option(st.getMinLength), Option(st.getMaxLength)) :::
+              pattern(Option(st.getPattern))
           )
 
         case _ =>

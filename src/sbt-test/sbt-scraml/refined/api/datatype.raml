@@ -33,8 +33,6 @@ properties:
     type: array
     items:
       type: string
-      minLength: 5
+      pattern: "^[A-z0-9]+$"
+      minLength: 2
       maxLength: 42
-    minItems: 1
-    maxItems: 100
-    uniqueItems: true
