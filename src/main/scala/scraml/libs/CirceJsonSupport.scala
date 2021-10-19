@@ -58,7 +58,7 @@ class CirceJsonSupport(formats: Map[String, String]) extends LibrarySupport with
   private def discriminatorAndValue(aType: ObjectType): Option[(String, String)] =
     discriminator(aType).zip(discriminatorValue(aType)).headOption
 
-  private def typeEncoder(context: ModelGenContext): Defn.Val = {
+  private def typeEncoder(implicit context: ModelGenContext): Defn.Val = {
     val subTypes = context.leafTypes.toList
     val typeName = context.objectType.getName
 
@@ -352,7 +352,7 @@ class CirceJsonSupport(formats: Map[String, String]) extends LibrarySupport with
     if (shouldDeriveJson(context.objectType)) {
       context.isMapType match {
         case Some(mapType) =>
-          val mapApply = Type.Apply(Type.Name("Map"), List(mapType.keyType, mapType.valueType))
+          val mapApply = Type.Apply(mapType.mapType, List(mapType.keyType, mapType.valueType))
 
           val decodeType: Type.Apply = if (mapType.optional) {
             Type.Apply(Type.Name("Option"), List(mapApply))
@@ -385,7 +385,7 @@ class CirceJsonSupport(formats: Map[String, String]) extends LibrarySupport with
 
     } else List.empty
 
-  override def modifyClass(classDef: Defn.Class, companion: Option[Defn.Object])(
+  override def modifyClass(classDef: Defn.Class, companion: Option[Defn.Object])(implicit
       context: ModelGenContext
   ): DefnWithCompanion[Defn.Class] =
     DefnWithCompanion(
@@ -398,7 +398,7 @@ class CirceJsonSupport(formats: Map[String, String]) extends LibrarySupport with
       )
     )
 
-  override def modifyTrait(traitDef: Defn.Trait, companion: Option[Defn.Object])(
+  override def modifyTrait(traitDef: Defn.Trait, companion: Option[Defn.Object])(implicit
       context: ModelGenContext
   ): DefnWithCompanion[Defn.Trait] =
     DefnWithCompanion(
@@ -406,7 +406,7 @@ class CirceJsonSupport(formats: Map[String, String]) extends LibrarySupport with
       companion = companion.map(appendObjectStats(_, deriveJsonTypeSwitch(context)))
     )
 
-  override def modifyObject(objectDef: Defn.Object)(
+  override def modifyObject(objectDef: Defn.Object)(implicit
       context: ModelGenContext
   ): DefnWithCompanion[Defn.Object] =
     discriminatorAndValue(context.objectType)
@@ -447,7 +447,7 @@ class CirceJsonSupport(formats: Map[String, String]) extends LibrarySupport with
   override def modifyPackageObject(
       libs: List[LibrarySupport],
       api: Api
-  ): Pkg.Object => Pkg.Object = {
+  )(implicit context: ModelGenContext): Pkg.Object => Pkg.Object = {
     val formatStats: List[Stat] = formats.map { case (alias, fullQualifiedName) =>
       q"""implicit lazy val ${Pat.Var(Term.Name(alias))} = ${packageTerm(fullQualifiedName)}"""
     }.toList

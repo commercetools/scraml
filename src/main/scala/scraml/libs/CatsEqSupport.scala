@@ -37,7 +37,7 @@ object CatsEqSupport extends LibrarySupport {
       }
     """.stats
 
-  override def modifyClass(classDef: Defn.Class, companion: Option[Defn.Object])(
+  override def modifyClass(classDef: Defn.Class, companion: Option[Defn.Object])(implicit
       context: ModelGenContext
   ): DefnWithCompanion[Defn.Class] =
     DefnWithCompanion(

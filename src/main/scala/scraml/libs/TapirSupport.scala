@@ -4,8 +4,7 @@ import io.vrap.rmf.raml.model.modules.Api
 import io.vrap.rmf.raml.model.resources.Resource
 import io.vrap.rmf.raml.model.responses.Body
 import io.vrap.rmf.raml.model.types.TypedElement
-import scraml.{JsonSupport, LibrarySupport, ModelGen}
-
+import scraml.{JsonSupport, LibrarySupport, MetaUtil, ModelGen, ModelGenContext}
 import scala.collection.immutable.TreeSet
 import scala.jdk.CollectionConverters._
 import scala.meta._
@@ -66,7 +65,9 @@ final class TapirSupport(endpointsObjectName: String) extends LibrarySupport {
     pathMatcherString.parse[Term].get
   }
 
-  private def paramTypes(elements: Seq[TypedElement]): List[Term.Param] =
+  private def paramTypes(elements: Seq[TypedElement])(implicit
+      context: ModelGenContext
+  ): List[Term.Param] =
     elements.flatMap { queryParam =>
       if (Option(queryParam.getPattern).isDefined) None
       else ModelGen.scalaProperty(queryParam)(fallbackType = "String")
@@ -111,9 +112,9 @@ final class TapirSupport(endpointsObjectName: String) extends LibrarySupport {
       bodies: Iterable[Body],
       jsonSupport: JsonSupport,
       optional: Boolean
-  ): List[BodyWithMediaType] =
+  )(implicit context: ModelGenContext): List[BodyWithMediaType] =
     bodies.flatMap { body =>
-      ModelGen
+      context
         .scalaTypeRef(body.getType, optional, None, jsonSupport.jsonType)
         .map(_.scalaType)
         .map(BodyWithMediaType(body.getContentType, _))
@@ -122,7 +123,7 @@ final class TapirSupport(endpointsObjectName: String) extends LibrarySupport {
   private def resourceEndpointsDefinitions(
       resource: Resource,
       jsonSupport: JsonSupport
-  ): List[ResourceDefinitions] = {
+  )(implicit context: ModelGenContext): List[ResourceDefinitions] = {
     val templateWithoutSlash = removeLeadingSlash(resource.getFullUri.getTemplate)
     // treat dashes as camel case separator (in the name only)
     val fullResourceName = resourceNameFromTemplate(templateWithoutSlash.replaceAll("-", "/"))
@@ -167,7 +168,7 @@ final class TapirSupport(endpointsObjectName: String) extends LibrarySupport {
 
       val endpointWithInputBody: Term = method.getBodies.asScala.headOption
         .flatMap(body =>
-          ModelGen
+          context
             .scalaTypeRef(body.getType, optional = false, None, jsonSupport.jsonType)
             .map((_, body))
         )
@@ -257,27 +258,11 @@ final class TapirSupport(endpointsObjectName: String) extends LibrarySupport {
       .toList
   }
 
-  private val anySchema =
-    q"""
-       private implicit def anySchema[T]: Schema[T] = Schema[T](
-        SchemaType.SCoproduct(Nil, None)(_ => None),
-        None
-      )
-     """
+  private def tapirDefinitions(context: ModelGenContext) = new TapirPackageDefinitions(context)
 
-  // the query matchers were not happy with Option[List[String]] types
-  // TODO: why do we need that in the first place, could be simplified with an already defined codec?
-  private val queryListParamEncoder: Defn.Val =
-    q"""
-        private implicit val queryOptionalListCodec: Codec[List[String], Option[List[String]], TextPlain] = new Codec[List[String], Option[List[String]], TextPlain] {
-          override def rawDecode(l: List[String]): DecodeResult[Option[List[String]]] = DecodeResult.Value(Some(l))
-          override def encode(h: Option[List[String]]): List[String] = h.getOrElse(List.empty)
-          override lazy val schema: Schema[Option[List[String]]] = Schema.binary
-          override lazy val format: TextPlain = TextPlain()
-        }
-     """
-
-  override def modifyPackageObject(libs: List[LibrarySupport], api: Api): Pkg.Object => Pkg.Object =
+  override def modifyPackageObject(libs: List[LibrarySupport], api: Api)(implicit
+      context: ModelGenContext
+  ): Pkg.Object => Pkg.Object =
     packageObject => {
       val circeJsonSupport: JsonSupport = libs
         .collectFirst { case instance: CirceJsonSupport =>
@@ -335,8 +320,8 @@ final class TapirSupport(endpointsObjectName: String) extends LibrarySupport {
 
         type |[+A1, +A2] = Either[A1, A2]
 
-        $anySchema
-        $queryListParamEncoder
+        ..${tapirDefinitions(context)()}
+
        """.stats
 
       LibrarySupport.appendPkgObjectStats(packageObject, tapirImports ++ List(endpointsObject))

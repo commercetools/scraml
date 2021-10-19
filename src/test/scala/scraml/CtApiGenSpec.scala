@@ -3,9 +3,9 @@ package scraml
 import cats.effect.unsafe.implicits.global
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
-
 import java.io.File
-import scraml.libs.CirceJsonSupport
+
+import scraml.libs.{CirceJsonSupport, TapirSupport}
 
 class CtApiGenSpec extends AnyFlatSpec with Matchers {
   "Default model gen" should "generate ct API" in {
@@ -13,7 +13,13 @@ class CtApiGenSpec extends AnyFlatSpec with Matchers {
       new File("src/sbt-test/sbt-scraml/ct-api/reference/api-specs/api/api.raml"),
       new File("target/scraml-test-ct"),
       "scraml",
-      librarySupport = Set(CirceJsonSupport()),
+      DefaultTypes(
+        array = "scala.collection.immutable.Vector",
+        double = "scala.math.BigDecimal",
+        float = "scala.math.BigDecimal",
+        number = "scala.math.BigDecimal"
+      ),
+      librarySupport = Set(CirceJsonSupport(), TapirSupport("PlatformEndpoints")),
       None
     )
 

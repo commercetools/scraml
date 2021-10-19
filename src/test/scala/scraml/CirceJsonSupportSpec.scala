@@ -13,6 +13,12 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers {
       new File("src/sbt-test/sbt-scraml/json/api/json.raml"),
       new File("target/scraml-circe-json-test"),
       "scraml",
+      DefaultTypes(
+        float = "scala.math.BigDecimal",
+        double = "scala.math.BigDecimal",
+        number = "scala.math.BigDecimal",
+        long = "scala.math.BigInt"
+      ),
       librarySupport = Set(
         CirceJsonSupport(formats = Map("localDateTime" -> "io.circe.Decoder.decodeLocalDateTime"))
       ),
@@ -158,7 +164,7 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers {
                                                                           |  }
                                                                           |}""".stripMargin))
         mapLike.source.source.toString() should be(
-          s"""final case class MapLike(values: Map[String, String]) extends NoSealedBase""".stripMargin
+          s"""final case class MapLike(values: scala.collection.immutable.Map[String, String]) extends NoSealedBase""".stripMargin
         )
 
         mapLike.source.companion.map(_.toString()) should be(Some(s"""object MapLike {
@@ -166,7 +172,7 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers {
                                                                      |  import io.circe.syntax._
                                                                      |  import io.circe.generic.semiauto._
                                                                      |  import io.circe.Decoder.Result
-                                                                     |  implicit lazy val decoder: Decoder[MapLike] = new Decoder[MapLike] { override def apply(c: HCursor): Result[MapLike] = c.as[Map[String, String]].map(MapLike.apply) }
+                                                                     |  implicit lazy val decoder: Decoder[MapLike] = new Decoder[MapLike] { override def apply(c: HCursor): Result[MapLike] = c.as[scala.collection.immutable.Map[String, String]].map(MapLike.apply) }
                                                                      |  implicit lazy val encoder: Encoder[MapLike] = new Encoder[MapLike] { override def apply(a: MapLike): Json = a.values.asJson }
                                                                      |}""".stripMargin))
 
@@ -248,7 +254,7 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers {
         )
 
         grandchildType.source.source.toString() should be(
-          "final case class GrandchildType(id: String, foo: Option[String] = None, customTypeProp: scala.math.BigDecimal, customArrayTypeProp: Vector[scala.math.BigDecimal] = Vector.empty) extends IntermediateType"
+          "final case class GrandchildType(id: String, foo: Option[String] = None, aDouble: scala.math.BigDecimal, aFloat: scala.math.BigDecimal, anInt: Int, aLong: scala.math.BigInt, customTypeProp: scala.math.BigDecimal, customArrayTypeProp: Vector[scala.math.BigDecimal] = Vector.empty) extends IntermediateType"
         )
         grandchildType.source.companion.map(_.toString()) should be(Some(s"""object GrandchildType {
                                                                             |  import io.circe._

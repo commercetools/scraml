@@ -93,7 +93,7 @@ object SphereJsonSupport extends LibrarySupport with JsonSupport {
       )
     } else None
 
-  override def modifyClass(classDef: Defn.Class, companion: Option[Defn.Object])(
+  override def modifyClass(classDef: Defn.Class, companion: Option[Defn.Object])(implicit
       context: ModelGenContext
   ): DefnWithCompanion[Defn.Class] =
     DefnWithCompanion(
@@ -104,7 +104,7 @@ object SphereJsonSupport extends LibrarySupport with JsonSupport {
 
   override def modifyObject(
       objectDef: Defn.Object
-  )(context: ModelGenContext): DefnWithCompanion[Defn.Object] =
+  )(implicit context: ModelGenContext): DefnWithCompanion[Defn.Object] =
     DefnWithCompanion(
       appendObjectStats(
         objectDef.copy(mods =
@@ -115,7 +115,7 @@ object SphereJsonSupport extends LibrarySupport with JsonSupport {
       None
     )
 
-  override def modifyTrait(traitDef: Defn.Trait, companion: Option[Defn.Object])(
+  override def modifyTrait(traitDef: Defn.Trait, companion: Option[Defn.Object])(implicit
       context: ModelGenContext
   ): DefnWithCompanion[Defn.Trait] =
     DefnWithCompanion(

@@ -13,6 +13,7 @@ object ScramlPlugin extends AutoPlugin {
       "target dir to use for generation, otherwise 'Compile / sourceManaged' is used"
     )
     val basePackageName = settingKey[String]("base package name to be used for generated types")
+    val defaultTypes    = settingKey[DefaultTypes]("Scala types to use for RAML built-in types")
     val librarySupport  = settingKey[Set[LibrarySupport]]("additional library support")
     val formatConfig =
       settingKey[Option[File]]("config to be used for formatting, no formatting if not set")
@@ -24,6 +25,7 @@ object ScramlPlugin extends AutoPlugin {
   override lazy val globalSettings: Seq[Setting[_]] = Seq(
     ramlFile        := None,
     basePackageName := "scraml",
+    defaultTypes    := DefaultTypes(),
     librarySupport  := Set.empty,
     formatConfig    := None,
     scramlTargetDir := None
@@ -46,7 +48,9 @@ object ScramlPlugin extends AutoPlugin {
               file,
               targetDir,
               basePackageName.value,
+              defaultTypes.value,
               librarySupport.value,
+              CrossVersion.partialVersion(scalaVersion.value),
               formatConfig.value
             )
 
