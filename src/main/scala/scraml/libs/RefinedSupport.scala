@@ -579,7 +579,7 @@ object RefinedSupport extends LibrarySupport {
   }
 
   private def refinedTypeObject(
-      typeName : Type.Name,
+      typeName: Type.Name,
       originalType: Type,
       predicates: Type,
       optional: Boolean
