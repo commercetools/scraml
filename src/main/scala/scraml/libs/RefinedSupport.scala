@@ -402,7 +402,8 @@ object RefinedSupport extends LibrarySupport {
             itemPredicates ++ List[Stat](
               q"""
                 type $typeName = Option[Refined[$originalType,${predicates(prop)}]]
-                """
+                """,
+              refinedTypeObject(typeName, originalType, predicates(prop), true)
             )
 
           case RefinedPropertyType(typeName, Some(itemName), _) =>
@@ -418,18 +419,23 @@ object RefinedSupport extends LibrarySupport {
             }
 
             itemPredicates ++ List[Stat](
-              q"type $typeName = Refined[$originalType,${predicates(prop)}]"
+              q"type $typeName = Refined[$originalType,${predicates(prop)}]",
+              refinedTypeObject(typeName, originalType, predicates(prop), false)
             )
 
           case RefinedPropertyType(typeName, None, optional) if optional =>
             List[Stat](
               q"""
                 type $typeName = Option[Refined[$originalType,${predicates(prop)}]]
-                """
+                """,
+              refinedTypeObject(typeName, originalType, predicates(prop), true)
             )
 
           case RefinedPropertyType(typeName, None, _) =>
-            List[Stat](q"type $typeName = Refined[$originalType,${predicates(prop)}]")
+            List[Stat](
+              q"type $typeName = Refined[$originalType,${predicates(prop)}]",
+              refinedTypeObject(typeName, originalType, predicates(prop), false)
+            )
 
           case _ =>
             List.empty[Stat]
@@ -570,5 +576,67 @@ object RefinedSupport extends LibrarySupport {
       q"val dummy: And[$lhs, ${reduce(head, tail)}]".decltpe
     case Nil =>
       throw new RuntimeException("logic error: unable to reduce an empty list")
+  }
+
+  private def refinedTypeObject(
+      typeName: Type.Name,
+      originalType: Type,
+      predicates: Type,
+      optional: Boolean
+  ): Defn.Object = {
+    /// These "companion-like" object definitions are inspired by the refined
+    /// `RefTypeOps` class.
+    if (optional)
+      q"""
+      object ${Term.Name(typeName.value)} {
+        import eu.timepit.refined.api._
+
+        type ResultType = Refined[$originalType,$predicates]
+
+        private val rt = RefinedType.apply[ResultType]
+
+        def apply(candidate: $originalType): Either[IllegalArgumentException, Option[ResultType]] =
+          from(Option(candidate))
+
+        def apply(candidate: Option[$originalType]): Either[IllegalArgumentException, Option[ResultType]] =
+          from(candidate)
+
+        def from(candidate: Option[$originalType]): Either[IllegalArgumentException, Option[ResultType]] =
+          candidate match {
+            case Some(value) =>
+              rt.refine(value).map(Some(_)).left.map(msg => new IllegalArgumentException(msg))
+            case None =>
+              Right(None)
+          }
+
+        def unapply(candidate: Option[$originalType]): Option[ResultType] =
+          from(candidate).fold(_ => None, a => a)
+
+        def unsafeFrom(candidate: Option[$originalType]): Option[ResultType] =
+          candidate.map(rt.unsafeRefine)
+      }
+     """
+    else
+      q"""
+      object ${Term.Name(typeName.value)} {
+        import eu.timepit.refined.api._
+
+        type ResultType = Refined[$originalType,$predicates]
+
+        private val rt = RefinedType.apply[ResultType]
+
+        def apply(candidate: $originalType): Either[IllegalArgumentException, ResultType] =
+          from(candidate)
+
+        def from(candidate: $originalType): Either[IllegalArgumentException, ResultType] =
+          rt.refine(candidate).left.map(msg => new IllegalArgumentException(msg))
+
+        def unapply(candidate: $originalType): Option[ResultType] =
+          from(candidate).toOption
+
+        def unsafeFrom(candidate: $originalType): ResultType =
+          rt.unsafeRefine(candidate)
+      }
+     """
   }
 }
