@@ -140,6 +140,33 @@ class RefinedSupportSpec extends AnyWordSpec with Diagrams {
             |    def unapply(candidate: Option[scala.collection.immutable.List[String]]): Option[ResultType] = from(candidate).fold(_ => None, a => a)
             |    def unsafeFrom(candidate: Option[scala.collection.immutable.List[String]]): Option[ResultType] = candidate.map(rt.unsafeRefine)
             |  }
+            |  def from(id: String, optionalCustomArrayTypeProp: Option[Set[scala.math.BigDecimal]] = None, foo: Option[String] = None, bar: Option[String] = None, numberProp: Float, customNumberProp: scala.math.BigDecimal, customArrayTypeProp: Vector[scala.math.BigDecimal] = Vector.empty, optionalStringArray: Option[scala.collection.immutable.List[String]] = None): Either[IllegalArgumentException, DataType] = {
+            |    val _id = IdType.from(id)
+            |    val _optionalCustomArrayTypeProp = OptionalCustomArrayTypePropType.from(optionalCustomArrayTypeProp)
+            |    val _foo = Right(foo)
+            |    val _bar = BarType.from(bar)
+            |    val _numberProp = NumberPropType.from(numberProp)
+            |    val _customNumberProp = CustomNumberPropType.from(customNumberProp)
+            |    val _customArrayTypeProp = CustomArrayTypePropType.from(customArrayTypeProp)
+            |    val _optionalStringArray = OptionalStringArrayType.from(optionalStringArray)
+            |    _id.flatMap { (__id: IdType) => 
+            |      _optionalCustomArrayTypeProp.flatMap { (__optionalCustomArrayTypeProp: OptionalCustomArrayTypePropType) => 
+            |        _foo.flatMap { (__foo: Option[String]) => 
+            |          _bar.flatMap { (__bar: BarType) => 
+            |            _numberProp.flatMap { (__numberProp: NumberPropType) => 
+            |              _customNumberProp.flatMap { (__customNumberProp: CustomNumberPropType) => 
+            |                _customArrayTypeProp.flatMap { (__customArrayTypeProp: CustomArrayTypePropType) => 
+            |                  _optionalStringArray.map {
+            |                    (__optionalStringArray: OptionalStringArrayType) => DataType(__id, __optionalCustomArrayTypeProp, __foo, __bar, __numberProp, __customNumberProp, __customArrayTypeProp, __optionalStringArray)
+            |                  }
+            |                }
+            |              }
+            |            }
+            |          }
+            |        }
+            |      }
+            |    }
+            |  }
             |  import io.circe._
             |  import io.circe.generic.semiauto._
             |  implicit lazy val decoder: Decoder[DataType] = deriveDecoder[DataType]

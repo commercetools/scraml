@@ -371,20 +371,7 @@ object RefinedSupport extends LibrarySupport {
       // Properties which have regular expressions as their name cannot
       // be resolved, so are skipped.
       case prop if context.objectType.getProperty(prop.name.value) ne null =>
-        val propDef = context.objectType.getProperty(prop.name.value)
-        val scalaTypeAnnotation = Option(
-          propDef.getAnnotation("scala-type")
-        ).map(_.getValue.getValue.toString)
-
-        val originalType = context
-          .scalaTypeRef(
-            propDef.getType,
-            optional = false,
-            typeName = scalaTypeAnnotation,
-            defaultAnyTypeName = context.anyTypeName
-          )
-          .get
-          .scalaType
+        val originalType = determineOriginalType(prop.name.value)
 
         prop match {
           case RefinedPropertyType(typeName, Some(itemName), optional) if optional =>
@@ -445,7 +432,86 @@ object RefinedSupport extends LibrarySupport {
         List.empty[Stat]
     }
 
-    appendObjectStats(companion, preface ++ types)
+    val from =
+      List[Stat](
+        q"""
+          def from( ..${classDef.ctor.paramss.flatten})
+          : Either[IllegalArgumentException, ${classDef.name}] = {
+            ..${generatePropertiesCode(classDef) {
+          case prop if context.objectType.getProperty(prop.name.value) ne null =>
+            val invocation = prop match {
+              case RefinedPropertyType(typeName, _, optional) if optional =>
+                q"${Term.Name(typeName.value)}.from(${Term.Name(prop.name.value)})"
+
+              case RefinedPropertyType(typeName, _, _) =>
+                q"${Term.Name(typeName.value)}.from(${Term.Name(prop.name.value)})"
+
+              case unrefined =>
+                q"Right(${Term.Name(unrefined.name.value)})"
+            }
+
+            List[Stat](
+              q"val ${Pat.Var(Term.Name("_" + prop.name.value))} = $invocation"
+            )
+
+          case _ =>
+            List[Stat](
+              q"val _values = Right(values)"
+            )
+        }}
+
+          ${
+          def genFlatmaps(terms: List[Term.Param], remaining: List[Term.Param]): Term.Apply =
+            remaining match {
+              case last :: Nil =>
+                val termName  = Term.Name(last.name.value)
+                val paramName = Term.Name("_" + last.name.value)
+
+                q"""
+                   $termName.map { $paramName: ${last.decltpe.get} =>
+                   ${Term.Name(context.objectType.getName)}( ..${terms.map(p =>
+                  Term.Name(p.name.value)
+                )})
+                   }
+                 """
+              case head :: tail =>
+                val termName  = Term.Name(head.name.value)
+                val paramName = Term.Name("_" + head.name.value)
+
+                q"""
+                   $termName.flatMap { $paramName: ${head.decltpe.get} =>
+                     ${genFlatmaps(terms, tail)}
+                   }
+                 """
+            }
+
+          val terms = classDef.ctor.paramss.flatten.map {
+            case prop: Term.Param if context.objectType.getProperty(prop.name.value) ne null =>
+              prop match {
+                case RefinedPropertyType(typeName, _, _) =>
+                  prop.copy(
+                    name = Name("_" + prop.name.value),
+                    decltpe = Some(q"val foo: $typeName".decltpe)
+                  )
+
+                case unrefined =>
+                  unrefined.copy(name = Term.Name("_" + unrefined.name.value))
+              }
+
+            case map: Term.Param =>
+              map.copy(name = Name("_values"))
+          }
+
+          genFlatmaps(
+            terms.map(p => p.copy(name = Term.Name("_" + p.name.value))),
+            terms
+          )
+        }
+      }
+       """
+      )
+
+    appendObjectStats(companion, preface ++ types ++ from)
   }
 
   private def defineRefinements(traitDef: Defn.Trait, companion: Defn.Object)(implicit
@@ -455,20 +521,7 @@ object RefinedSupport extends LibrarySupport {
       // Properties which have regular expressions as their name cannot
       // be resolved, so are skipped.
       case prop if context.objectType.getProperty(prop.name.value) ne null =>
-        val propDef = context.objectType.getProperty(prop.name.value)
-        val scalaTypeAnnotation = Option(
-          propDef.getAnnotation("scala-type")
-        ).map(_.getValue.getValue.toString)
-
-        val originalType = context
-          .scalaTypeRef(
-            propDef.getType,
-            optional = false,
-            typeName = scalaTypeAnnotation,
-            defaultAnyTypeName = context.anyTypeName
-          )
-          .get
-          .scalaType
+        val originalType = determineOriginalType(prop.name.value)
 
         prop match {
           case RefinedPropertyType(typeName, Some(itemName), optional) if optional =>
@@ -526,6 +579,25 @@ object RefinedSupport extends LibrarySupport {
     }
 
     appendObjectStats(companion, preface ++ types)
+  }
+
+  private def determineOriginalType(name: String)(implicit
+      context: ModelGenContext
+  ): Type = {
+    val propDef = context.objectType.getProperty(name)
+    val scalaTypeAnnotation = Option(
+      propDef.getAnnotation("scala-type")
+    ).map(_.getValue.getValue.toString)
+
+    context
+      .scalaTypeRef(
+        propDef.getType,
+        optional = false,
+        typeName = scalaTypeAnnotation,
+        defaultAnyTypeName = context.anyTypeName
+      )
+      .get
+      .scalaType
   }
 
   private def predicates(prop: Decl.Def)(implicit
