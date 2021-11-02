@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+
+<head>
+<title>Specify an API · SCRAML</title>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<meta name="description" content='sbt-scraml'/>
+<link rel="canonical" href="https://github.com/commercetools/scramlapi.html"/>
+<link href="https://fonts.googleapis.com/css?family=Roboto:100normal,100italic,300normal,300italic,400normal,400italic,500normal,500italic,700normal,700italic,900normal,900italicc" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="lib/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="js/page.js"></script>
+<script type="text/javascript" src="js/warnOldVersion.js"></script>
+<script type="text/javascript" src="js/groups.js"></script>
+<script type="text/javascript" src="js/snippets.js"></script>
+<link rel="stylesheet" type="text/css" href="lib/foundation/dist/foundation.min.css"/>
+<link rel="stylesheet" type="text/css" href="css/page.css"/>
+
+<!--
+<link rel="shortcut icon" href="images/favicon.ico" />
+-->
+</head>
+
+<body>
+<div class="off-canvas-wrapper">
+<div class="off-canvas-wrapper-inner" data-off-canvas-wrapper>
+
+<div class="off-canvas position-left" id="off-canvas-menu" data-off-canvas>
+<nav class="off-canvas-nav">
+<div class="nav-home">
+<a href="index.html" >
+<span class="home-icon">⌂</span>SCRAML
+</a>
+<div class="version-number">
+0.9.1+10-6c2d3cbb+20211102-1751*
+</div>
+</div>
+<div class="nav-toc">
+<ul>
+  <li><a href="setup.html" class="page">Setup</a></li>
+  <li><a href="api.html" class="active page">Specify an API</a></li>
+  <li><a href="run.html" class="page">Run</a></li>
+  <li><a href="libs.html" class="page">Library Support</a></li>
+</ul>
+</div>
+
+</nav>
+</div>
+
+<div class="off-canvas-content" data-off-canvas-content>
+
+<header class="site-header expanded row">
+<div class="small-12 column">
+<a href="#" class="off-canvas-toggle hide-for-medium" data-toggle="off-canvas-menu"><svg class="svg-icon svg-icon-menu" version="1.1" id="Menu" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" viewBox="0 0 20 20" enable-background="new 0 0 20 20" xml:space="preserve"> <path class="svg-icon-menu-path" fill="#53CDEC" d="M16.4,9H3.6C3.048,9,3,9.447,3,10c0,0.553,0.048,1,0.6,1H16.4c0.552,0,0.6-0.447,0.6-1C17,9.447,16.952,9,16.4,9z M16.4,13
+H3.6C3.048,13,3,13.447,3,14c0,0.553,0.048,1,0.6,1H16.4c0.552,0,0.6-0.447,0.6-1C17,13.447,16.952,13,16.4,13z M3.6,7H16.4
+C16.952,7,17,6.553,17,6c0-0.553-0.048-1-0.6-1H3.6C3.048,5,3,5.447,3,6C3,6.553,3.048,7,3.6,7z"/></svg>
+</a>
+<div class="title"><a href="index.html">SCRAML</a></div>
+
+<!--
+<a href="https://www.example.com" class="logo show-for-medium">logo</a>
+-->
+</div>
+</header>
+
+<div class="expanded row">
+
+<div class="medium-3 large-2 show-for-medium column">
+<nav class="site-nav">
+<div class="nav-home">
+<a href="index.html" >
+<span class="home-icon">⌂</span>SCRAML
+</a>
+<div class="version-number">
+0.9.1+10-6c2d3cbb+20211102-1751*
+</div>
+</div>
+<div class="nav-toc">
+<ul>
+  <li><a href="setup.html" class="page">Setup</a></li>
+  <li><a href="api.html" class="active page">Specify an API</a></li>
+  <li><a href="run.html" class="page">Run</a></li>
+  <li><a href="libs.html" class="page">Library Support</a></li>
+</ul>
+</div>
+
+</nav>
+</div>
+
+<div class="small-12 medium-9 large-10 column">
+<section class="site-content">
+
+<span id="version-warning"></span>
+
+<div class="page-header row">
+<div class="medium-12 show-for-medium column">
+<div class="nav-breadcrumbs">
+<ul>
+  <li><a href="index.html">SCRAML</a></li>
+  <li>Specify an API</li>
+</ul>
+</div>
+</div>
+</div>
+
+<div class="page-content row">
+<div class="small-12 large-9 column" id="docs">
+<h2><a href="#specify-an-api" name="specify-an-api" class="anchor"><span class="anchor-link"></span></a>Specify an API</h2>
+<p>SCRAML uses <a href="https://github.com/commercetools/rest-modeling-framework">https://github.com/commercetools/rest-modeling-framework</a> which is based on the <a href="https://raml.org/">RAML API specification</a></p>
+<h2><a href="#example-api" name="example-api" class="anchor"><span class="anchor-link"></span></a>Example API</h2>
+<p>in <code>api/simple.raml</code>:</p>
+<pre class="prettyprint"><button class="snippet-button copy-snippet" title="Copy snippet to clipboard">copy</button><a class="snippet-button go-to-source" href="https://github.com/commercetools/scraml/tree/master/src/sbt-test/sbt-scraml/simple/api/simple.raml" target="_blank" title="Go to snippet source">source</a><code class="language-raml">#%RAML 1.0
+title: Hello world # required title
+# taken from https://github.com/raml-org/raml-spec
+annotationTypes: !include annotations.raml
+# this is not optional, the file included here must follow the format shown &#39;types.raml&#39;
+types: !include types.raml
+
+/greeting: # optional resource
+  get: # HTTP method declaration
+    queryParameters:
+      name?:
+        type: string
+    responses: # declare a response
+      200: # HTTP status code
+        body: # declare content of response
+          application/json: # media type
+            type: DataType</code></pre>
+<p>Note the use of annotations:</p>
+<pre class="prettyprint"><button class="snippet-button copy-snippet" title="Copy snippet to clipboard">copy</button><a class="snippet-button go-to-source" href="https://github.com/commercetools/scraml/tree/master/src/sbt-test/sbt-scraml/simple/api/annotations.raml" target="_blank" title="Go to snippet source">source</a><code class="language-raml"># the package will be used as the file name, currently no actual package structure is generated
+package:
+  type: string
+  allowedTargets: TypeDeclaration
+# allows to specify a url for documentation purposes, not reflected in the code currently
+docs-uri:
+  type: string
+# allows to override the type used with a full qualified name of a scala type
+scala-type:
+  type: string
+# allows to override the default type for a collection
+scala-array-type:
+  type: string
+# allows to specify an additional supertype like a traited
+scala-extends:
+  type: string
+# allows to control on a granular level if JSON support is enabled for the annotated type
+scala-derive-json:
+  type: boolean</code></pre>
+<p>and types aliases (which will be used for the generated type names):</p>
+<pre class="prettyprint"><button class="snippet-button copy-snippet" title="Copy snippet to clipboard">copy</button><a class="snippet-button go-to-source" href="https://github.com/commercetools/scraml/tree/master/src/sbt-test/sbt-scraml/simple/api/types.raml" target="_blank" title="Go to snippet source">source</a><code class="language-raml">BaseType: !include basetype.raml
+DataType: !include datatype.raml
+EmptyBase: !include emptybase.raml
+NoProps: !include noprops.raml
+SomeEnum: !include enum.raml</code></pre>
+<div class="source-github">
+The source code for this page can be found <a href="https://github.com/commercetools/scraml/tree/master/src/main/paradox/api.md">here</a>.
+</div>
+
+<div class="nav-next">
+<p><strong>Next:</strong> <a href="run.html">Run</a></p>
+</div>
+</div>
+<div class="large-3 show-for-large column" data-sticky-container>
+<nav class="sidebar sticky" data-sticky data-anchor="docs" data-sticky-on="large">
+<div class="page-nav">
+<div class="nav-title">On this page:</div>
+<div class="nav-toc">
+<ul>
+  <li><a href="api.html#specify-an-api" class="header">Specify an API</a>
+  <ul>
+    <li><a href="api.html#example-api" class="header">Example API</a></li>
+  </ul></li>
+</ul>
+</div>
+</div>
+</nav>
+</div>
+</div>
+
+</section>
+</div>
+
+</div>
+
+<footer class="site-footer">
+
+<section class="site-footer-nav">
+<div class="expanded row">
+<div class="small-12 large-offset-2 large-10 column">
+<div class="row site-footer-content">
+
+<div class="small-12 medium-4 large-3 text-center column">
+<div class="nav-links">
+<ul>
+<!-- <li><a href="https://www.example.com/products/">Products</a> -->
+</ul>
+</div>
+</div>
+
+</div>
+</div>
+</div>
+</section>
+
+<section class="site-footer-base">
+<div class="expanded row">
+<div class="small-12 large-offset-2 large-10 column">
+<div class="row site-footer-content">
+
+<div class="small-12 text-center large-9 column">
+
+<!--
+<div class="copyright">
+<span class="text">&copy; 2021</span>
+<a href="https://www.example.com" class="logo">logo</a>
+</div>
+-->
+</div>
+
+</div>
+</div>
+</div>
+</section>
+</footer>
+
+</div>
+</div>
+</div>
+</body>
+
+<script type="text/javascript" src="lib/foundation/dist/foundation.min.js"></script>
+<script type="text/javascript">jQuery(document).foundation();</script>
+<script type="text/javascript" src="js/magellan.js"></script>
+
+<style type="text/css">@import "lib/prettify/prettify.css";</style>
+<script type="text/javascript" src="lib/prettify/prettify.js"></script>
+<script type="text/javascript" src="lib/prettify/lang-scala.js"></script>
+<script type="text/javascript">jQuery(function(){window.prettyPrint && prettyPrint()});</script>
+<script type="text/javascript">jQuery(function(jq){initOldVersionWarnings(jq, '0.9.1+10-6c2d3cbb+20211102-1751-SNAPSHOT', 'https://github.com/commercetools/scraml')});</script>
+
+
+</html>

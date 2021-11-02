@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+
+<head>
+<title>Library Support · SCRAML</title>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<meta name="description" content='sbt-scraml'/>
+<link rel="canonical" href="https://github.com/commercetools/scramllibs.html"/>
+<link href="https://fonts.googleapis.com/css?family=Roboto:100normal,100italic,300normal,300italic,400normal,400italic,500normal,500italic,700normal,700italic,900normal,900italicc" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="lib/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="js/page.js"></script>
+<script type="text/javascript" src="js/warnOldVersion.js"></script>
+<script type="text/javascript" src="js/groups.js"></script>
+<script type="text/javascript" src="js/snippets.js"></script>
+<link rel="stylesheet" type="text/css" href="lib/foundation/dist/foundation.min.css"/>
+<link rel="stylesheet" type="text/css" href="css/page.css"/>
+
+<!--
+<link rel="shortcut icon" href="images/favicon.ico" />
+-->
+</head>
+
+<body>
+<div class="off-canvas-wrapper">
+<div class="off-canvas-wrapper-inner" data-off-canvas-wrapper>
+
+<div class="off-canvas position-left" id="off-canvas-menu" data-off-canvas>
+<nav class="off-canvas-nav">
+<div class="nav-home">
+<a href="index.html" >
+<span class="home-icon">⌂</span>SCRAML
+</a>
+<div class="version-number">
+0.9.1+10-6c2d3cbb+20211102-1751*
+</div>
+</div>
+<div class="nav-toc">
+<ul>
+  <li><a href="setup.html" class="page">Setup</a></li>
+  <li><a href="api.html" class="page">Specify an API</a></li>
+  <li><a href="run.html" class="page">Run</a></li>
+  <li><a href="libs.html" class="active page">Library Support</a></li>
+</ul>
+</div>
+
+</nav>
+</div>
+
+<div class="off-canvas-content" data-off-canvas-content>
+
+<header class="site-header expanded row">
+<div class="small-12 column">
+<a href="#" class="off-canvas-toggle hide-for-medium" data-toggle="off-canvas-menu"><svg class="svg-icon svg-icon-menu" version="1.1" id="Menu" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" viewBox="0 0 20 20" enable-background="new 0 0 20 20" xml:space="preserve"> <path class="svg-icon-menu-path" fill="#53CDEC" d="M16.4,9H3.6C3.048,9,3,9.447,3,10c0,0.553,0.048,1,0.6,1H16.4c0.552,0,0.6-0.447,0.6-1C17,9.447,16.952,9,16.4,9z M16.4,13
+H3.6C3.048,13,3,13.447,3,14c0,0.553,0.048,1,0.6,1H16.4c0.552,0,0.6-0.447,0.6-1C17,13.447,16.952,13,16.4,13z M3.6,7H16.4
+C16.952,7,17,6.553,17,6c0-0.553-0.048-1-0.6-1H3.6C3.048,5,3,5.447,3,6C3,6.553,3.048,7,3.6,7z"/></svg>
+</a>
+<div class="title"><a href="index.html">SCRAML</a></div>
+
+<!--
+<a href="https://www.example.com" class="logo show-for-medium">logo</a>
+-->
+</div>
+</header>
+
+<div class="expanded row">
+
+<div class="medium-3 large-2 show-for-medium column">
+<nav class="site-nav">
+<div class="nav-home">
+<a href="index.html" >
+<span class="home-icon">⌂</span>SCRAML
+</a>
+<div class="version-number">
+0.9.1+10-6c2d3cbb+20211102-1751*
+</div>
+</div>
+<div class="nav-toc">
+<ul>
+  <li><a href="setup.html" class="page">Setup</a></li>
+  <li><a href="api.html" class="page">Specify an API</a></li>
+  <li><a href="run.html" class="page">Run</a></li>
+  <li><a href="libs.html" class="active page">Library Support</a></li>
+</ul>
+</div>
+
+</nav>
+</div>
+
+<div class="small-12 medium-9 large-10 column">
+<section class="site-content">
+
+<span id="version-warning"></span>
+
+<div class="page-header row">
+<div class="medium-12 show-for-medium column">
+<div class="nav-breadcrumbs">
+<ul>
+  <li><a href="index.html">SCRAML</a></li>
+  <li>Library Support</li>
+</ul>
+</div>
+</div>
+</div>
+
+<div class="page-content row">
+<div class="small-12 large-9 column" id="docs">
+<h1><a href="#library-support" name="library-support" class="anchor"><span class="anchor-link"></span></a>Library Support</h1>
+<p>SCRAML allows to generate supporting types for a number of libraries:</p>
+<h2><a href="#cats" name="cats" class="anchor"><span class="anchor-link"></span></a>cats</h2>
+<pre class="prettyprint"><button class="snippet-button copy-snippet" title="Copy snippet to clipboard">copy</button><a class="snippet-button go-to-source" href="https://github.com/commercetools/scraml/tree/master/src/sbt-test/sbt-scraml/cats/build.sbt" target="_blank" title="Go to snippet source">source</a><code class="language-sbt">lazy val root = (project in file(&quot;.&quot;))
+  .settings(
+    scalaVersion := &quot;2.13.6&quot;,
+    name := &quot;scraml-cats-test&quot;,
+    version := &quot;0.1&quot;,
+    ramlFile := Some(file(&quot;api/simple.raml&quot;)),
+    librarySupport := Set(
+      scraml.libs.CatsEqSupport,
+      scraml.libs.CatsShowSupport,
+      scraml.libs.MonocleOpticsSupport
+    ),
+    Compile / sourceGenerators += runScraml,
+    libraryDependencies ++= Seq(
+      &quot;org.typelevel&quot; %% &quot;cats-core&quot; % &quot;2.6.1&quot;,
+      &quot;dev.optics&quot; %% &quot;monocle-core&quot; % &quot;3.0.0&quot;,
+    )
+  )</code></pre>
+<h2><a href="#circe" name="circe" class="anchor"><span class="anchor-link"></span></a>circe</h2>
+<pre class="prettyprint"><button class="snippet-button copy-snippet" title="Copy snippet to clipboard">copy</button><a class="snippet-button go-to-source" href="https://github.com/commercetools/scraml/tree/master/src/sbt-test/sbt-scraml/json/build.sbt" target="_blank" title="Go to snippet source">source</a><code class="language-sbt">val circeVersion = &quot;0.14.1&quot;
+
+lazy val root = (project in file(&quot;.&quot;))
+  .settings(
+    name := &quot;scraml-json-test&quot;,
+    scalaVersion := &quot;2.12.14&quot;,
+    version := &quot;0.1&quot;,
+    ramlFile := Some(file(&quot;api/json.raml&quot;)),
+    basePackageName := &quot;scraml&quot;,
+    librarySupport := Set(scraml.libs.CirceJsonSupport(formats = Map(&quot;localDateTime&quot; -&gt; &quot;io.circe.Decoder.decodeLocalDateTime&quot;))),
+    Compile / sourceGenerators += runScraml,
+    libraryDependencies += &quot;com.commercetools&quot; %% &quot;sphere-json&quot; % &quot;0.12.5&quot;,
+    libraryDependencies ++= Seq(
+        &quot;io.circe&quot; %% &quot;circe-core&quot;,
+        &quot;io.circe&quot; %% &quot;circe-generic&quot;,
+        &quot;io.circe&quot; %% &quot;circe-parser&quot;
+    ).map(_ % circeVersion)
+  )</code></pre>
+<h2><a href="#refined-with-cats-and-circe-" name="refined-with-cats-and-circe-" class="anchor"><span class="anchor-link"></span></a>refined (with cats and circe)</h2>
+<pre class="prettyprint"><button class="snippet-button copy-snippet" title="Copy snippet to clipboard">copy</button><a class="snippet-button go-to-source" href="https://github.com/commercetools/scraml/tree/master/src/sbt-test/sbt-scraml/refined/build.sbt" target="_blank" title="Go to snippet source">source</a><code class="language-sbt">val circeVersion = &quot;0.14.1&quot;
+val refinedVersion = &quot;0.9.27&quot;
+
+lazy val root = (project in file(&quot;.&quot;))
+  .settings(
+    scalaVersion := &quot;2.13.6&quot;,
+    name := &quot;scraml-refined-test&quot;,
+    version := &quot;0.1&quot;,
+    ramlFile := Some(file(&quot;api/refined.raml&quot;)),
+    librarySupport := Set(
+      scraml.libs.CatsEqSupport,
+      scraml.libs.CatsShowSupport,
+      scraml.libs.CirceJsonSupport(
+        formats = Map(
+          &quot;localDateTime&quot; -&gt; &quot;io.circe.Decoder.decodeLocalDateTime&quot;
+        )
+      ),
+      scraml.libs.RefinedSupport
+    ),
+    Compile / sourceGenerators += runScraml,
+	libraryDependencies += &quot;com.chuusai&quot; %% &quot;shapeless&quot; % &quot;2.3.7&quot;,
+    libraryDependencies ++= Seq(
+      &quot;eu.timepit&quot; %% &quot;refined&quot;,
+      &quot;eu.timepit&quot; %% &quot;refined-cats&quot;
+    ).map(_ % refinedVersion),
+    libraryDependencies ++= Seq(
+        &quot;io.circe&quot; %% &quot;circe-core&quot;,
+        &quot;io.circe&quot; %% &quot;circe-generic&quot;,
+        &quot;io.circe&quot; %% &quot;circe-parser&quot;,
+        &quot;io.circe&quot; %% &quot;circe-refined&quot;
+    ).map(_ % circeVersion)
+  )</code></pre>
+<h2><a href="#sphere-json" name="sphere-json" class="anchor"><span class="anchor-link"></span></a>Sphere JSON</h2>
+<pre class="prettyprint"><button class="snippet-button copy-snippet" title="Copy snippet to clipboard">copy</button><a class="snippet-button go-to-source" href="https://github.com/commercetools/scraml/tree/master/src/sbt-test/sbt-scraml/ct-api-sphere/build.sbt" target="_blank" title="Go to snippet source">source</a><code class="language-sbt">val circeVersion = &quot;0.14.1&quot;
+
+lazy val root = (project in file(&quot;.&quot;))
+  .settings(
+    scalaVersion := &quot;2.12.12&quot;,
+    name := &quot;scraml-ct-api-sphere-test&quot;,
+    version := &quot;0.1&quot;,
+    ramlFile := Some(file(&quot;reference/api-specs/api/api.raml&quot;)),
+    basePackageName := &quot;de.commercetools.api&quot;,
+    librarySupport := Set(scraml.libs.SphereJsonSupport),
+    Compile / sourceGenerators += runScraml,
+    libraryDependencies += &quot;com.commercetools&quot; %% &quot;sphere-json&quot; % &quot;0.12.5&quot;
+  )
+</code></pre>
+<h2><a href="#tapir" name="tapir" class="anchor"><span class="anchor-link"></span></a>tapir</h2>
+<p>the <a href="https://github.com/softwaremill/tapir">tapir</a> support generating endpoint values:</p>
+<h3><a href="#example-tapir-build-sbt" name="example-tapir-build-sbt" class="anchor"><span class="anchor-link"></span></a>Example tapir build.sbt</h3>
+<pre class="prettyprint"><button class="snippet-button copy-snippet" title="Copy snippet to clipboard">copy</button><a class="snippet-button go-to-source" href="https://github.com/commercetools/scraml/tree/master/examples/build.sbt" target="_blank" title="Go to snippet source">source</a><code class="language-sbt">scalaVersion := &quot;2.13.6&quot;
+
+val circeVersion = &quot;0.14.1&quot;
+val tapirVersion = &quot;0.19.0-M9&quot;
+
+lazy val examples = (project in file(&quot;.&quot;))
+  .settings(
+    name := &quot;sbt-scraml-examples&quot;,
+
+    libraryDependencies ++= Seq(
+      &quot;io.circe&quot; %% &quot;circe-core&quot;,
+      &quot;io.circe&quot; %% &quot;circe-generic&quot;,
+      &quot;io.circe&quot; %% &quot;circe-parser&quot;
+    ).map(_ % circeVersion),
+
+    libraryDependencies += &quot;com.softwaremill.sttp.tapir&quot; %% &quot;tapir-core&quot; % tapirVersion,
+    libraryDependencies += &quot;com.softwaremill.sttp.tapir&quot; %% &quot;tapir-json-circe&quot; % tapirVersion,
+    libraryDependencies += &quot;com.softwaremill.sttp.tapir&quot; %% &quot;tapir-sttp-client&quot; % tapirVersion,
+    libraryDependencies += &quot;com.softwaremill.sttp.tapir&quot; %% &quot;tapir-akka-http-server&quot; % tapirVersion,
+    libraryDependencies += &quot;com.softwaremill.sttp.client3&quot; %% &quot;async-http-client-backend-cats&quot; % &quot;3.3.14&quot;,
+
+    libraryDependencies += &quot;org.typelevel&quot; %% &quot;cats-effect&quot; % &quot;3.2.8&quot;,
+
+    ramlFile := Some(file(&quot;../src/sbt-test/sbt-scraml/simple/api/simple.raml&quot;)),
+    basePackageName := &quot;scraml.examples&quot;,
+    librarySupport := Set(scraml.libs.CirceJsonSupport, scraml.libs.TapirSupport(&quot;Endpoints&quot;)),
+    Compile / sourceGenerators += runScraml
+  )</code></pre>
+<h3><a href="#interpreting-tapir-endpoints" name="interpreting-tapir-endpoints" class="anchor"><span class="anchor-link"></span></a>Interpreting tapir endpoints</h3>
+<p>usage of the generated <code>Endpoints.Greeting.getGreeting</code> type from the previous <a href="api.html">api</a> example:</p>
+<pre class="prettyprint"><button class="snippet-button copy-snippet" title="Copy snippet to clipboard">copy</button><a class="snippet-button go-to-source" href="https://github.com/commercetools/scraml/tree/master/examples/src/main/scala/examples/GreetingExample.scala" target="_blank" title="Go to snippet source">source</a><code class="language-scala">package examples
+
+import akka.actor.ActorSystem
+import akka.http.scaladsl.Http
+import cats.effect.{ExitCode, IO, IOApp}
+import scraml.examples.{DataType, Endpoints}
+import scraml.examples.Endpoints.Greeting.GetGreetingParams
+import sttp.client3.SttpBackend
+import sttp.client3.asynchttpclient.cats.AsyncHttpClientCatsBackend
+import sttp.model.{Header, StatusCode}
+import sttp.tapir.DecodeResult.{Failure, Value}
+import sttp.tapir.client.sttp.WebSocketToPipe
+
+import scala.concurrent.Future
+
+class GreetingClient(apiUrl: String)(backend: SttpBackend[IO, Any])(implicit wsToPipe: WebSocketToPipe[Any]) {
+  import sttp.client3._
+  import sttp.tapir._
+  import sttp.tapir.client.sttp.SttpClientInterpreter
+
+  private lazy val client = SttpClientInterpreter()
+  private def authenticate: IO[String] = IO.pure(&quot;sometoken&quot;)
+
+  def getGreeting(params: GetGreetingParams): IO[DataType] = for {
+    accessToken &lt;- authenticate
+    // adding an input and output to the endpoint to access headers and to provide an access token (checking not implemented)
+    response &lt;- client.toClient(Endpoints.Greeting.getGreeting.in(auth.bearer[String]()).out(headers), Some(uri&quot;$apiUrl&quot;), backend)(wsToPipe)(params, accessToken)
+    result &lt;- response match {
+      case Value(value) =&gt; IO.fromEither(value.left.map(error =&gt; new RuntimeException(s&quot;error in $response: $error&quot;)))
+      case error: Failure =&gt; IO.raiseError(new RuntimeException(s&quot;error while getting greeting: $error&quot;))
+    }
+    (data, headers) = result
+    _ &lt;- IO(println(s&quot;got headers: $headers&quot;))
+  } yield data
+}
+
+object GreetingClient {
+  def apply(apiUrl: String): IO[(GreetingClient, SttpBackend[IO, Any])] =
+    AsyncHttpClientCatsBackend[IO]().flatMap(backend =&gt; IO((new GreetingClient(apiUrl)(backend), backend)))
+}
+
+object GreetingServer {
+  import sttp.tapir._
+  import sttp.tapir.server.akkahttp.AkkaHttpServerInterpreter
+  import scala.concurrent.Future
+  import akka.http.scaladsl.server.Route
+
+  def getGreeting(params: GetGreetingParams): Future[Either[Unit, (DataType, StatusCode, List[Header])]] =
+    Future.successful(Right(DataType(params.name.getOrElse(&quot;no input&quot;), customTypeProp = BigDecimal(42)), StatusCode.Ok, List(Header(&quot;custom-header&quot;, &quot;value&quot;))))
+
+  // adding outputs to provide statusCode and headers in the implementation
+  val greetingWithStatusAndHeaders = Endpoints.Greeting.getGreeting.out(statusCode and sttp.tapir.headers)
+
+  val greetingRoute: Route =
+    AkkaHttpServerInterpreter().toRoute(greetingWithStatusAndHeaders)(getGreeting)
+
+  implicit val httpSystem: ActorSystem = ActorSystem(&quot;http&quot;)
+
+  def startServer: IO[Http.ServerBinding] =
+    IO.fromFuture(IO(Http().newServerAt(&quot;localhost&quot;, 8080).bind(greetingRoute)))
+}
+
+object GreetingApp extends IOApp {
+  implicit class FutureOps[T](future: Future[T]) {
+    def toIO: IO[T] = IO.fromFuture(IO(future))
+  }
+
+  override def run(args: List[String]): IO[ExitCode] = for {
+    binding &lt;- GreetingServer.startServer
+    (clientWithBackend) &lt;- GreetingClient(
+      apiUrl = s&quot;http://${binding.localAddress.getHostName}:${binding.localAddress.getPort}&quot;
+    )
+    (client, clientBackend) = clientWithBackend
+    result &lt;- client.getGreeting(GetGreetingParams(name = Some(&quot;world&quot;))).attempt
+    _ &lt;- IO(println(result))
+    _ &lt;-
+      clientBackend
+        .close()
+        .guarantee(binding.unbind().toIO.void)
+        .guarantee(GreetingServer.httpSystem.terminate().toIO.void)
+  } yield ExitCode.Success
+}</code></pre>
+<div class="source-github">
+The source code for this page can be found <a href="https://github.com/commercetools/scraml/tree/master/src/main/paradox/libs.md">here</a>.
+</div>
+
+</div>
+<div class="large-3 show-for-large column" data-sticky-container>
+<nav class="sidebar sticky" data-sticky data-anchor="docs" data-sticky-on="large">
+<div class="page-nav">
+<div class="nav-title">On this page:</div>
+<div class="nav-toc">
+<ul>
+  <li><a href="libs.html#library-support" class="header">Library Support</a>
+  <ul>
+    <li><a href="libs.html#cats" class="header">cats</a></li>
+    <li><a href="libs.html#circe" class="header">circe</a></li>
+    <li><a href="libs.html#refined-with-cats-and-circe-" class="header">refined (with cats and circe)</a></li>
+    <li><a href="libs.html#sphere-json" class="header">Sphere JSON</a></li>
+    <li><a href="libs.html#tapir" class="header">tapir</a></li>
+  </ul></li>
+</ul>
+</div>
+</div>
+</nav>
+</div>
+</div>
+
+</section>
+</div>
+
+</div>
+
+<footer class="site-footer">
+
+<section class="site-footer-nav">
+<div class="expanded row">
+<div class="small-12 large-offset-2 large-10 column">
+<div class="row site-footer-content">
+
+<div class="small-12 medium-4 large-3 text-center column">
+<div class="nav-links">
+<ul>
+<!-- <li><a href="https://www.example.com/products/">Products</a> -->
+</ul>
+</div>
+</div>
+
+</div>
+</div>
+</div>
+</section>
+
+<section class="site-footer-base">
+<div class="expanded row">
+<div class="small-12 large-offset-2 large-10 column">
+<div class="row site-footer-content">
+
+<div class="small-12 text-center large-9 column">
+
+<!--
+<div class="copyright">
+<span class="text">&copy; 2021</span>
+<a href="https://www.example.com" class="logo">logo</a>
+</div>
+-->
+</div>
+
+</div>
+</div>
+</div>
+</section>
+</footer>
+
+</div>
+</div>
+</div>
+</body>
+
+<script type="text/javascript" src="lib/foundation/dist/foundation.min.js"></script>
+<script type="text/javascript">jQuery(document).foundation();</script>
+<script type="text/javascript" src="js/magellan.js"></script>
+
+<style type="text/css">@import "lib/prettify/prettify.css";</style>
+<script type="text/javascript" src="lib/prettify/prettify.js"></script>
+<script type="text/javascript" src="lib/prettify/lang-scala.js"></script>
+<script type="text/javascript">jQuery(function(){window.prettyPrint && prettyPrint()});</script>
+<script type="text/javascript">jQuery(function(jq){initOldVersionWarnings(jq, '0.9.1+10-6c2d3cbb+20211102-1751-SNAPSHOT', 'https://github.com/commercetools/scraml')});</script>
+
+
+</html>
