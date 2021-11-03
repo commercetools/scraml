@@ -29,7 +29,7 @@ inThisBuild(List(
 val circeVersion = "0.14.1"
 
 lazy val root = (project in file("."))
-  .enablePlugins(SbtPlugin)
+  .enablePlugins(SbtPlugin, ParadoxSitePlugin, GhpagesPlugin)
   .settings(
     name := "sbt-scraml",
     libraryDependencies += "com.commercetools.rmf" % "raml-model" % "0.2.0-20210817071658",
@@ -50,5 +50,10 @@ lazy val root = (project in file("."))
     scriptedLaunchOpts := { scriptedLaunchOpts.value ++
       Seq("-Xmx2048M", "-Dplugin.version=" + version.value)
     },
-    scriptedBufferLog := false
+    scriptedBufferLog := false,
+    git.remoteRepo := "git@github.com:commercetools/scraml.git",
+    paradoxProperties += ("version" -> version.value),
+    makeSite / mappings ++= Seq(
+      file("LICENSE") -> "LICENSE"
+    )
   )
