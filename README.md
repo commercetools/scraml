@@ -10,7 +10,7 @@ and [scalameta](https://scalameta.org/).
 
 ## How to use
 
-check the [docs](../../../src/main/paradox)
+check the [docs](https://commercetools.github.io/scraml)
 
 ### License 
 
