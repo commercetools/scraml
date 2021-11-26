@@ -56,7 +56,7 @@ object RMFUtil {
   }
 
   /** get all super-types of '''aType''', returned in __inheritance__ order.
-   */
+    */
   def superTypes(aType: ObjectType): List[ObjectType] =
     Option(aType.getType()) match {
       case Some(parent: ObjectType) if parent.getName != "object" =>
@@ -65,13 +65,12 @@ object RMFUtil {
         Nil
     }
 
-  /** finds all declarations of a given '''name''' in the inheritance tree
-    * and returns them in their __declared__ order.
+  /** finds all declarations of a given '''name''' in the inheritance tree and returns them in their
+    * __declared__ order.
     */
   def findAllDeclarations(aType: ObjectType, name: String): List[(ObjectType, Property)] =
-    (aType :: superTypes(aType)).reverse.flatMap {
-      objectType =>
-        Option(objectType.getProperty(name)).map(objectType -> _).toList
+    (aType :: superTypes(aType)).reverse.flatMap { objectType =>
+      Option(objectType.getProperty(name)).map(objectType -> _).toList
     }
 
   /** get all (including inherited) properties of a type note: will not include properties from

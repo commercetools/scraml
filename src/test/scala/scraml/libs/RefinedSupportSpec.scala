@@ -10,7 +10,8 @@ import scraml.{DefaultModelGen, DefaultTypes, ModelGenParams, ModelGenRunner}
 class RefinedSupportSpec extends AnyWordSpec with Diagrams {
   implicit class StripTrailingSpaces(private val content: String) {
     def stripTrailingSpaces: String =
-      content.split('\n')
+      content
+        .split('\n')
         .map(_.replaceFirst(" +$", ""))
         .mkString("\n")
   }
@@ -49,13 +50,37 @@ class RefinedSupportSpec extends AnyWordSpec with Diagrams {
       assert(
         theCompanion.contains(
           """object DataType {
+            |  import io.circe._
+            |  import io.circe.generic.semiauto._
+            |  import io.circe.refined._
+            |  implicit lazy val decoder: Decoder[DataType] = new Decoder[DataType] {
+            |    def apply(c: HCursor): Decoder.Result[DataType] = {
+            |      c.downField("id").as[String].flatMap { (_id: String) =>
+            |        c.downField("optionalCustomArrayTypeProp").as[Option[Set[scala.math.BigDecimal]]].flatMap { (_optionalCustomArrayTypeProp: Option[Set[scala.math.BigDecimal]]) =>
+            |          c.downField("foo").as[Option[String]].flatMap { (_foo: Option[String]) =>
+            |            c.downField("bar").as[Option[String]].flatMap { (_bar: Option[String]) =>
+            |              c.downField("numberProp").as[Float].flatMap { (_numberProp: Float) =>
+            |                c.downField("customNumberProp").as[scala.math.BigDecimal].flatMap { (_customNumberProp: scala.math.BigDecimal) =>
+            |                  c.downField("customArrayTypeProp").as[Vector[scala.math.BigDecimal]].flatMap { (_customArrayTypeProp: Vector[scala.math.BigDecimal]) =>
+            |                    c.downField("optionalStringArray").as[Option[scala.collection.immutable.List[String]]].flatMap {
+            |                      (_optionalStringArray: Option[scala.collection.immutable.List[String]]) => DataType.from(_id, _optionalCustomArrayTypeProp, _foo, _bar, _numberProp, _customNumberProp, _customArrayTypeProp, _optionalStringArray).swap.map(e => DecodingFailure(e.getMessage, Nil)).swap
+            |                    }
+            |                  }
+            |                }
+            |              }
+            |            }
+            |          }
+            |        }
+            |      }
+            |    }
+            |  }
+            |  implicit lazy val encoder: Encoder[DataType] = deriveEncoder[DataType].mapJsonObject(_.add("type", Json.fromString("data")))
             |  import eu.timepit.refined.api.Refined
             |  import eu.timepit.refined.boolean.And
             |  import eu.timepit.refined.collection._
             |  import eu.timepit.refined.numeric._
             |  import eu.timepit.refined.string._
             |  import shapeless.Witness
-            |  import io.circe.refined._
             |  type IdType = Refined[String, And[MinSize[Witness.`1`.T], And[MaxSize[Witness.`10`.T], MatchesRegex[Witness.`"^[A-z0-9-.]+$"`.T]]]]
             |  object IdType {
             |    import eu.timepit.refined.api._
@@ -156,13 +181,13 @@ class RefinedSupportSpec extends AnyWordSpec with Diagrams {
             |    val _customNumberProp = CustomNumberPropType.from(customNumberProp)
             |    val _customArrayTypeProp = CustomArrayTypePropType.from(customArrayTypeProp)
             |    val _optionalStringArray = OptionalStringArrayType.from(optionalStringArray)
-            |    _id.flatMap { (__id: IdType) => 
-            |      _optionalCustomArrayTypeProp.flatMap { (__optionalCustomArrayTypeProp: OptionalCustomArrayTypePropType) => 
-            |        _foo.flatMap { (__foo: Option[String]) => 
-            |          _bar.flatMap { (__bar: BarType) => 
-            |            _numberProp.flatMap { (__numberProp: NumberPropType) => 
-            |              _customNumberProp.flatMap { (__customNumberProp: CustomNumberPropType) => 
-            |                _customArrayTypeProp.flatMap { (__customArrayTypeProp: CustomArrayTypePropType) => 
+            |    _id.flatMap { (__id: IdType) =>
+            |      _optionalCustomArrayTypeProp.flatMap { (__optionalCustomArrayTypeProp: OptionalCustomArrayTypePropType) =>
+            |        _foo.flatMap { (__foo: Option[String]) =>
+            |          _bar.flatMap { (__bar: BarType) =>
+            |            _numberProp.flatMap { (__numberProp: NumberPropType) =>
+            |              _customNumberProp.flatMap { (__customNumberProp: CustomNumberPropType) =>
+            |                _customArrayTypeProp.flatMap { (__customArrayTypeProp: CustomArrayTypePropType) =>
             |                  _optionalStringArray.map {
             |                    (__optionalStringArray: OptionalStringArrayType) => DataType(__id, __optionalCustomArrayTypeProp, __foo, __bar, __numberProp, __customNumberProp, __customArrayTypeProp, __optionalStringArray)
             |                  }
@@ -174,12 +199,7 @@ class RefinedSupportSpec extends AnyWordSpec with Diagrams {
             |      }
             |    }
             |  }
-            |  import io.circe._
-            |  import io.circe.generic.semiauto._
-            |  implicit lazy val decoder: Decoder[DataType] = deriveDecoder[DataType]
-            |  implicit lazy val encoder: Encoder[DataType] = deriveEncoder[DataType].mapJsonObject(_.add("type", Json.fromString("data")))
-            |}""".stripMargin
-            .stripTrailingSpaces
+            |}""".stripMargin.stripTrailingSpaces
         )
       )
     }
@@ -217,13 +237,23 @@ class RefinedSupportSpec extends AnyWordSpec with Diagrams {
       assert(
         theCompanion.contains(
           """object ChildWithFacetsType {
+            |  import io.circe._
+            |  import io.circe.generic.semiauto._
+            |  import io.circe.refined._
+            |  implicit lazy val decoder: Decoder[ChildWithFacetsType] = new Decoder[ChildWithFacetsType] {
+            |    def apply(c: HCursor): Decoder.Result[ChildWithFacetsType] = {
+            |      c.downField("id").as[String].flatMap {
+            |        (_id: String) => ChildWithFacetsType.from(_id).swap.map(e => DecodingFailure(e.getMessage, Nil)).swap
+            |      }
+            |    }
+            |  }
+            |  implicit lazy val encoder: Encoder[ChildWithFacetsType] = deriveEncoder[ChildWithFacetsType].mapJsonObject(_.add("type", Json.fromString("child")))
             |  import eu.timepit.refined.api.Refined
             |  import eu.timepit.refined.boolean.And
             |  import eu.timepit.refined.collection._
             |  import eu.timepit.refined.numeric._
             |  import eu.timepit.refined.string._
             |  import shapeless.Witness
-            |  import io.circe.refined._
             |  type IdType = Refined[String, MatchesRegex[Witness.`"^[A-z]+$"`.T]]
             |  object IdType {
             |    import eu.timepit.refined.api._
@@ -240,12 +270,7 @@ class RefinedSupportSpec extends AnyWordSpec with Diagrams {
             |      (__id: IdType) => ChildWithFacetsType(__id.value)
             |    }
             |  }
-            |  import io.circe._
-            |  import io.circe.generic.semiauto._
-            |  implicit lazy val decoder: Decoder[ChildWithFacetsType] = deriveDecoder[ChildWithFacetsType]
-            |  implicit lazy val encoder: Encoder[ChildWithFacetsType] = deriveEncoder[ChildWithFacetsType].mapJsonObject(_.add("type", Json.fromString("child")))
-            |}""".stripMargin
-            .stripTrailingSpaces
+            |}""".stripMargin.stripTrailingSpaces
         )
       )
     }
@@ -298,13 +323,29 @@ class RefinedSupportSpec extends AnyWordSpec with Diagrams {
       assert(
         theChildCompanion.contains(
           """object ChildOverridesAll {
+            |  import io.circe._
+            |  import io.circe.generic.semiauto._
+            |  import io.circe.refined._
+            |  implicit lazy val decoder: Decoder[ChildOverridesAll] = new Decoder[ChildOverridesAll] {
+            |    def apply(c: HCursor): Decoder.Result[ChildOverridesAll] = {
+            |      c.downField("id").as[String].flatMap { (_id: String) =>
+            |        c.downField("count").as[Int].flatMap { (_count: Int) =>
+            |          c.downField("atMost100").as[Float].flatMap { (_atMost100: Float) =>
+            |            c.downField("stringArray").as[scala.collection.immutable.List[String]].flatMap {
+            |              (_stringArray: scala.collection.immutable.List[String]) => ChildOverridesAll.from(_id, _count, _atMost100, _stringArray).swap.map(e => DecodingFailure(e.getMessage, Nil)).swap
+            |            }
+            |          }
+            |        }
+            |      }
+            |    }
+            |  }
+            |  implicit lazy val encoder: Encoder[ChildOverridesAll] = deriveEncoder[ChildOverridesAll].mapJsonObject(_.add("type", Json.fromString("overrides")))
             |  import eu.timepit.refined.api.Refined
             |  import eu.timepit.refined.boolean.And
             |  import eu.timepit.refined.collection._
             |  import eu.timepit.refined.numeric._
             |  import eu.timepit.refined.string._
             |  import shapeless.Witness
-            |  import io.circe.refined._
             |  type IdType = Refined[String, And[MinSize[Witness.`8`.T], And[MaxSize[Witness.`64`.T], MatchesRegex[Witness.`"^[A-z0-9-]*$"`.T]]]]
             |  object IdType {
             |    import eu.timepit.refined.api._
@@ -361,12 +402,7 @@ class RefinedSupportSpec extends AnyWordSpec with Diagrams {
             |      }
             |    }
             |  }
-            |  import io.circe._
-            |  import io.circe.generic.semiauto._
-            |  implicit lazy val decoder: Decoder[ChildOverridesAll] = deriveDecoder[ChildOverridesAll]
-            |  implicit lazy val encoder: Encoder[ChildOverridesAll] = deriveEncoder[ChildOverridesAll].mapJsonObject(_.add("type", Json.fromString("overrides")))
-            |}""".stripMargin
-            .stripTrailingSpaces
+            |}""".stripMargin.stripTrailingSpaces
         )
       )
     }
@@ -406,8 +442,7 @@ class RefinedSupportSpec extends AnyWordSpec with Diagrams {
             |  def count: BaseWithFacetsType.CountType
             |  def atMost100: BaseWithFacetsType.AtMost100Type
             |  def stringArray: BaseWithFacetsType.StringArrayType
-            |}""".stripMargin
-            .stripTrailingSpaces
+            |}""".stripMargin.stripTrailingSpaces
         )
       )
 
@@ -420,13 +455,29 @@ class RefinedSupportSpec extends AnyWordSpec with Diagrams {
       assert(
         theChildCompanion.contains(
           """object ChildInheritsAll {
+            |  import io.circe._
+            |  import io.circe.generic.semiauto._
+            |  import io.circe.refined._
+            |  implicit lazy val decoder: Decoder[ChildInheritsAll] = new Decoder[ChildInheritsAll] {
+            |    def apply(c: HCursor): Decoder.Result[ChildInheritsAll] = {
+            |      c.downField("id").as[String].flatMap { (_id: String) =>
+            |        c.downField("count").as[Int].flatMap { (_count: Int) =>
+            |          c.downField("atMost100").as[Float].flatMap { (_atMost100: Float) =>
+            |            c.downField("stringArray").as[scala.collection.immutable.List[String]].flatMap {
+            |              (_stringArray: scala.collection.immutable.List[String]) => ChildInheritsAll.from(_id, _count, _atMost100, _stringArray).swap.map(e => DecodingFailure(e.getMessage, Nil)).swap
+            |            }
+            |          }
+            |        }
+            |      }
+            |    }
+            |  }
+            |  implicit lazy val encoder: Encoder[ChildInheritsAll] = deriveEncoder[ChildInheritsAll].mapJsonObject(_.add("type", Json.fromString("inherited")))
             |  import eu.timepit.refined.api.Refined
             |  import eu.timepit.refined.boolean.And
             |  import eu.timepit.refined.collection._
             |  import eu.timepit.refined.numeric._
             |  import eu.timepit.refined.string._
             |  import shapeless.Witness
-            |  import io.circe.refined._
             |  type IdType = Refined[String, And[MinSize[Witness.`8`.T], And[MaxSize[Witness.`64`.T], MatchesRegex[Witness.`"^[A-z0-9-]*$"`.T]]]]
             |  object IdType {
             |    import eu.timepit.refined.api._
@@ -473,9 +524,9 @@ class RefinedSupportSpec extends AnyWordSpec with Diagrams {
             |    val _count = CountType.from(count)
             |    val _atMost100 = AtMost100Type.from(atMost100)
             |    val _stringArray = StringArrayType.from(stringArray)
-            |    _id.flatMap { (__id: IdType) => 
-            |      _count.flatMap { (__count: CountType) => 
-            |        _atMost100.flatMap { (__atMost100: AtMost100Type) => 
+            |    _id.flatMap { (__id: IdType) =>
+            |      _count.flatMap { (__count: CountType) =>
+            |        _atMost100.flatMap { (__atMost100: AtMost100Type) =>
             |          _stringArray.map {
             |            (__stringArray: StringArrayType) => ChildInheritsAll(__id, __count, __atMost100, __stringArray)
             |          }
@@ -483,12 +534,7 @@ class RefinedSupportSpec extends AnyWordSpec with Diagrams {
             |      }
             |    }
             |  }
-            |  import io.circe._
-            |  import io.circe.generic.semiauto._
-            |  implicit lazy val decoder: Decoder[ChildInheritsAll] = deriveDecoder[ChildInheritsAll]
-            |  implicit lazy val encoder: Encoder[ChildInheritsAll] = deriveEncoder[ChildInheritsAll].mapJsonObject(_.add("type", Json.fromString("inherited")))
-            |}""".stripMargin
-            .stripTrailingSpaces
+            |}""".stripMargin.stripTrailingSpaces
         )
       )
     }
