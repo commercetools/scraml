@@ -295,9 +295,12 @@ object RefinedSupport extends LibrarySupport {
       // strip leading underscores added in generated variable names
       val nameToUse = propertyName(name)
 
-      if (!optional && faceted && !originalWasFaceted(nameToUse))
-        Some(q"${Term.Name(name.value)}.value")
-      else
+      if (faceted && !originalWasFaceted(nameToUse)) {
+        if (optional)
+          Some(q"${Term.Name(name.value)}.map(_.value)")
+        else
+          Some(q"${Term.Name(name.value)}.value")
+      } else
         None
     }
 
