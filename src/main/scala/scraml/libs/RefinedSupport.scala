@@ -27,42 +27,6 @@ object RefinedSupport extends LibrarySupport {
       Type.Name(propertyName.capitalize + "Type")
   }
 
-  sealed trait HasFacets {
-    final def hasAnyFacets(anyType: AnyType): Boolean =
-      anyType match {
-        case at: ArrayType =>
-          hasFacets(at)
-        case nt: NumberType =>
-          hasFacets(nt)
-        case st: StringType =>
-          hasFacets(st)
-        case _ =>
-          false
-      }
-
-    final def hasFacets(at: ArrayType): Boolean =
-      (at.getMaxItems ne null) ||
-        (at.getMinItems ne null) ||
-        (at.getUniqueItems ne null) ||
-        hasItemFacets(at)
-
-    final def hasFacets(nt: NumberType): Boolean =
-      (nt.getMaximum ne null) ||
-        (nt.getMinimum ne null)
-
-    final def hasFacets(st: StringType): Boolean =
-      (st.getPattern ne null) ||
-        (st.getMaxLength ne null) ||
-        (st.getMinLength ne null)
-
-    final def hasItemFacets(at: ArrayType): Boolean =
-      Option(at.getItems).exists {
-        case nt: NumberType if hasFacets(nt) => true
-        case st: StringType if hasFacets(st) => true
-        case _                               => false
-      }
-  }
-
   object DetectMultipleFacetDefinitions extends HasFacets {
     final def apply(declaration: Member)(implicit
         context: ModelGenContext

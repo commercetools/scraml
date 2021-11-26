@@ -15,6 +15,17 @@ class CirceJsonSupport(formats: Map[String, String]) extends LibrarySupport with
   import scala.meta._
   import scala.collection.JavaConverters._
 
+  object HasRefinements extends HasFacets {
+    def apply(context: ModelGenContext, classDef: Defn.Class): Boolean =
+      context.isLibraryEnabled[RefinedSupport.type]() &&
+        classDef.ctor.paramss.flatten
+          .map(_.name.value)
+          .flatMap(name => RMFUtil.findAllDeclarations(context.objectType, name).map(_._2))
+          .exists { prop =>
+            Option(prop.getType()).exists(hasAnyFacets)
+          }
+  }
+
   override def jsonType: String = "io.circe.Json"
 
   private val decoderChunkThreshold = 50
@@ -348,7 +359,7 @@ class CirceJsonSupport(formats: Map[String, String]) extends LibrarySupport with
   private def deriveJsonClassDecoder(context: ModelGenContext, classDef: Defn.Class): List[Stat] = {
     val objectTypeName = Type.Name(context.objectType.getName)
 
-    if (context.isLibraryEnabled[RefinedSupport.type]()) {
+    if (HasRefinements(context, classDef)) {
       q"""
         import io.circe.refined._
 
