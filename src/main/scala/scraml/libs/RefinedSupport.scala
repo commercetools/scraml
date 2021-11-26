@@ -4,7 +4,7 @@ import scala.meta._
 
 import _root_.io.vrap.rmf.raml.model.types._
 import _root_.io.vrap.rmf.raml.model.values.RegExp
-import scraml.{DefnWithCompanion, LibrarySupport, MetaUtil, ModelGenContext}
+import scraml.{DefnWithCompanion, LibrarySupport, MetaUtil, ModelGenContext, RMFUtil}
 
 object RefinedSupport extends LibrarySupport {
   import LibrarySupport.appendObjectStats
@@ -23,7 +23,19 @@ object RefinedSupport extends LibrarySupport {
       Type.Name(propertyName.capitalize + "Type")
   }
 
-  sealed abstract class RefinedPropertyMatching[A] extends TypeNaming {
+  sealed trait HasFacets {
+    final def hasAnyFacets(anyType: AnyType): Boolean =
+      anyType match {
+        case at: ArrayType =>
+          hasFacets(at)
+        case nt: NumberType =>
+          hasFacets(nt)
+        case st: StringType =>
+          hasFacets(st)
+        case _ =>
+          false
+      }
+
     final def hasFacets(at: ArrayType): Boolean =
       (at.getMaxItems ne null) ||
         (at.getMinItems ne null) ||
@@ -45,42 +57,123 @@ object RefinedSupport extends LibrarySupport {
         case st: StringType if hasFacets(st) => true
         case _                               => false
       }
+  }
 
-    final def unapply(declaration: Decl.Def)(implicit
-        context: ModelGenContext
-    ): Option[A] = {
-      val property = Option(context.objectType.getProperty(declaration.name.value))
-
-      dispatch(
-        declaration.name,
-        property.map(_.getType),
-        property.fold(true)(_.getRequired)
-      )
+  object DetectMultipleFacetDefinitions extends HasFacets {
+    final def apply(declaration: Member)(
+      implicit context: ModelGenContext
+    ): Option[String] = {
+      detect(context.objectType, declaration.name.value)
     }
 
-    final def unapply(param: Term.Param)(implicit
-        context: ModelGenContext
-    ): Option[A] = {
-      val property = Option(context.objectType.getProperty(param.name.value))
+    private def detect(objectType: ObjectType, name: String)(
+      implicit context: ModelGenContext
+    ): Option[String] = {
+      val declarations = RMFUtil.findAllDeclarations(objectType, name)
+        .filter {
+          case (definingType, prop) =>
+            hasAnyFacets(prop.getType())
+        }
 
-      dispatch(
-        param.name,
-        property.map(_.getType),
-        property.fold(true)(_.getRequired)
-      )
+      declarations match {
+        case _ :: Nil =>
+          None
+
+        case head :: tail if different(head, tail) =>
+          Some(
+            s"""multiple facet definitions detected for '$name':
+               |   using      : ${head._1.getName()}
+               |   additional : ${tail.map(_._1.getName()).mkString(", ")}
+               |""".stripMargin
+          )
+
+        case _ =>
+          None
+      }
     }
 
-    protected def array(name: Name, descriptor: ArrayType, optional: Boolean)(implicit
-        context: ModelGenContext
-    ): Option[A] = None
+    private def different(
+      first: (ObjectType, Property),
+      children: List[(ObjectType, Property)]
+    ): Boolean = {
+      children.foldLeft(false) {
+        case (accum, (_, prop)) =>
+          val isDifferent = (first._2.getType(), prop.getType()) match {
+            case (original: ArrayType, current: ArrayType) =>
+              val itemDifference = (Option(original.getItems()), Option(current.getItems())) match {
+                case (Some(originalItems: NumberType), Some(currentItems: NumberType)) =>
+                  diff(originalItems, currentItems)
 
-    protected def number(name: Name, descriptor: NumberType, optional: Boolean)(implicit
-        context: ModelGenContext
-    ): Option[A] = None
+                case (Some(originalItems: StringType), Some(currentItems: StringType)) =>
+                  diff(originalItems, currentItems)
 
-    protected def string(name: Name, descriptor: StringType, optional: Boolean)(implicit
-        context: ModelGenContext
-    ): Option[A] = None
+                case _ =>
+                  false
+              }
+
+              Option(original.getMaxItems()) != Option(current.getMaxItems()) ||
+                Option(original.getMinItems()) != Option(current.getMinItems()) ||
+                Option(original.getUniqueItems()) != Option(current.getUniqueItems()) ||
+                itemDifference
+
+            case (original: NumberType, current: NumberType) =>
+              diff(original, current)
+
+            case (original: StringType, current: StringType) =>
+              diff(original, current)
+
+            case _ =>
+                  false
+          }
+
+          accum || isDifferent
+      }
+    }
+
+    private def diff(original: NumberType, current: NumberType): Boolean =
+      Option(original.getMaximum()) != Option(current.getMaximum()) ||
+        Option(original.getMinimum()) != Option(current.getMinimum())
+
+    private def diff(original: StringType, current: StringType): Boolean =
+      Option(original.getMaxLength()) != Option(current.getMaxLength()) ||
+        Option(original.getMinLength()) != Option(current.getMinLength()) ||
+        Option(original.getPattern()) != Option(current.getPattern())
+  }
+
+  sealed abstract class RefinedPropertyMatching[A]
+    extends TypeNaming with HasFacets {
+    final def unapply(declaration: Decl.Def)(
+      implicit context: ModelGenContext
+    ): Option[A] = {
+      dispatch(declaration.name)
+    }
+
+    final def unapply(param: Term.Param)(
+      implicit context: ModelGenContext
+    ): Option[A] = {
+      dispatch(param.name)
+    }
+
+    protected def array(
+      definingType: ObjectType,
+      name: Name,
+      descriptor: ArrayType,
+      optional: Boolean
+    )(implicit context: ModelGenContext): Option[A] = None
+
+    protected def number(
+      definingType: ObjectType,
+      name: Name,
+      descriptor: NumberType,
+      optional: Boolean
+    )(implicit context: ModelGenContext): Option[A] = None
+
+    protected def string(
+      definingType: ObjectType,
+      name: Name,
+      descriptor: StringType,
+      optional: Boolean
+    )(implicit context: ModelGenContext): Option[A] = None
 
     protected def numberBounds(
         min: Option[BigDecimal],
@@ -136,26 +229,112 @@ object RefinedSupport extends LibrarySupport {
         }
       )
 
-    private def dispatch(name: Name, propertyType: Option[AnyType], required: Boolean)(implicit
-        context: ModelGenContext
+    protected def propertyDefinition(aType: ObjectType, name: Name): Option[(ObjectType, Property)] =
+      RMFUtil.findAllDeclarations(aType, name.value).headOption
+
+    private def dispatch(name: Name)(
+      implicit context: ModelGenContext
     ): Option[A] = {
-      propertyType match {
-        case Some(at: ArrayType) if hasFacets(at) =>
-          array(name, at, !required)
-        case Some(nt: NumberType) if hasFacets(nt) =>
-          number(name, nt, !required)
-        case Some(st: StringType) if hasFacets(st) =>
-          string(name, st, !required)
+      val definition = propertyDefinition(context.objectType, name).map {
+        case (ot, prop) =>
+          (ot, prop.getType(), prop.getRequired)
+      }
+
+      definition match {
+        case Some((obj, at: ArrayType, required)) =>
+          array(obj, name, at, !required)
+        case Some((obj, nt: NumberType, required)) =>
+          number(obj, name, nt, !required)
+        case Some((obj, st: StringType, required)) =>
+          string(obj, name, st, !required)
         case _ =>
           None
       }
     }
   }
 
+  object RefinedPropertyConstructorUse extends RefinedPropertyMatching[Term] {
+    override protected def propertyDefinition(
+      objectType: ObjectType,
+      name: Name
+    ): Option[(ObjectType, Property)] = {
+      super.propertyDefinition(objectType, Name(propertyName(name)))
+    }
+
+    override protected def array(
+      definingType: ObjectType,
+      name: Name,
+      descriptor: ArrayType,
+      optional: Boolean
+    )(implicit context: ModelGenContext): Option[Term] =
+      constructorArg(name, optional, sourceIsFaceted(name))
+
+    override protected def number(
+      definingType: ObjectType,
+      name: Name,
+      descriptor: NumberType,
+      optional: Boolean
+    )(implicit context: ModelGenContext): Option[Term] =
+      constructorArg(name, optional, sourceIsFaceted(name))
+
+    override protected def string(
+      definingType: ObjectType,
+      name: Name,
+      descriptor: StringType,
+      optional: Boolean
+    )(implicit context: ModelGenContext): Option[Term] =
+      constructorArg(name, optional, sourceIsFaceted(name))
+
+    private def constructorArg(name: Name, optional: Boolean, faceted: Boolean)(
+        implicit context: ModelGenContext
+    )
+    : Option[Term] = {
+      // strip leading underscores added in generated variable names
+      val nameToUse = propertyName(name)
+
+      if (!optional && faceted && !originalWasFaceted(nameToUse))
+        Some(q"${Term.Name(name.value)}.value")
+      else
+        None
+    }
+
+    private def originalWasFaceted(name: String)(
+      implicit context: ModelGenContext
+    ): Boolean =
+      propertyDefinition(context.objectType, Name(name))
+        .map(_._2)
+        .exists {
+          prop =>
+            hasAnyFacets(prop.getType)
+        }
+
+    private def propertyName(name: Name): String =
+      name.value
+        .stripPrefix("_")
+        .stripPrefix("_")
+
+    private def sourceIsFaceted(name: Name)(
+      implicit context: ModelGenContext
+    ): Boolean =
+    Option(context.objectType.getProperty(propertyName(name))).exists(
+      p => hasAnyFacets(p.getType())
+    )
+  }
+
   object RefinedPropertyDeclaration extends RefinedPropertyMatching[(Type, Option[Term])] {
-    override protected def array(name: Name, descriptor: ArrayType, optional: Boolean)(implicit
-        context: ModelGenContext
-    ): Option[(Type, Option[Term])] = {
+    override protected def propertyDefinition(aType: ObjectType, name: Name): Option[(ObjectType, Property)] = {
+      super.propertyDefinition(aType, name).filter {
+        case (_, prop) =>
+          hasAnyFacets(prop.getType())
+      }
+    }
+
+    override protected def array(
+      definingType: ObjectType,
+      name: Name,
+      descriptor: ArrayType,
+      optional: Boolean
+    )(implicit context: ModelGenContext): Option[(Type, Option[Term])] = {
       Some(
         mkDeclType(context.objectType, name.value) -> defaultValue(optional) {
           q"None"
@@ -163,18 +342,24 @@ object RefinedSupport extends LibrarySupport {
       )
     }
 
-    override protected def number(name: Name, descriptor: NumberType, optional: Boolean)(implicit
-        context: ModelGenContext
-    ): Option[(Type, Option[Term])] =
+    override protected def number(
+      definingType: ObjectType,
+      name: Name,
+      descriptor: NumberType,
+      optional: Boolean
+    )(implicit context: ModelGenContext): Option[(Type, Option[Term])] =
       Some(
         mkDeclType(context.objectType, name.value) -> defaultValue(optional) {
           q"None"
         }
       )
 
-    override protected def string(name: Name, descriptor: StringType, optional: Boolean)(implicit
-        context: ModelGenContext
-    ): Option[(Type, Option[Term])] =
+    override protected def string(
+      definingType: ObjectType,
+      name: Name,
+      descriptor: StringType,
+      optional: Boolean
+    )(implicit context: ModelGenContext): Option[(Type, Option[Term])] =
       Some(
         mkDeclType(context.objectType, name.value) -> defaultValue(optional) {
           q"None"
@@ -191,6 +376,16 @@ object RefinedSupport extends LibrarySupport {
   }
 
   object RefinedPropertyItemPredicates extends RefinedPropertyMatching[List[Type.Apply]] {
+    override protected def propertyDefinition(
+      aType: ObjectType,
+      name: Name
+    ): Option[(ObjectType, Property)] = {
+      RMFUtil.findAllDeclarations(aType, name.value).find {
+        case (_, prop) =>
+          hasAnyFacets(prop.getType())
+      }
+    }
+
     def apply(declaration: Decl.Def)(implicit
         context: ModelGenContext
     ): Option[List[Type.Apply]] =
@@ -201,9 +396,12 @@ object RefinedSupport extends LibrarySupport {
     ): Option[List[Type.Apply]] =
       unapply(param)
 
-    override protected def array(name: Name, descriptor: ArrayType, optional: Boolean)(implicit
-        context: ModelGenContext
-    ): Option[List[Type.Apply]] = {
+    override protected def array(
+      definingType: ObjectType,
+      name: Name,
+      descriptor: ArrayType,
+      optional: Boolean
+    )(implicit context: ModelGenContext): Option[List[Type.Apply]] = {
       Option(descriptor.getItems) match {
         case Some(nt: NumberType) if hasFacets(nt) =>
           Some(
@@ -226,19 +424,35 @@ object RefinedSupport extends LibrarySupport {
   }
 
   object RefinedPropertyPredicates extends RefinedPropertyMatching[List[Type.Apply]] {
-    override protected def array(name: Name, descriptor: ArrayType, optional: Boolean)(implicit
-        context: ModelGenContext
-    ): Option[List[Type.Apply]] = {
+    override protected def propertyDefinition(
+      aType: ObjectType,
+      name: Name
+    ): Option[(ObjectType, Property)] = {
+      RMFUtil.findAllDeclarations(aType, name.value).find {
+        case (_, prop) =>
+          hasAnyFacets(prop.getType())
+      }
+    }
+
+    override protected def array(
+      definingType: ObjectType,
+      name: Name,
+      descriptor: ArrayType,
+      optional: Boolean
+    )(implicit context: ModelGenContext): Option[List[Type.Apply]] = {
+      val min = Option(descriptor.getMinItems)
+      val max = Option(descriptor.getMaxItems)
+
       Option(descriptor.getItems) match {
         case Some(nt: NumberType) if hasFacets(nt) =>
           Some(
-            collectionBounds(Option(descriptor.getMinItems), Option(descriptor.getMaxItems)) :::
+            collectionBounds(min, max) :::
               forall(mkItemTypeName(name.value))
           )
 
         case Some(st: StringType) if hasFacets(st) =>
           Some(
-            collectionBounds(Option(descriptor.getMinItems), Option(descriptor.getMaxItems)) :::
+            collectionBounds(min, max) :::
               forall(mkItemTypeName(name.value))
           )
 
@@ -249,20 +463,24 @@ object RefinedSupport extends LibrarySupport {
       }
     }
 
-    override protected def number(name: Name, descriptor: NumberType, optional: Boolean)(implicit
-        context: ModelGenContext
-    ): Option[List[Type.Apply]] = {
-      Some(
-        numberBounds(
-          Option(descriptor.getMinimum).map(BigDecimal(_)),
-          Option(descriptor.getMaximum).map(BigDecimal(_))
-        )
-      )
+    override protected def number(
+      definingType: ObjectType,
+      name: Name,
+      descriptor: NumberType,
+      optional: Boolean
+    )(implicit context: ModelGenContext): Option[List[Type.Apply]] = {
+      val min = Option(descriptor.getMinimum)
+      val max = Option(descriptor.getMaximum)
+
+      Some(numberBounds(min.map(BigDecimal(_)), max.map(BigDecimal(_))))
     }
 
-    override protected def string(name: Name, descriptor: StringType, optional: Boolean)(implicit
-        context: ModelGenContext
-    ): Option[List[Type.Apply]] = {
+    override protected def string(
+      definingType: ObjectType,
+      name: Name,
+      descriptor: StringType,
+      optional: Boolean
+    )(implicit context: ModelGenContext): Option[List[Type.Apply]] = {
       Some(
         collectionBounds(Option(descriptor.getMinLength), Option(descriptor.getMaxLength)) :::
           pattern(Option(descriptor.getPattern))
@@ -279,9 +497,22 @@ object RefinedSupport extends LibrarySupport {
 
   object RefinedPropertyType
       extends RefinedPropertyMatching[(Type.Name, Option[Type.Name], Boolean)] {
-    override protected def array(name: Name, descriptor: ArrayType, optional: Boolean)(implicit
-        context: ModelGenContext
-    ): Option[(Type.Name, Option[Type.Name], Boolean)] = {
+    override protected def propertyDefinition(
+      aType: ObjectType,
+      name: Name
+    ): Option[(ObjectType, Property)] = {
+      RMFUtil.findAllDeclarations(aType, name.value).find {
+        case (_, prop) =>
+          hasAnyFacets(prop.getType())
+      }
+    }
+
+    override protected def array(
+      definingType: ObjectType,
+      name: Name,
+      descriptor: ArrayType,
+      optional: Boolean
+    )(implicit context: ModelGenContext): Option[(Type.Name, Option[Type.Name], Boolean)] = {
       Option(descriptor.getItems) match {
         case Some(nt: NumberType) if hasFacets(nt) =>
           Some((mkTypeName(name.value), Some(mkItemTypeName(name.value)), optional))
@@ -294,14 +525,20 @@ object RefinedSupport extends LibrarySupport {
       }
     }
 
-    override protected def number(name: Name, descriptor: NumberType, optional: Boolean)(implicit
-        context: ModelGenContext
-    ): Option[(Type.Name, Option[Type.Name], Boolean)] =
+    override protected def number(
+      definingType: ObjectType,
+      name: Name,
+      descriptor: NumberType,
+      optional: Boolean
+    )(implicit context: ModelGenContext): Option[(Type.Name, Option[Type.Name], Boolean)] =
       Some((mkTypeName(name.value), None, optional))
 
-    override protected def string(name: Name, descriptor: StringType, optional: Boolean)(implicit
-        context: ModelGenContext
-    ): Option[(Type.Name, Option[Type.Name], Boolean)] =
+    override protected def string(
+      definingType: ObjectType,
+      name: Name,
+      descriptor: StringType,
+      optional: Boolean
+    )(implicit context: ModelGenContext): Option[(Type.Name, Option[Type.Name], Boolean)] =
       Some((mkTypeName(name.value), None, optional))
   }
 
@@ -372,6 +609,8 @@ object RefinedSupport extends LibrarySupport {
       // be resolved, so are skipped.
       case prop if context.objectType.getProperty(prop.name.value) ne null =>
         val originalType = determineOriginalType(prop.name.value)
+
+        warnWhenMultipleFacets(prop)
 
         prop match {
           case RefinedPropertyType(typeName, Some(itemName), optional) if optional =>
@@ -469,9 +708,14 @@ object RefinedSupport extends LibrarySupport {
 
                 q"""
                    $termName.map { $paramName: ${last.decltpe.get} =>
-                   ${Term.Name(context.objectType.getName)}( ..${terms.map(p =>
-                  Term.Name(p.name.value)
-                )})
+                   ${Term.Name(context.objectType.getName)}( ..${
+                  terms.map {
+                    case RefinedPropertyConstructorUse(term) =>
+                      term
+                    case p =>
+                      Term.Name(p.name.value)
+                }
+                })
                    }
                  """
               case head :: tail =>
@@ -522,6 +766,8 @@ object RefinedSupport extends LibrarySupport {
       // be resolved, so are skipped.
       case prop if context.objectType.getProperty(prop.name.value) ne null =>
         val originalType = determineOriginalType(prop.name.value)
+
+        warnWhenMultipleFacets(prop)
 
         prop match {
           case RefinedPropertyType(typeName, Some(itemName), optional) if optional =>
@@ -711,4 +957,11 @@ object RefinedSupport extends LibrarySupport {
       }
      """
   }
+
+  private def warnWhenMultipleFacets(declaration: Member)(
+      implicit context: ModelGenContext
+  ): Unit =
+    DetectMultipleFacetDefinitions(declaration).foreach {
+      context.warn(_)
+    }
 }

@@ -8,6 +8,13 @@ import org.scalatest.wordspec.AnyWordSpec
 import scraml.{DefaultModelGen, DefaultTypes, ModelGenParams, ModelGenRunner}
 
 class RefinedSupportSpec extends AnyWordSpec with Diagrams {
+  implicit class StripTrailingSpaces(private val content: String) {
+    def stripTrailingSpaces: String =
+      content.split('\n')
+        .map(_.replaceFirst(" +$", ""))
+        .mkString("\n")
+  }
+
   "RefinedSupport" must {
     "modify case class refined property types" in {
       val params = ModelGenParams(
@@ -26,12 +33,12 @@ class RefinedSupportSpec extends AnyWordSpec with Diagrams {
 
       val theSource = generated.files
         .find(_.source.name == "DataType")
-        .map(_.source.source.toString())
+        .map(_.source.source.toString().stripTrailingSpaces)
 
       val theCompanion = generated.files
         .find(_.source.name == "DataType")
         .flatMap(_.source.companion)
-        .map(_.toString())
+        .map(_.toString().stripTrailingSpaces)
 
       assert(
         theSource.contains(
@@ -172,6 +179,316 @@ class RefinedSupportSpec extends AnyWordSpec with Diagrams {
             |  implicit lazy val decoder: Decoder[DataType] = deriveDecoder[DataType]
             |  implicit lazy val encoder: Encoder[DataType] = deriveEncoder[DataType].mapJsonObject(_.add("type", Json.fromString("data")))
             |}""".stripMargin
+            .stripTrailingSpaces
+        )
+      )
+    }
+
+    "use base property declarations" in {
+      val params = ModelGenParams(
+        new File("src/sbt-test/sbt-scraml/refined/api/refined.raml"),
+        new File("target/scraml-refined-test"),
+        "scraml",
+        DefaultTypes(),
+        librarySupport = Set(CirceJsonSupport(), RefinedSupport),
+        formatConfig = None,
+        generateDateCreated = true
+      )
+
+      val generated = ModelGenRunner.run(DefaultModelGen)(params).unsafeRunSync()
+
+      assert(generated.files.nonEmpty)
+
+      val theSource = generated.files
+        .find(_.source.name == "ChildWithFacetsType")
+        .map(_.source.source.toString().stripTrailingSpaces)
+
+      val theCompanion = generated.files
+        .find(_.source.name == "ChildWithFacetsType")
+        .flatMap(_.source.companion)
+        .map(_.toString().stripTrailingSpaces)
+
+      assert(
+        theSource.contains(
+          """final case class ChildWithFacetsType(id: String) extends BaseWithoutFacetsType"""
+        )
+      )
+
+      assert(
+        theCompanion.contains(
+          """object ChildWithFacetsType {
+            |  import eu.timepit.refined.api.Refined
+            |  import eu.timepit.refined.boolean.And
+            |  import eu.timepit.refined.collection._
+            |  import eu.timepit.refined.numeric._
+            |  import eu.timepit.refined.string._
+            |  import shapeless.Witness
+            |  import io.circe.refined._
+            |  type IdType = Refined[String, MatchesRegex[Witness.`"^[A-z]+$"`.T]]
+            |  object IdType {
+            |    import eu.timepit.refined.api._
+            |    type ResultType = Refined[String, MatchesRegex[Witness.`"^[A-z]+$"`.T]]
+            |    private val rt = RefinedType.apply[ResultType]
+            |    def apply(candidate: String): Either[IllegalArgumentException, ResultType] = from(candidate)
+            |    def from(candidate: String): Either[IllegalArgumentException, ResultType] = rt.refine(candidate).left.map(msg => new IllegalArgumentException(msg))
+            |    def unapply(candidate: String): Option[ResultType] = from(candidate).toOption
+            |    def unsafeFrom(candidate: String): ResultType = rt.unsafeRefine(candidate)
+            |  }
+            |  def from(id: String): Either[IllegalArgumentException, ChildWithFacetsType] = {
+            |    val _id = IdType.from(id)
+            |    _id.map {
+            |      (__id: IdType) => ChildWithFacetsType(__id.value)
+            |    }
+            |  }
+            |  import io.circe._
+            |  import io.circe.generic.semiauto._
+            |  implicit lazy val decoder: Decoder[ChildWithFacetsType] = deriveDecoder[ChildWithFacetsType]
+            |  implicit lazy val encoder: Encoder[ChildWithFacetsType] = deriveEncoder[ChildWithFacetsType].mapJsonObject(_.add("type", Json.fromString("child")))
+            |}""".stripMargin
+            .stripTrailingSpaces
+        )
+      )
+    }
+
+    "use inherited facets over ones in derived types" in {
+      val params = ModelGenParams(
+        new File("src/sbt-test/sbt-scraml/refined/api/refined.raml"),
+        new File("target/scraml-refined-test"),
+        "scraml",
+        DefaultTypes(),
+        librarySupport = Set(CirceJsonSupport(), RefinedSupport),
+        formatConfig = None,
+        generateDateCreated = true
+      )
+
+      val generated = ModelGenRunner.run(DefaultModelGen)(params).unsafeRunSync()
+
+      assert(generated.files.nonEmpty)
+
+      val theBaseSource = generated.files
+        .find(_.source.name == "BaseWithFacetsType")
+        .map(_.source.source.toString().stripTrailingSpaces)
+
+      val theChildSource = generated.files
+        .find(_.source.name == "ChildOverridesAll")
+        .map(_.source.source.toString().stripTrailingSpaces)
+
+      val theChildCompanion = generated.files
+        .find(_.source.name == "ChildOverridesAll")
+        .flatMap(_.source.companion)
+        .map(_.toString().stripTrailingSpaces)
+
+      assert(
+        theBaseSource.contains(
+          """sealed trait BaseWithFacetsType {
+            |  def id: BaseWithFacetsType.IdType
+            |  def count: BaseWithFacetsType.CountType
+            |  def atMost100: BaseWithFacetsType.AtMost100Type
+            |  def stringArray: BaseWithFacetsType.StringArrayType
+            |}""".stripMargin
+        )
+      )
+
+      assert(
+        theChildSource.contains(
+          """final case class ChildOverridesAll(id: ChildOverridesAll.IdType, count: ChildOverridesAll.CountType, atMost100: ChildOverridesAll.AtMost100Type, stringArray: ChildOverridesAll.StringArrayType) extends BaseWithFacetsType"""
+        )
+      )
+
+      assert(
+        theChildCompanion.contains(
+          """object ChildOverridesAll {
+            |  import eu.timepit.refined.api.Refined
+            |  import eu.timepit.refined.boolean.And
+            |  import eu.timepit.refined.collection._
+            |  import eu.timepit.refined.numeric._
+            |  import eu.timepit.refined.string._
+            |  import shapeless.Witness
+            |  import io.circe.refined._
+            |  type IdType = Refined[String, And[MinSize[Witness.`8`.T], And[MaxSize[Witness.`64`.T], MatchesRegex[Witness.`"^[A-z0-9-]*$"`.T]]]]
+            |  object IdType {
+            |    import eu.timepit.refined.api._
+            |    type ResultType = Refined[String, And[MinSize[Witness.`8`.T], And[MaxSize[Witness.`64`.T], MatchesRegex[Witness.`"^[A-z0-9-]*$"`.T]]]]
+            |    private val rt = RefinedType.apply[ResultType]
+            |    def apply(candidate: String): Either[IllegalArgumentException, ResultType] = from(candidate)
+            |    def from(candidate: String): Either[IllegalArgumentException, ResultType] = rt.refine(candidate).left.map(msg => new IllegalArgumentException(msg))
+            |    def unapply(candidate: String): Option[ResultType] = from(candidate).toOption
+            |    def unsafeFrom(candidate: String): ResultType = rt.unsafeRefine(candidate)
+            |  }
+            |  type CountType = Refined[Int, GreaterEqual[Witness.`0`.T]]
+            |  object CountType {
+            |    import eu.timepit.refined.api._
+            |    type ResultType = Refined[Int, GreaterEqual[Witness.`0`.T]]
+            |    private val rt = RefinedType.apply[ResultType]
+            |    def apply(candidate: Int): Either[IllegalArgumentException, ResultType] = from(candidate)
+            |    def from(candidate: Int): Either[IllegalArgumentException, ResultType] = rt.refine(candidate).left.map(msg => new IllegalArgumentException(msg))
+            |    def unapply(candidate: Int): Option[ResultType] = from(candidate).toOption
+            |    def unsafeFrom(candidate: Int): ResultType = rt.unsafeRefine(candidate)
+            |  }
+            |  type AtMost100Type = Refined[Float, LessEqual[Witness.`100.0`.T]]
+            |  object AtMost100Type {
+            |    import eu.timepit.refined.api._
+            |    type ResultType = Refined[Float, LessEqual[Witness.`100.0`.T]]
+            |    private val rt = RefinedType.apply[ResultType]
+            |    def apply(candidate: Float): Either[IllegalArgumentException, ResultType] = from(candidate)
+            |    def from(candidate: Float): Either[IllegalArgumentException, ResultType] = rt.refine(candidate).left.map(msg => new IllegalArgumentException(msg))
+            |    def unapply(candidate: Float): Option[ResultType] = from(candidate).toOption
+            |    def unsafeFrom(candidate: Float): ResultType = rt.unsafeRefine(candidate)
+            |  }
+            |  type StringArrayItemPredicate = And[MinSize[Witness.`2`.T], And[MaxSize[Witness.`99`.T], MatchesRegex[Witness.`"^[A-z0-9]+$"`.T]]]
+            |  type StringArrayType = Refined[scala.collection.immutable.List[String], And[MinSize[Witness.`1`.T], And[MaxSize[Witness.`5`.T], Forall[StringArrayItemPredicate]]]]
+            |  object StringArrayType {
+            |    import eu.timepit.refined.api._
+            |    type ResultType = Refined[scala.collection.immutable.List[String], And[MinSize[Witness.`1`.T], And[MaxSize[Witness.`5`.T], Forall[StringArrayItemPredicate]]]]
+            |    private val rt = RefinedType.apply[ResultType]
+            |    def apply(candidate: scala.collection.immutable.List[String]): Either[IllegalArgumentException, ResultType] = from(candidate)
+            |    def from(candidate: scala.collection.immutable.List[String]): Either[IllegalArgumentException, ResultType] = rt.refine(candidate).left.map(msg => new IllegalArgumentException(msg))
+            |    def unapply(candidate: scala.collection.immutable.List[String]): Option[ResultType] = from(candidate).toOption
+            |    def unsafeFrom(candidate: scala.collection.immutable.List[String]): ResultType = rt.unsafeRefine(candidate)
+            |  }
+            |  def from(id: String, count: Int, atMost100: Float, stringArray: scala.collection.immutable.List[String] = scala.collection.immutable.List.empty): Either[IllegalArgumentException, ChildOverridesAll] = {
+            |    val _id = IdType.from(id)
+            |    val _count = CountType.from(count)
+            |    val _atMost100 = AtMost100Type.from(atMost100)
+            |    val _stringArray = StringArrayType.from(stringArray)
+            |    _id.flatMap { (__id: IdType) =>
+            |      _count.flatMap { (__count: CountType) =>
+            |        _atMost100.flatMap { (__atMost100: AtMost100Type) =>
+            |          _stringArray.map {
+            |            (__stringArray: StringArrayType) => ChildOverridesAll(__id, __count, __atMost100, __stringArray)
+            |          }
+            |        }
+            |      }
+            |    }
+            |  }
+            |  import io.circe._
+            |  import io.circe.generic.semiauto._
+            |  implicit lazy val decoder: Decoder[ChildOverridesAll] = deriveDecoder[ChildOverridesAll]
+            |  implicit lazy val encoder: Encoder[ChildOverridesAll] = deriveEncoder[ChildOverridesAll].mapJsonObject(_.add("type", Json.fromString("overrides")))
+            |}""".stripMargin
+            .stripTrailingSpaces
+        )
+      )
+    }
+
+    "use inherited facets" in {
+      val params = ModelGenParams(
+        new File("src/sbt-test/sbt-scraml/refined/api/refined.raml"),
+        new File("target/scraml-refined-test"),
+        "scraml",
+        DefaultTypes(),
+        librarySupport = Set(CirceJsonSupport(), RefinedSupport),
+        formatConfig = None,
+        generateDateCreated = true
+      )
+
+      val generated = ModelGenRunner.run(DefaultModelGen)(params).unsafeRunSync()
+
+      assert(generated.files.nonEmpty)
+
+      val theBaseSource = generated.files
+        .find(_.source.name == "BaseWithFacetsType")
+        .map(_.source.source.toString().stripTrailingSpaces)
+
+      val theChildSource = generated.files
+        .find(_.source.name == "ChildInheritsAll")
+        .map(_.source.source.toString().stripTrailingSpaces)
+
+      val theChildCompanion = generated.files
+        .find(_.source.name == "ChildInheritsAll")
+        .flatMap(_.source.companion)
+        .map(_.toString().stripTrailingSpaces)
+
+      assert(
+        theBaseSource.contains(
+          """sealed trait BaseWithFacetsType {
+            |  def id: BaseWithFacetsType.IdType
+            |  def count: BaseWithFacetsType.CountType
+            |  def atMost100: BaseWithFacetsType.AtMost100Type
+            |  def stringArray: BaseWithFacetsType.StringArrayType
+            |}""".stripMargin
+            .stripTrailingSpaces
+        )
+      )
+
+      assert(
+        theChildSource.contains(
+          """final case class ChildInheritsAll(id: ChildInheritsAll.IdType, count: ChildInheritsAll.CountType, atMost100: ChildInheritsAll.AtMost100Type, stringArray: ChildInheritsAll.StringArrayType) extends BaseWithFacetsType"""
+        )
+      )
+
+      assert(
+        theChildCompanion.contains(
+          """object ChildInheritsAll {
+            |  import eu.timepit.refined.api.Refined
+            |  import eu.timepit.refined.boolean.And
+            |  import eu.timepit.refined.collection._
+            |  import eu.timepit.refined.numeric._
+            |  import eu.timepit.refined.string._
+            |  import shapeless.Witness
+            |  import io.circe.refined._
+            |  type IdType = Refined[String, And[MinSize[Witness.`8`.T], And[MaxSize[Witness.`64`.T], MatchesRegex[Witness.`"^[A-z0-9-]*$"`.T]]]]
+            |  object IdType {
+            |    import eu.timepit.refined.api._
+            |    type ResultType = Refined[String, And[MinSize[Witness.`8`.T], And[MaxSize[Witness.`64`.T], MatchesRegex[Witness.`"^[A-z0-9-]*$"`.T]]]]
+            |    private val rt = RefinedType.apply[ResultType]
+            |    def apply(candidate: String): Either[IllegalArgumentException, ResultType] = from(candidate)
+            |    def from(candidate: String): Either[IllegalArgumentException, ResultType] = rt.refine(candidate).left.map(msg => new IllegalArgumentException(msg))
+            |    def unapply(candidate: String): Option[ResultType] = from(candidate).toOption
+            |    def unsafeFrom(candidate: String): ResultType = rt.unsafeRefine(candidate)
+            |  }
+            |  type CountType = Refined[Int, GreaterEqual[Witness.`0`.T]]
+            |  object CountType {
+            |    import eu.timepit.refined.api._
+            |    type ResultType = Refined[Int, GreaterEqual[Witness.`0`.T]]
+            |    private val rt = RefinedType.apply[ResultType]
+            |    def apply(candidate: Int): Either[IllegalArgumentException, ResultType] = from(candidate)
+            |    def from(candidate: Int): Either[IllegalArgumentException, ResultType] = rt.refine(candidate).left.map(msg => new IllegalArgumentException(msg))
+            |    def unapply(candidate: Int): Option[ResultType] = from(candidate).toOption
+            |    def unsafeFrom(candidate: Int): ResultType = rt.unsafeRefine(candidate)
+            |  }
+            |  type AtMost100Type = Refined[Float, LessEqual[Witness.`100.0`.T]]
+            |  object AtMost100Type {
+            |    import eu.timepit.refined.api._
+            |    type ResultType = Refined[Float, LessEqual[Witness.`100.0`.T]]
+            |    private val rt = RefinedType.apply[ResultType]
+            |    def apply(candidate: Float): Either[IllegalArgumentException, ResultType] = from(candidate)
+            |    def from(candidate: Float): Either[IllegalArgumentException, ResultType] = rt.refine(candidate).left.map(msg => new IllegalArgumentException(msg))
+            |    def unapply(candidate: Float): Option[ResultType] = from(candidate).toOption
+            |    def unsafeFrom(candidate: Float): ResultType = rt.unsafeRefine(candidate)
+            |  }
+            |  type StringArrayItemPredicate = And[MinSize[Witness.`2`.T], And[MaxSize[Witness.`99`.T], MatchesRegex[Witness.`"^[A-z0-9]+$"`.T]]]
+            |  type StringArrayType = Refined[scala.collection.immutable.List[String], And[MinSize[Witness.`1`.T], And[MaxSize[Witness.`5`.T], Forall[StringArrayItemPredicate]]]]
+            |  object StringArrayType {
+            |    import eu.timepit.refined.api._
+            |    type ResultType = Refined[scala.collection.immutable.List[String], And[MinSize[Witness.`1`.T], And[MaxSize[Witness.`5`.T], Forall[StringArrayItemPredicate]]]]
+            |    private val rt = RefinedType.apply[ResultType]
+            |    def apply(candidate: scala.collection.immutable.List[String]): Either[IllegalArgumentException, ResultType] = from(candidate)
+            |    def from(candidate: scala.collection.immutable.List[String]): Either[IllegalArgumentException, ResultType] = rt.refine(candidate).left.map(msg => new IllegalArgumentException(msg))
+            |    def unapply(candidate: scala.collection.immutable.List[String]): Option[ResultType] = from(candidate).toOption
+            |    def unsafeFrom(candidate: scala.collection.immutable.List[String]): ResultType = rt.unsafeRefine(candidate)
+            |  }
+            |  def from(id: String, count: Int, atMost100: Float, stringArray: scala.collection.immutable.List[String] = scala.collection.immutable.List.empty): Either[IllegalArgumentException, ChildInheritsAll] = {
+            |    val _id = IdType.from(id)
+            |    val _count = CountType.from(count)
+            |    val _atMost100 = AtMost100Type.from(atMost100)
+            |    val _stringArray = StringArrayType.from(stringArray)
+            |    _id.flatMap { (__id: IdType) => 
+            |      _count.flatMap { (__count: CountType) => 
+            |        _atMost100.flatMap { (__atMost100: AtMost100Type) => 
+            |          _stringArray.map {
+            |            (__stringArray: StringArrayType) => ChildInheritsAll(__id, __count, __atMost100, __stringArray)
+            |          }
+            |        }
+            |      }
+            |    }
+            |  }
+            |  import io.circe._
+            |  import io.circe.generic.semiauto._
+            |  implicit lazy val decoder: Decoder[ChildInheritsAll] = deriveDecoder[ChildInheritsAll]
+            |  implicit lazy val encoder: Encoder[ChildInheritsAll] = deriveEncoder[ChildInheritsAll].mapJsonObject(_.add("type", Json.fromString("inherited")))
+            |}""".stripMargin
+            .stripTrailingSpaces
         )
       )
     }

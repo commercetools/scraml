@@ -5,11 +5,12 @@ import io.vrap.rmf.raml.model.modules.Api
 import io.vrap.rmf.raml.model.types._
 import scraml.MetaUtil.{packageTerm, typeFromName}
 import scraml.RMFUtil.{getAnnotation, getPackageName}
-
 import java.io.File
 import scala.collection.immutable.TreeSet
 import scala.meta.{Decl, Defn, Member, Pkg, Stat, Term, Type}
 import scala.reflect.ClassTag
+
+import sbt.internal.util.ManagedLogger
 
 trait JsonSupport { self: LibrarySupport =>
   // Json support should usually be one of the first to be applied
@@ -42,7 +43,8 @@ final case class ModelGenParams(
     librarySupport: Set[LibrarySupport],
     scalaVersion: Option[(Long, Long)] = Some((2, 12)),
     formatConfig: Option[File] = None,
-    generateDateCreated: Boolean = false
+    generateDateCreated: Boolean = false,
+    logger: Option[ManagedLogger] = None
 ) {
   lazy val allLibraries: List[LibrarySupport] = librarySupport.toList.sorted
 }
@@ -165,6 +167,11 @@ final case class ModelGenContext(
       )
     case None => typeProperties.flatMap(ModelGen.scalaProperty(_)(this.anyTypeName)(this)).toList
   }
+
+  def warn(message: => String): Unit =
+    params.logger.foreach {
+      _.warn(message)
+    }
 }
 
 final case class DefnWithCompanion[T <: Defn with Member](defn: T, companion: Option[Defn.Object])

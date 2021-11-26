@@ -1,0 +1,10 @@
+#%RAML 1.0 DataType
+(package): DataTypes
+(docs-uri): "https://example.org/child-with-facets-type"
+displayName: ChildWithFacetsType
+type: BaseWithoutFacetsType
+discriminatorValue: child
+properties:
+  id:
+    type: string
+    pattern: ^[A-z]+$

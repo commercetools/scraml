@@ -5,7 +5,6 @@ import io.vrap.rmf.raml.model.RamlModelBuilder
 import io.vrap.rmf.raml.model.modules.Api
 import io.vrap.rmf.raml.model.types.{Annotation, AnyType, ObjectType, Property}
 import org.eclipse.emf.common.util.URI
-
 import java.io.File
 import scala.collection.immutable.TreeSet
 
@@ -55,6 +54,25 @@ object RMFUtil {
         .getOrElse(List.empty)
     case _ => List.empty
   }
+
+  /** get all super-types of '''aType''', returned in __inheritance__ order.
+   */
+  def superTypes(aType: ObjectType): List[ObjectType] =
+    Option(aType.getType()) match {
+      case Some(parent: ObjectType) if parent.getName != "object" =>
+        parent :: superTypes(parent)
+      case _ =>
+        Nil
+    }
+
+  /** finds all declarations of a given '''name''' in the inheritance tree
+    * and returns them in their __declared__ order.
+    */
+  def findAllDeclarations(aType: ObjectType, name: String): List[(ObjectType, Property)] =
+    (aType :: superTypes(aType)).reverse.flatMap {
+      objectType =>
+        Option(objectType.getProperty(name)).map(objectType -> _).toList
+    }
 
   /** get all (including inherited) properties of a type note: will not include properties from
     * 'scala-extends' references

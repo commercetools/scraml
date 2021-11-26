@@ -3,3 +3,11 @@ DataType: !include datatype.raml
 EmptyBase: !include emptybase.raml
 NoProps: !include noprops.raml
 SomeEnum: !include enum.raml
+
+# Verify inherited facets defintions
+BaseWithoutFacetsType: !include basewithoutfacetstype.raml
+ChildWithFacetsType: !include childwithfacetstype.raml
+
+BaseWithFacetsType: !include basewithfacetstype.raml
+ChildInheritsAll: !include childinheritsall.raml
+ChildOverridesAll: !include childoverridesall.raml
