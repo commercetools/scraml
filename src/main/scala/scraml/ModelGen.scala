@@ -5,11 +5,12 @@ import io.vrap.rmf.raml.model.modules.Api
 import io.vrap.rmf.raml.model.types._
 import scraml.MetaUtil.{packageTerm, typeFromName}
 import scraml.RMFUtil.{getAnnotation, getPackageName}
-
 import java.io.File
 import scala.collection.immutable.TreeSet
 import scala.meta.{Decl, Defn, Member, Pkg, Stat, Term, Type}
 import scala.reflect.ClassTag
+
+import sbt.internal.util.ManagedLogger
 
 trait JsonSupport { self: LibrarySupport =>
   // Json support should usually be one of the first to be applied
@@ -42,7 +43,8 @@ final case class ModelGenParams(
     librarySupport: Set[LibrarySupport],
     scalaVersion: Option[(Long, Long)] = Some((2, 12)),
     formatConfig: Option[File] = None,
-    generateDateCreated: Boolean = false
+    generateDateCreated: Boolean = false,
+    logger: Option[ManagedLogger] = None
 ) {
   lazy val allLibraries: List[LibrarySupport] = librarySupport.toList.sorted
 }
@@ -165,6 +167,11 @@ final case class ModelGenContext(
       )
     case None => typeProperties.flatMap(ModelGen.scalaProperty(_)(this.anyTypeName)(this)).toList
   }
+
+  def warn(message: => String): Unit =
+    params.logger.foreach {
+      _.warn(message)
+    }
 }
 
 final case class DefnWithCompanion[T <: Defn with Member](defn: T, companion: Option[Defn.Object])
@@ -182,6 +189,42 @@ trait LibrarySupport {
         // a declaration without parameters is considered a property
         case prop: Decl.Def if prop.paramss.isEmpty => true
         case _                                      => false
+      }
+  }
+
+  trait HasFacets {
+    final def hasAnyFacets(anyType: AnyType): Boolean =
+      anyType match {
+        case at: ArrayType =>
+          hasFacets(at)
+        case nt: NumberType =>
+          hasFacets(nt)
+        case st: StringType =>
+          hasFacets(st)
+        case _ =>
+          false
+      }
+
+    final def hasFacets(at: ArrayType): Boolean =
+      (at.getMaxItems ne null) ||
+        (at.getMinItems ne null) ||
+        (at.getUniqueItems ne null) ||
+        hasItemFacets(at)
+
+    final def hasFacets(nt: NumberType): Boolean =
+      (nt.getMaximum ne null) ||
+        (nt.getMinimum ne null)
+
+    final def hasFacets(st: StringType): Boolean =
+      (st.getPattern ne null) ||
+        (st.getMaxLength ne null) ||
+        (st.getMinLength ne null)
+
+    final def hasItemFacets(at: ArrayType): Boolean =
+      Option(at.getItems).exists {
+        case nt: NumberType if hasFacets(nt) => true
+        case st: StringType if hasFacets(st) => true
+        case _                               => false
       }
   }
 

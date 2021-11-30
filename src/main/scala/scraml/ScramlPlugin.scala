@@ -44,6 +44,7 @@ object ScramlPlugin extends AutoPlugin {
       ) { (_: Set[File]) =>
         ramlFile.value
           .map { file =>
+            val s = streams.value
             val params = ModelGenParams(
               file,
               targetDir,
@@ -51,11 +52,12 @@ object ScramlPlugin extends AutoPlugin {
               defaultTypes.value,
               librarySupport.value,
               CrossVersion.partialVersion(scalaVersion.value),
-              formatConfig.value
+              formatConfig.value,
+              logger = Option(s.log)
             )
 
             val generated = ModelGenRunner.run(DefaultModelGen)(params).unsafeRunSync()
-            val s         = streams.value
+
             s.log.info(s"generated API model for $file in $targetDir")
             s.log.debug(generated.toString)
             generated.files.map(_.file)

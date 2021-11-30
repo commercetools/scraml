@@ -5,7 +5,7 @@ import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import java.io.File
 
-import scraml.libs.{CirceJsonSupport, TapirSupport}
+import scraml.libs.{CirceJsonSupport, RefinedSupport, TapirSupport}
 
 class CtApiGenSpec extends AnyFlatSpec with Matchers {
   "Default model gen" should "generate ct API" in {
@@ -19,7 +19,7 @@ class CtApiGenSpec extends AnyFlatSpec with Matchers {
         float = "scala.math.BigDecimal",
         number = "scala.math.BigDecimal"
       ),
-      librarySupport = Set(CirceJsonSupport(), TapirSupport("PlatformEndpoints")),
+      librarySupport = Set(CirceJsonSupport(), TapirSupport("PlatformEndpoints"), RefinedSupport),
       None
     )
 

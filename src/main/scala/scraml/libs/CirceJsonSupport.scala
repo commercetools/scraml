@@ -12,10 +12,21 @@ object CirceJsonSupport {
 }
 
 class CirceJsonSupport(formats: Map[String, String]) extends LibrarySupport with JsonSupport {
-  override def jsonType: String = "io.circe.Json"
-
   import scala.meta._
   import scala.collection.JavaConverters._
+
+  object HasRefinements extends HasFacets {
+    def apply(context: ModelGenContext, classDef: Defn.Class): Boolean =
+      context.isLibraryEnabled[RefinedSupport.type]() &&
+        classDef.ctor.paramss.flatten
+          .map(_.name.value)
+          .flatMap(name => RMFUtil.findAllDeclarations(context.objectType, name).map(_._2))
+          .exists { prop =>
+            Option(prop.getType()).exists(hasAnyFacets)
+          }
+  }
+
+  override def jsonType: String = "io.circe.Json"
 
   private val decoderChunkThreshold = 50
 
@@ -293,7 +304,7 @@ class CirceJsonSupport(formats: Map[String, String]) extends LibrarySupport with
         .getOrElse(List.empty) // no subtypes
     } else List.empty          // should not derive
 
-  private def deriveJson(context: ModelGenContext): List[Stat] = {
+  private def deriveJson(context: ModelGenContext, classDef: Defn.Class): List[Stat] = {
     val objectType = context.objectType
     if (shouldDeriveJson(objectType)) {
       val encoderDef: Defn.Val = discriminatorAndValue(objectType)
@@ -337,15 +348,67 @@ class CirceJsonSupport(formats: Map[String, String]) extends LibrarySupport with
           import io.circe.generic.semiauto._
           """.stats ++ formats.headOption.map(_ => q"import $packageObjectRef.Formats._").toList
 
-      importStats ++ q"""
-          implicit lazy val decoder: Decoder[${Type.Name(
-        objectType.getName
-      )}] = deriveDecoder[${Type.Name(
-        objectType.getName
-      )}]
-         $encoderDef
-      """.stats
+      importStats ++
+        q"""
+          ..${deriveJsonClassDecoder(context, classDef)}
+          $encoderDef
+         """.stats
     } else List.empty
+  }
+
+  private def deriveJsonClassDecoder(context: ModelGenContext, classDef: Defn.Class): List[Stat] = {
+    val objectTypeName = Type.Name(context.objectType.getName)
+
+    if (HasRefinements(context, classDef)) {
+      q"""
+        import io.circe.refined._
+
+        implicit lazy val decoder: Decoder[$objectTypeName] =
+          new Decoder[$objectTypeName] {
+            def apply(c: HCursor): Decoder.Result[$objectTypeName] = {
+              ${
+        def genFlatmaps(args: List[Term.Param]): Term.Apply =
+          args match {
+            case last :: Nil =>
+              val fieldName     = Lit.String(last.name.value)
+              val paramName     = Term.Name("_" + last.name.value)
+              val companionName = Term.Name(classDef.name.value)
+
+              q"""
+                        c.downField($fieldName).as[${last.decltpe.get}].flatMap {
+                          $paramName: ${last.decltpe.get} =>
+                            $companionName.from(..${generatePropertiesCode(classDef) { prop =>
+                Term.Name("_" + prop.name.value) :: Nil
+              }.collect { case t: Term =>
+                t
+              }}).swap.map(
+                              e => DecodingFailure(e.getMessage, Nil)
+                            ).swap
+                        }
+                       """
+
+            case head :: tail =>
+              val fieldName = Lit.String(head.name.value)
+              val paramName = Term.Name("_" + head.name.value)
+
+              q"""
+                        c.downField($fieldName).as[${head.decltpe.get}].flatMap {
+                          $paramName: ${head.decltpe.get} => ${genFlatmaps(tail)}
+                        }
+                     """
+          }
+
+        genFlatmaps(classDef.ctor.paramss.flatten.toList)
+      }
+          }
+        }
+       """.stats
+    } else
+      List(
+        q"""
+          implicit lazy val decoder: Decoder[$objectTypeName] = deriveDecoder[$objectTypeName]
+         """
+      )
   }
 
   private def mapTypeCodec(context: ModelGenContext): List[Stat] =
@@ -393,7 +456,7 @@ class CirceJsonSupport(formats: Map[String, String]) extends LibrarySupport with
       companion = companion.map(
         appendObjectStats(
           _,
-          if (context.isMapType.isDefined) mapTypeCodec(context) else deriveJson(context)
+          if (context.isMapType.isDefined) mapTypeCodec(context) else deriveJson(context, classDef)
         )
       )
     )

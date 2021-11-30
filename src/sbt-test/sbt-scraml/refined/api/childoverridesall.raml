@@ -1,0 +1,30 @@
+#%RAML 1.0 DataType
+(package): DataTypes
+(docs-uri): "https://example.org/child-overrides-all"
+displayName: ChildOverridesAll
+type: BaseWithFacetsType
+discriminatorValue: overrides
+properties:
+  id:
+    type: string
+    minLength: 0
+    maxLength: 100
+    pattern: ^[0-9].*$
+  count:
+    type: number
+    format: int32
+    minimum: 1
+    maximum: 10
+  atMost100:
+    type: number
+    maximum: 200.0
+    minimum: 0.0
+  stringArray:
+    type: array
+    minItems: 0
+    maxItems: 10
+    items:
+      type: string
+      pattern: "^[0-9]+$"
+      minLength: 20
+      maxLength: 30
