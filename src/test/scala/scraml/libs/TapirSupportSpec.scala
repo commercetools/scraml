@@ -1,12 +1,12 @@
 package scraml.libs
 
+import cats.effect.unsafe.implicits.global
 import org.scalatest.diagrams.Diagrams
+import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import scraml.{DefaultModelGen, DefaultTypes, ModelGenParams, ModelGenRunner}
-import java.io.File
 
-import cats.effect.unsafe.implicits.global
-import org.scalatest.matchers.should.Matchers
+import java.io.File
 
 final class TapirSupportSpec extends AnyWordSpec with Diagrams with Matchers {
   "TapirSupport" must {
@@ -49,7 +49,7 @@ final class TapirSupportSpec extends AnyWordSpec with Diagrams with Matchers {
                                                                   |  object Endpoints {
                                                                   |    object Greeting {
                                                                   |      final case class GetGreetingParams(name: Option[String] = None)
-                                                                  |      val getGreeting = endpoint.in("greeting").in(query[Option[String]]("name")).mapInTo[GetGreetingParams].get.out(jsonBody[DataType])
+                                                                  |      val getGreeting = endpoint.get.in("greeting").in(query[Option[String]]("name")).mapInTo[GetGreetingParams].out(jsonBody[DataType])
                                                                   |    }
                                                                   |  }
                                                                   |}""".stripMargin)
