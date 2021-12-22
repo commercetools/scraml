@@ -120,7 +120,7 @@ final class TapirSupport(endpointsObjectName: String) extends LibrarySupport {
         .map(BodyWithMediaType(body.getContentType, _))
     }.toList
 
-  private def resourceEndpointsDefinitions(
+  private[libs] def resourceEndpointsDefinitions(
       resource: Resource,
       jsonSupport: JsonSupport
   )(implicit context: ModelGenContext): List[ResourceDefinitions] = {
@@ -135,13 +135,20 @@ final class TapirSupport(endpointsObjectName: String) extends LibrarySupport {
       val headerParams: List[Term.Param] = paramTypes(method.getHeaders.asScala)
       val hasParams = pathParams.nonEmpty || queryParams.nonEmpty || headerParams.nonEmpty
 
+      val endpointWithMethod =
+        q"""
+          endpoint.${Term.Name(method.getMethodName)}
+        """
+
       val endpointWithHeaderMatcher: Term = paramMatcher(headerParams)("header").map(matcher => q"""
-           endpoint.in($matcher)
-         """) getOrElse (q"""endpoint""")
+           $endpointWithMethod
+             .in($matcher)
+         """) getOrElse (endpointWithMethod)
 
       val endpointWithPathMatcher: Term =
         q"""
-           $endpointWithHeaderMatcher.in(${pathMatcher(templateWithoutSlash)})
+           $endpointWithHeaderMatcher
+             .in(${pathMatcher(templateWithoutSlash)})
          """
 
       val endpointWithQueryMatcher: Term = paramMatcher(queryParams)("query")
@@ -162,7 +169,6 @@ final class TapirSupport(endpointsObjectName: String) extends LibrarySupport {
           q"""
            $endpointWithQueryMatcher
             .mapInTo[$paramsTypeName]
-            .${Term.Name(method.getMethodName)}
          """
         } else endpointWithQueryMatcher
 
