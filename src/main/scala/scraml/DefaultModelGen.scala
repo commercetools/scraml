@@ -158,7 +158,9 @@ object DefaultModelGen extends ModelGen {
       stringType: StringType,
       params: ModelGenParams
   ): IO[GeneratedTypeSource] = for {
-    packageName <- IO.fromOption(getPackageName(stringType))(
+    packageName <- IO.fromOption(
+      getPackageName(stringType).orElse(params.defaultPackageAnnotation)
+    )(
       new IllegalStateException("enum type should have package name")
     )
     enumInstances = stringType.getEnum.asScala.map { instance =>
@@ -194,7 +196,9 @@ object DefaultModelGen extends ModelGen {
       api: ApiContext
   ): IO[GeneratedTypeSource] =
     for {
-      packageName <- IO.fromOption(getPackageName(objectType))(
+      packageName <- IO.fromOption(
+        getPackageName(objectType).orElse(params.defaultPackageAnnotation)
+      )(
         new IllegalStateException("object type should have package name")
       )
       apiBaseType = Option(objectType.asInstanceOf[AnyType].getType)

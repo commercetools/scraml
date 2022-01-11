@@ -1,0 +1,19 @@
+# the package will be used as the file name, currently no actual package structure is generated
+package:
+  type: string
+  allowedTargets: TypeDeclaration
+# allows to specify a url for documentation purposes, not reflected in the code currently
+docs-uri:
+  type: string
+# allows to override the type used with a full qualified name of a scala type
+scala-type:
+  type: string
+# allows to override the default type for a collection
+scala-array-type:
+  type: string
+# allows to specify an additional supertype like a traited
+scala-extends:
+  type: string
+# allows to control on a granular level if JSON support is enabled for the annotated type
+scala-derive-json:
+  type: boolean

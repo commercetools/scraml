@@ -44,7 +44,8 @@ final case class ModelGenParams(
     scalaVersion: Option[(Long, Long)] = Some((2, 12)),
     formatConfig: Option[File] = None,
     generateDateCreated: Boolean = false,
-    logger: Option[ManagedLogger] = None
+    logger: Option[ManagedLogger] = None,
+    defaultPackageAnnotation: Option[String] = None
 ) {
   lazy val allLibraries: List[LibrarySupport] = librarySupport.toList.sorted
 }

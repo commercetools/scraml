@@ -1,0 +1,21 @@
+#%RAML 1.0
+title: Hello world # required title
+# taken from https://github.com/raml-org/raml-spec
+annotationTypes: !include annotations.raml
+# this test checks for inline type definition support via 'ramlDefinitions'
+types:
+  DataType:
+    properties:
+      text: string
+      when: datetime
+
+/greeting: # optional resource
+  get: # HTTP method declaration
+    queryParameters:
+      name?:
+        type: string
+    responses: # declare a response
+      200: # HTTP status code
+        body: # declare content of response
+          application/json: # media type
+            type: DataType
