@@ -93,7 +93,7 @@ object ScramlPlugin extends AutoPlugin {
     definitions: Seq[ModelDefinition]
   ): Seq[ModelDefinition] = {
     val packages = definitions.map(_.basePackage).sorted
-    val duplicates = packages.grouped(2)
+    val duplicates = packages.combinations(2)
       .toList
       .filter {
         case Seq(a, b) if a == b =>
