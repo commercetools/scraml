@@ -15,25 +15,34 @@ final case class ModelDefinition(
 ) {
   def toModelGenParams(
       targetDir: File,
+      fallbackDefaultTypes: DefaultTypes,
+      fallbackLibrarySupport: Set[LibrarySupport],
       compilerVersion: Option[(Long, Long)],
       logger: ManagedLogger
-  ): ModelGenParams =
+  ): ModelGenParams = {
+    val librariesToEnable =
+      if (librarySupport.isEmpty)
+        fallbackLibrarySupport
+      else
+        librarySupport
+
+    val typesToUse =
+      if (defaultTypes == DefaultTypes())
+        fallbackDefaultTypes
+      else
+        defaultTypes
+
     ModelGenParams(
       raml = raml,
       targetDir = targetDir,
       basePackage = basePackage,
-      defaultTypes = defaultTypes,
-      librarySupport = librarySupport,
+      defaultTypes = typesToUse,
+      librarySupport = librariesToEnable,
       scalaVersion = compilerVersion,
       formatConfig = formatConfig,
       generateDateCreated = generateDateCreated,
       logger = Some(logger),
       defaultPackageAnnotation = defaultPackageAnnotation.map(_.toLowerCase())
     )
-
-  def useDefaultLibrarySupport(default: Set[LibrarySupport]): ModelDefinition =
-    if (librarySupport.isEmpty)
-      copy(librarySupport = default)
-    else
-      this
+  }
 }

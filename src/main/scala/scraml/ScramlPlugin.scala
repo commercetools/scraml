@@ -44,21 +44,19 @@ object ScramlPlugin extends AutoPlugin {
     runScraml := {
       val targetDir: File = scramlTargetDir.value.getOrElse((Compile / sourceManaged).value)
       val s               = streams.value
-      val definitions     = detectDuplicateBasePackages(s.log) {
+      val definitions = detectDuplicateBasePackages(s.log) {
         ramlFile.value
-          .map {
-            raml =>
-              ModelDefinition(
-                raml,
-                basePackageName.value,
-                defaultTypes.value,
-                librarySupport.value,
-                None,
-                formatConfig.value
-              ) :: Nil
+          .map { raml =>
+            ModelDefinition(
+              raml,
+              basePackageName.value,
+              defaultTypes.value,
+              librarySupport.value,
+              None,
+              formatConfig.value
+            ) :: Nil
           }
           .getOrElse(ramlDefinitions.value)
-          .map(_.useDefaultLibrarySupport(librarySupport.value))
       }
 
       // adapted from https://stackoverflow.com/questions/33897874/sbt-sourcegenerators-task-execute-only-if-a-file-changes
@@ -68,6 +66,8 @@ object ScramlPlugin extends AutoPlugin {
         definitions.flatMap { definition =>
           val params = definition.toModelGenParams(
             targetDir,
+            defaultTypes.value,
+            librarySupport.value,
             CrossVersion.partialVersion(scalaVersion.value),
             s.log
           )
@@ -90,10 +90,11 @@ object ScramlPlugin extends AutoPlugin {
   )
 
   private def detectDuplicateBasePackages(logger: ManagedLogger)(
-    definitions: Seq[ModelDefinition]
+      definitions: Seq[ModelDefinition]
   ): Seq[ModelDefinition] = {
     val packages = definitions.map(_.basePackage).sorted
-    val duplicates = packages.combinations(2)
+    val duplicates = packages
+      .combinations(2)
       .toList
       .filter {
         case Seq(a, b) if a == b =>
@@ -103,9 +104,8 @@ object ScramlPlugin extends AutoPlugin {
           false
       }
 
-    duplicates.headOption.foreach {
-      case Seq(a, b) =>
-        throw new IllegalArgumentException(s"duplicate base packages detected: '$a' and '$b''")
+    duplicates.headOption.foreach { case Seq(a, b) =>
+      throw new IllegalArgumentException(s"duplicate base packages detected: '$a' and '$b''")
     }
 
     definitions

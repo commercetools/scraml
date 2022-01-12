@@ -12,15 +12,22 @@ lazy val root = (project in file("."))
       scraml.ModelDefinition(
         raml = file("api/inline-types.raml"),
         basePackage = "scraml.inline",
-        defaultTypes = scraml.DefaultTypes(),
+        // Explicitly override the default Scala types for this definition.
+        defaultTypes = scraml.DefaultTypes(
+          float = "Double",
+          number = "scala.math.BigDecimal"
+        ),
+        // Use DataTypes for RAML type definitions which do not have a
+        // (package) annotation.
         defaultPackageAnnotation = Some("DataTypes"),
+        // Explicitly override the global librarySupport setting.
+        librarySupport = Set(scraml.libs.CatsShowSupport),
         formatConfig = None,
         generateDateCreated = true
         ),
       scraml.ModelDefinition(
         raml = file("api/simple.raml"),
         basePackage = "scraml.simple",
-        defaultTypes = scraml.DefaultTypes(),
         defaultPackageAnnotation = None,
         formatConfig = None,
         generateDateCreated = true
@@ -29,7 +36,7 @@ lazy val root = (project in file("."))
     Compile / sourceGenerators += runScraml,
     libraryDependencies ++= Seq(
       "org.typelevel" %% "cats-core" % "2.7.0",
-      "dev.optics" %% "monocle-core" % "3.0.0",
+      "dev.optics" %% "monocle-core" % "3.1.0"
     )
   )
 
