@@ -3,12 +3,16 @@ package scraml
 import cats.effect.unsafe.implicits.global
 import sbt._
 import sbt.Keys._
+import sbt.internal.util.ManagedLogger
 
 object ScramlPlugin extends AutoPlugin {
   override def trigger = allRequirements
 
   object autoImport {
     val ramlFile = settingKey[Option[File]]("RAML file to be used by the sbt-scraml plugin")
+    val ramlDefinitions = settingKey[Seq[ModelDefinition]](
+      "RAML definitions to be used for by the sbt-scraml plugin"
+    )
     val scramlTargetDir = settingKey[Option[File]](
       "target dir to use for generation, otherwise 'Compile / sourceManaged' is used"
     )
@@ -24,6 +28,7 @@ object ScramlPlugin extends AutoPlugin {
   import autoImport._
   override lazy val globalSettings: Seq[Setting[_]] = Seq(
     ramlFile        := None,
+    ramlDefinitions := Seq.empty,
     basePackageName := "scraml",
     defaultTypes    := DefaultTypes(),
     librarySupport  := Set.empty,
@@ -38,40 +43,71 @@ object ScramlPlugin extends AutoPlugin {
   override lazy val projectSettings: Seq[Setting[_]] = Seq(
     runScraml := {
       val targetDir: File = scramlTargetDir.value.getOrElse((Compile / sourceManaged).value)
+      val s               = streams.value
+      val definitions = detectDuplicateBasePackages(s.log) {
+        ramlFile.value
+          .map { raml =>
+            ModelDefinition(
+              raml,
+              basePackageName.value,
+              defaultTypes.value,
+              librarySupport.value,
+              None,
+              formatConfig.value
+            ) :: Nil
+          }
+          .getOrElse(ramlDefinitions.value)
+      }
+
       // adapted from https://stackoverflow.com/questions/33897874/sbt-sourcegenerators-task-execute-only-if-a-file-changes
       val cachedGeneration = FileFunction.cached(
         streams.value.cacheDirectory / "scraml"
       ) { (_: Set[File]) =>
-        ramlFile.value
-          .map { file =>
-            val s = streams.value
-            val params = ModelGenParams(
-              file,
-              targetDir,
-              basePackageName.value,
-              defaultTypes.value,
-              librarySupport.value,
-              CrossVersion.partialVersion(scalaVersion.value),
-              formatConfig.value,
-              logger = Option(s.log)
-            )
+        definitions.flatMap { definition =>
+          val params = definition.toModelGenParams(
+            targetDir,
+            defaultTypes.value,
+            librarySupport.value,
+            CrossVersion.partialVersion(scalaVersion.value),
+            s.log
+          )
 
-            val generated = ModelGenRunner.run(DefaultModelGen)(params).unsafeRunSync()
+          val generated = ModelGenRunner.run(DefaultModelGen)(params).unsafeRunSync()
 
-            s.log.info(s"generated API model for $file in $targetDir")
-            s.log.debug(generated.toString)
-            generated.files.map(_.file)
-          }
-          .getOrElse(List.empty)
-          .toSet
+          s.log.info(s"generated API model for ${definition.raml} in $targetDir")
+          s.log.debug(generated.toString)
+          generated.files.map(_.file)
+        }.toSet
       }
 
-      ramlFile.value match {
-        case Some(apiFile) =>
-          val inputFiles = FileUtil.findFiles(apiFile.getParentFile).map(_.toFile).toSet
-          cachedGeneration(inputFiles).toSeq
-        case None => Seq.empty
-      }
+      val allRamls = definitions
+        .flatMap(definition => FileUtil.findFiles(definition.raml.getParentFile))
+        .map(_.toFile)
+        .toSet
+
+      cachedGeneration(allRamls).toSeq
     }
   )
+
+  private def detectDuplicateBasePackages(logger: ManagedLogger)(
+      definitions: Seq[ModelDefinition]
+  ): Seq[ModelDefinition] = {
+    val packages = definitions.map(_.basePackage).sorted
+    val duplicates = packages
+      .combinations(2)
+      .toList
+      .filter {
+        case Seq(a, b) if a == b =>
+          logger.error(s"duplicate base packages detected: '$a' and '$b''")
+          true
+        case _ =>
+          false
+      }
+
+    duplicates.headOption.foreach { case Seq(a, b) =>
+      throw new IllegalArgumentException(s"duplicate base packages detected: '$a' and '$b''")
+    }
+
+    definitions
+  }
 }

@@ -18,7 +18,7 @@ lazy val root = (project in file("."))
       scraml.libs.RefinedSupport
     ),
     Compile / sourceGenerators += runScraml,
-	libraryDependencies += "com.chuusai" %% "shapeless" % "2.3.7",
+    libraryDependencies += "com.chuusai" %% "shapeless" % "2.3.7",
     libraryDependencies ++= Seq(
       "eu.timepit" %% "refined",
       "eu.timepit" %% "refined-cats"
@@ -30,3 +30,4 @@ lazy val root = (project in file("."))
         "io.circe" %% "circe-refined"
     ).map(_ % circeVersion)
   )
+
