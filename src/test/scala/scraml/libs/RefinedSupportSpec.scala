@@ -7,15 +7,7 @@ import org.scalatest.diagrams.Diagrams
 import org.scalatest.wordspec.AnyWordSpec
 import scraml.{DefaultModelGen, DefaultTypes, ModelGenParams, ModelGenRunner}
 
-class RefinedSupportSpec extends AnyWordSpec with Diagrams {
-  implicit class StripTrailingSpaces(private val content: String) {
-    def stripTrailingSpaces: String =
-      content
-        .split('\n')
-        .map(_.replaceFirst(" +$", ""))
-        .mkString("\n")
-  }
-
+class RefinedSupportSpec extends AnyWordSpec with Diagrams with SourceCodeFormatting {
   "RefinedSupport" must {
     "modify case class refined property types" in {
       val params = ModelGenParams(

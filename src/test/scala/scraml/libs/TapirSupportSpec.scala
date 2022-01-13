@@ -8,7 +8,11 @@ import scraml.{DefaultModelGen, DefaultTypes, ModelGenParams, ModelGenRunner}
 
 import java.io.File
 
-final class TapirSupportSpec extends AnyWordSpec with Diagrams with Matchers {
+final class TapirSupportSpec
+    extends AnyWordSpec
+    with Diagrams
+    with Matchers
+    with SourceCodeFormatting {
   "TapirSupport" must {
     "generate simple endpoints" in {
       val params = ModelGenParams(
@@ -40,6 +44,26 @@ final class TapirSupportSpec extends AnyWordSpec with Diagrams with Matchers {
                                                                   |  import sttp.tapir.json.circe._
                                                                   |  type |[+A1, +A2] = Either[A1, A2]
                                                                   |  private implicit def anySchema[T]: Schema[T] = Schema[T](SchemaType.SCoproduct(Nil, None)(_ => None), None)
+                                                                  |  private implicit def eitherTapirCodecPlain[A, B](implicit aCodec: Codec.PlainCodec[A], bCodec: Codec.PlainCodec[B]): Codec.PlainCodec[Either[A, B]] = new Codec.PlainCodec[Either[A, B]] {
+                                                                  |    override val format = TextPlain()
+                                                                  |    override val schema = anySchema[Either[A, B]]
+                                                                  |    override def rawDecode(l: String): DecodeResult[Either[A, B]] = {
+                                                                  |      aCodec.rawDecode(l) match {
+                                                                  |        case e: DecodeResult.Failure =>
+                                                                  |          bCodec.rawDecode(l).map(Right(_))
+                                                                  |        case other =>
+                                                                  |          other.map(Left(_))
+                                                                  |      }
+                                                                  |    }
+                                                                  |    override def encode(h: Either[A, B]): String = {
+                                                                  |      h match {
+                                                                  |        case Left(a) =>
+                                                                  |          aCodec.encode(a)
+                                                                  |        case Right(b) =>
+                                                                  |          bCodec.encode(b)
+                                                                  |      }
+                                                                  |    }
+                                                                  |  }
                                                                   |  private implicit val queryOptionalCollectionCodec: Codec[List[String], Option[scala.collection.immutable.List[String]], TextPlain] = new Codec[List[String], Option[scala.collection.immutable.List[String]], TextPlain] {
                                                                   |    override def rawDecode(l: List[String]): DecodeResult[Option[scala.collection.immutable.List[String]]] = DecodeResult.Value(Some(l.to[scala.collection.immutable.List]))
                                                                   |    override def encode(h: Option[scala.collection.immutable.List[String]]): List[String] = h.map(_.to[List]).getOrElse(Nil)
@@ -53,6 +77,54 @@ final class TapirSupportSpec extends AnyWordSpec with Diagrams with Matchers {
                                                                   |    }
                                                                   |  }
                                                                   |}""".stripMargin)
+    }
+
+    "generate enumeration types" in {
+      val params = ModelGenParams(
+        new File("src/sbt-test/sbt-scraml/simple/api/simple.raml"),
+        new File("target/scraml-tapir-test"),
+        "scraml",
+        DefaultTypes(),
+        librarySupport = Set(CirceJsonSupport(), TapirSupport("Endpoints")),
+        formatConfig = None
+      )
+
+      val generated = ModelGenRunner.run(DefaultModelGen)(params).unsafeRunSync()
+      val enumCompanion =
+        generated.files.find(_.source.name == "SomeEnum").flatMap(_.source.companion)
+
+      enumCompanion.map(_.toString.stripTrailingSpaces) should be(
+        Some(
+          """object SomeEnum {
+            |  case object A extends SomeEnum
+            |  case object B extends SomeEnum
+            |  import io.circe._
+            |  implicit lazy val encoder: Encoder[SomeEnum] = Encoder[String].contramap({
+            |    case A => "A"
+            |    case B => "B"
+            |  })
+            |  implicit lazy val decoder: Decoder[SomeEnum] = Decoder[String].emap({
+            |    case "A" =>
+            |      Right(A)
+            |    case "B" =>
+            |      Right(B)
+            |    case other =>
+            |      Left(s"invalid enum value: $other")
+            |  })
+            |  implicit lazy val tapirCodec: sttp.tapir.Codec.PlainCodec[SomeEnum] = sttp.tapir.Codec.string.mapDecode[SomeEnum]({
+            |    case "A" =>
+            |      sttp.tapir.DecodeResult.Value(A)
+            |    case "B" =>
+            |      sttp.tapir.DecodeResult.Value(B)
+            |    case other =>
+            |      sttp.tapir.DecodeResult.InvalidValue(sttp.tapir.ValidationError.Primitive[String](sttp.tapir.Validator.enumeration(List("A", "B")), other) :: Nil)
+            |  })({
+            |    case A => "A"
+            |    case B => "B"
+            |  })
+            |}""".stripMargin
+        )
+      )
     }
 
     "generate ct api endpoints" in {
