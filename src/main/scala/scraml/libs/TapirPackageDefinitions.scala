@@ -5,11 +5,39 @@ import scala.meta._
 import scraml.{MetaUtil, ModelGenContext}
 
 final class TapirPackageDefinitions(private val context: ModelGenContext) {
+  private trait CommonDefinitions {
+    protected def eitherCodecPlain =
+      q"""
+      private implicit def eitherTapirCodecPlain[A, B](
+        implicit aCodec: Codec.PlainCodec[A],
+        bCodec: Codec.PlainCodec[B]
+      )
+      : Codec.PlainCodec[Either[A, B]] =
+        new Codec.PlainCodec[Either[A, B]] {
+          override val format = TextPlain()
+          override val schema = anySchema[Either[A, B]]
+          override def rawDecode(l: String): DecodeResult[Either[A, B]] = {
+            aCodec.rawDecode(l) match {
+              case e: DecodeResult.Failure => bCodec.rawDecode(l).map(Right(_))
+              case other => other.map(Left(_))
+            }
+          }
+          override def encode(h: Either[A, B]): String = {
+            h match {
+              case Left(a) => aCodec.encode(a)
+              case Right(b) => bCodec.encode(b)
+            }
+          }
+        }
+       """
+  }
+
   // Scala v2.12 specific tapir definitions
-  private object Scala212 {
+  private object Scala212 extends CommonDefinitions {
     def apply(): List[Stat] =
       q"""
           $anySchema
+          $eitherCodecPlain
           $queryCollectionParamEncoder
        """.stats
 
@@ -38,10 +66,11 @@ final class TapirPackageDefinitions(private val context: ModelGenContext) {
   }
 
   // Scala v2.13 specific tapir definitions
-  private object Scala213 {
+  private object Scala213 extends CommonDefinitions {
     def apply(): List[Stat] =
       q"""
           $anySchema
+          $eitherCodecPlain
           $queryCollectionParamEncoder
        """.stats
 

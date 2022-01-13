@@ -3,8 +3,8 @@ package scraml.libs
 import io.vrap.rmf.raml.model.modules.Api
 import io.vrap.rmf.raml.model.resources.Resource
 import io.vrap.rmf.raml.model.responses.Body
-import io.vrap.rmf.raml.model.types.TypedElement
-import scraml.{JsonSupport, LibrarySupport, MetaUtil, ModelGen, ModelGenContext}
+import io.vrap.rmf.raml.model.types.{StringType, TypedElement}
+import scraml.{DefnWithCompanion, JsonSupport, LibrarySupport, ModelGen, ModelGenContext}
 import scala.collection.immutable.TreeSet
 import scala.jdk.CollectionConverters._
 import scala.meta._
@@ -17,6 +17,8 @@ final case class ResourceDefinitions(
 )
 
 final class TapirSupport(endpointsObjectName: String) extends LibrarySupport {
+  import scraml.LibrarySupport._
+
   private val jsonContentType = "application/json"
 
   private def upperCaseFirst(string: String): String =
@@ -332,6 +334,64 @@ final class TapirSupport(endpointsObjectName: String) extends LibrarySupport {
 
       LibrarySupport.appendPkgObjectStats(packageObject, tapirImports ++ List(endpointsObject))
     }
+
+  override def modifyEnum(enumType: StringType)(
+      enumTrait: Defn.Trait,
+      companion: Option[Defn.Object]
+  ): DefnWithCompanion[Defn.Trait] = {
+    val enumValuesAsList =
+      q"""
+         List(
+         ..${enumType.getEnum.asScala.toList.map { enum =>
+        Lit.String(enum.getValue.toString)
+      }})
+       """
+
+    val enumTypeName = Type.Name(enumType.getName)
+    val tapirEnumCodec: List[Stat] =
+      q"""
+      implicit lazy val tapirCodec: sttp.tapir.Codec.PlainCodec[$enumTypeName] =
+      sttp.tapir.Codec.string.mapDecode[$enumTypeName](
+        ${Term.PartialFunction(
+        enumType.getEnum.asScala.toList.map { enum =>
+          Case(
+            Lit.String(enum.getValue.toString),
+            None,
+            q"sttp.tapir.DecodeResult.Value(${Term.Name(enum.getValue.toString)})"
+          )
+        }
+          ++ List[Case](
+            Case(
+              Pat.Var(Term.Name("other")),
+              None,
+              q"""
+                  sttp.tapir.DecodeResult.InvalidValue(
+                    sttp.tapir.ValidationError.Primitive[String](
+                      sttp.tapir.Validator.enumeration(
+                        $enumValuesAsList
+                      ),
+                      other
+                    ) :: Nil
+                  )
+                 """
+            )
+          )
+      )}
+      )(
+        ${Term.PartialFunction(
+        enumType.getEnum.asScala.toList.map { enum =>
+          Case(
+            Term.Name(enum.getValue.toString),
+            None,
+            Lit.String(enum.getValue.toString)
+          )
+        }
+      )}
+      )
+       """ :: Nil
+
+    super.modifyEnum(enumType)(enumTrait, companion.map(appendObjectStats(_, tapirEnumCodec)))
+  }
 }
 
 object TapirSupport {
