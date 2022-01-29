@@ -32,7 +32,7 @@ lazy val root = (project in file("."))
   .enablePlugins(SbtPlugin, ParadoxSitePlugin, GhpagesPlugin)
   .settings(
     name := "sbt-scraml",
-    libraryDependencies += "com.commercetools.rmf" % "raml-model" % "0.2.0-20210817071658",
+    libraryDependencies += "com.commercetools.rmf" % "raml-model" % "0.2.0-20211203200453",
     libraryDependencies += "org.scalameta" %% "scalameta" % "4.4.20",
     libraryDependencies += "org.scalameta" %% "scalafmt-dynamic" % "3.0.0-RC6",
     libraryDependencies += "org.typelevel" %% "cats-effect" % "3.1.1",

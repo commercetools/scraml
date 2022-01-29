@@ -7,6 +7,7 @@ import sbt.internal.util.ManagedLogger
 final case class ModelDefinition(
     raml: File,
     basePackage: String,
+    fieldMatchPolicy: Option[FieldMatchPolicy] = None,
     defaultTypes: DefaultTypes = DefaultTypes(),
     librarySupport: Set[LibrarySupport] = Set.empty,
     defaultPackageAnnotation: Option[String] = None,
@@ -15,6 +16,7 @@ final case class ModelDefinition(
 ) {
   def toModelGenParams(
       targetDir: File,
+      fallbackFieldMatchPolicy: FieldMatchPolicy,
       fallbackDefaultTypes: DefaultTypes,
       fallbackLibrarySupport: Set[LibrarySupport],
       compilerVersion: Option[(Long, Long)],
@@ -36,6 +38,7 @@ final case class ModelDefinition(
       raml = raml,
       targetDir = targetDir,
       basePackage = basePackage,
+      fieldMatchPolicy = fieldMatchPolicy.getOrElse(fallbackFieldMatchPolicy),
       defaultTypes = typesToUse,
       librarySupport = librariesToEnable,
       scalaVersion = compilerVersion,

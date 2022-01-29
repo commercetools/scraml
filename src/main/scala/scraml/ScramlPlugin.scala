@@ -13,6 +13,9 @@ object ScramlPlugin extends AutoPlugin {
     val ramlDefinitions = settingKey[Seq[ModelDefinition]](
       "RAML definitions to be used for by the sbt-scraml plugin"
     )
+    val ramlFieldMatchPolicy = settingKey[FieldMatchPolicy](
+      "RAML policy for additional properties support (default: keep extra)"
+    )
     val scramlTargetDir = settingKey[Option[File]](
       "target dir to use for generation, otherwise 'Compile / sourceManaged' is used"
     )
@@ -27,13 +30,14 @@ object ScramlPlugin extends AutoPlugin {
 
   import autoImport._
   override lazy val globalSettings: Seq[Setting[_]] = Seq(
-    ramlFile        := None,
-    ramlDefinitions := Seq.empty,
-    basePackageName := "scraml",
-    defaultTypes    := DefaultTypes(),
-    librarySupport  := Set.empty,
-    formatConfig    := None,
-    scramlTargetDir := None
+    ramlFile             := None,
+    ramlDefinitions      := Seq.empty,
+    ramlFieldMatchPolicy := FieldMatchPolicy.KeepExtra(),
+    basePackageName      := "scraml",
+    defaultTypes         := DefaultTypes(),
+    librarySupport       := Set.empty,
+    formatConfig         := None,
+    scramlTargetDir      := None
   )
 
   /// Here, the runScraml task is defined but not automatically added to
@@ -50,6 +54,7 @@ object ScramlPlugin extends AutoPlugin {
             ModelDefinition(
               raml,
               basePackageName.value,
+              Option(ramlFieldMatchPolicy.value),
               defaultTypes.value,
               librarySupport.value,
               None,
@@ -66,6 +71,7 @@ object ScramlPlugin extends AutoPlugin {
         definitions.flatMap { definition =>
           val params = definition.toModelGenParams(
             targetDir,
+            ramlFieldMatchPolicy.value,
             defaultTypes.value,
             librarySupport.value,
             CrossVersion.partialVersion(scalaVersion.value),

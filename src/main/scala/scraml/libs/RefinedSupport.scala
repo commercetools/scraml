@@ -795,17 +795,8 @@ object RefinedSupport extends LibrarySupport {
       context: ModelGenContext
   ): Type = {
     val propDef = context.objectType.getProperty(name)
-    val scalaTypeAnnotation = Option(
-      propDef.getAnnotation("scala-type")
-    ).map(_.getValue.getValue.toString)
 
-    context
-      .scalaTypeRef(
-        propDef.getType,
-        optional = false,
-        typeName = scalaTypeAnnotation,
-        defaultAnyTypeName = context.anyTypeName
-      )
+    context.scalaTypeRefFromProperty(propDef, optional = false)
       .get
       .scalaType
   }

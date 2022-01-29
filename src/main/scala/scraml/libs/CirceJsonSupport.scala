@@ -2,9 +2,9 @@ package scraml.libs
 
 import io.vrap.rmf.raml.model.modules.Api
 import scraml.LibrarySupport._
-import scraml.MetaUtil.packageTerm
+import scraml.MetaUtil._
 import scraml.RMFUtil.getAnnotation
-import scraml.{DefnWithCompanion, JsonSupport, LibrarySupport, ModelGen, ModelGenContext, RMFUtil}
+import scraml._
 import io.vrap.rmf.raml.model.types.{AnyType, ObjectType, StringType}
 
 object CirceJsonSupport {
@@ -12,6 +12,7 @@ object CirceJsonSupport {
 }
 
 class CirceJsonSupport(formats: Map[String, String]) extends LibrarySupport with JsonSupport {
+  import FieldMatchPolicy.{ Exact, IgnoreExtra, KeepExtra }
   import scala.meta._
   import scala.collection.JavaConverters._
 
@@ -305,42 +306,77 @@ class CirceJsonSupport(formats: Map[String, String]) extends LibrarySupport with
     } else List.empty          // should not derive
 
   private def deriveJson(context: ModelGenContext, classDef: Defn.Class): List[Stat] = {
-    val objectType = context.objectType
+    import context.objectType
+
     if (shouldDeriveJson(objectType)) {
-      val encoderDef: Defn.Val = discriminatorAndValue(objectType)
-        .map { case (discriminatorPropertyName, discriminatorValueString) =>
-          Defn.Val(
-            List(Mod.Implicit(), Mod.Lazy()),
-            List(Pat.Var(Term.Name("encoder"))),
-            Some(Type.Apply(Type.Name("Encoder"), List(Type.Name(objectType.getName)))),
-            rhs = Term.Apply(
-              Term.Select(
-                Term.ApplyType(Term.Name("deriveEncoder"), List(Type.Name(objectType.getName))),
-                Term.Name("mapJsonObject")
-              ),
-              List(
-                Term.Apply(
-                  Term.Select(Term.Placeholder(), Term.Name("add")),
-                  List(
-                    Lit.String(discriminatorPropertyName),
-                    Term.Apply(
-                      Term.Select(Term.Name("Json"), Term.Name("fromString")),
-                      List(Lit.String(discriminatorValueString))
-                    )
+      val discriminatorTuple = discriminatorAndValue(objectType).map {
+        case (name, value) =>
+          q"""${Lit.String(name)} -> Json.fromString(${Lit.String(value)})"""
+      }
+
+      val encoderDef: Defn.Val = context match {
+        case FieldMatchPolicy(policy) if policy.areAdditionalPropertiesEnabled(objectType)(context) =>
+          val pairs = policy.namedProperties(objectType).map { property =>
+            val scalaType = context.scalaTypeRefFromProperty(property)
+              .get
+              .scalaType
+
+            q"""
+              ${Lit.String(property.getName)} ->
+              Encoder[$scalaType].apply(
+                instance.${Term.Name(property.getName)}
+              )
+            """
+          }
+
+          q"""
+            implicit lazy val encoder: Encoder[${Type.Name(objectType.getName)}] =
+              new Encoder[${Type.Name(objectType.getName)}] {
+                final def apply(instance: ${Type.Name(objectType.getName)}): Json =
+                  AdditionalProperties.addFields(
+                    Json.obj(
+                      ..${discriminatorTuple.toList ::: pairs}
+                    ),
+                    instance.additionalProperties
                   )
-                )
+              }
+           """
+
+        case FieldMatchPolicy(Exact(_)) =>
+          discriminatorTuple match {
+            case Some(tuple) =>
+              q"""
+               implicit lazy val encoder: Encoder[${Type.Name(objectType.getName)}] =
+                 deriveEncoder[${Type.Name(objectType.getName)}].mapJsonObject(
+                   _ +: $tuple
+               )
+              """
+            case None =>
+              q"""
+               implicit lazy val encoder: Encoder[${Type.Name(objectType.getName)}] =
+                 deriveEncoder[${Type.Name(objectType.getName)}]
+              """
+          }
+
+        case FieldMatchPolicy(IgnoreExtra(policy)) =>
+          val pairs = policy.namedProperties(objectType).map { property =>
+            q"""(
+              ${Lit.String(property.getName)},
+              Encoder[${Type.Name(property.getType.getName)}](
+                instance.${Term.Name(property.getName)}
               )
             )
-          )
-        }
-        .getOrElse(
+            """
+          }
+
           q"""
-           implicit lazy val encoder: Encoder[${Type
-            .Name(objectType.getName)}] = deriveEncoder[${Type.Name(
-            objectType.getName
-          )}]
-         """
-        )
+            implicit lazy val encoder: Encoder[${Type.Name(objectType.getName)}] =
+              new Encoder[${Type.Name(objectType.getName)}] {
+                final def apply(instance: ${Type.Name(objectType.getName)}): Json =
+                    Json.obj(..$pairs)
+              }
+          """
+        }
 
       lazy val packageObjectRef = packageTerm(context.params.basePackage)
 
@@ -398,7 +434,7 @@ class CirceJsonSupport(formats: Map[String, String]) extends LibrarySupport with
                      """
           }
 
-        genFlatmaps(classDef.ctor.paramss.flatten.toList)
+        genFlatmaps(classDef.ctor.paramss.flatten)
       }
           }
         }
@@ -448,8 +484,52 @@ class CirceJsonSupport(formats: Map[String, String]) extends LibrarySupport with
 
     } else List.empty
 
-  override def modifyClass(classDef: Defn.Class, companion: Option[Defn.Object])(implicit
-      context: ModelGenContext
+  override def modifyAdditionalProperties(classDef: Defn.Class, companion: Option[Defn.Object])(
+    implicit context: ModelGenContext
+  ): DefnWithCompanion[Defn.Class] = {
+    val mapType = termFromName(context.params.defaultTypes.map)
+
+    DefnWithCompanion(
+      classDef,
+      companion = companion.map(
+        appendObjectStats(
+          _,
+          q"""
+            import io.circe._
+            import io.circe.generic.semiauto._
+
+            implicit lazy val decoder: Decoder[${classDef.name}] = new Decoder[${classDef.name}] {
+              final def apply(c: HCursor): Decoder.Result[${classDef.name}] = {
+                val parent = c.up
+                val allKeys = parent.keys.fold(Set.empty[String])(_.toSet)
+                val builder = $mapType.newBuilder[String, Json]
+                val it = allKeys.filterNot(propertyNames.contains).iterator
+                val entries = it.foldLeft(builder) {
+                  case (accum, key) =>
+                    parent.field(key).focus.fold(accum) { v =>
+                      accum += (key -> v)
+                    }
+                }
+
+                Right(AdditionalProperties(builder.result()))
+              }
+            }
+
+            def addFields(into: Json, oap: Option[AdditionalProperties]): Json = {
+              oap.fold(into)(ap => Json.fromFields(ap.underlying).deepMerge(into))
+            }
+
+            def addFields(into: Json, ap: AdditionalProperties): Json = {
+              Json.fromFields(ap.underlying).deepMerge(into)
+            }
+           """.stats
+        )
+      )
+    )
+  }
+
+  override def modifyClass(classDef: Defn.Class, companion: Option[Defn.Object])(
+    implicit context: ModelGenContext
   ): DefnWithCompanion[Defn.Class] =
     DefnWithCompanion(
       classDef,
@@ -600,6 +680,7 @@ class CirceJsonSupport(formats: Map[String, String]) extends LibrarySupport with
         $enumEncode
         $enumDecode
        """.stats
+
     DefnWithCompanion(enumTrait, companion.map(appendObjectStats(_, stats)))
   }
 }

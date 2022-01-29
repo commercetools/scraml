@@ -23,6 +23,7 @@ class RMFUtilSpec extends AnyFlatSpec with Matchers {
             ramlFile,
             new File("target"),
             "base",
+            FieldMatchPolicy.Exact(),
             DefaultTypes(),
             Set.empty,
             None

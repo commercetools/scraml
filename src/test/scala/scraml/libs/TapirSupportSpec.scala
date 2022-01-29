@@ -4,8 +4,7 @@ import cats.effect.unsafe.implicits.global
 import org.scalatest.diagrams.Diagrams
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
-import scraml.{DefaultModelGen, DefaultTypes, ModelGenParams, ModelGenRunner}
-
+import scraml.{DefaultModelGen, DefaultTypes, FieldMatchPolicy, ModelGenParams, ModelGenRunner}
 import java.io.File
 
 final class TapirSupportSpec
@@ -19,6 +18,7 @@ final class TapirSupportSpec
         new File("src/sbt-test/sbt-scraml/simple/api/simple.raml"),
         new File("target/scraml-tapir-test"),
         "scraml",
+        FieldMatchPolicy.Exact(),
         DefaultTypes(),
         librarySupport = Set(CirceJsonSupport(), TapirSupport("Endpoints")),
         formatConfig = None
@@ -84,6 +84,7 @@ final class TapirSupportSpec
         new File("src/sbt-test/sbt-scraml/simple/api/simple.raml"),
         new File("target/scraml-tapir-test"),
         "scraml",
+        FieldMatchPolicy.Exact(),
         DefaultTypes(),
         librarySupport = Set(CirceJsonSupport(), TapirSupport("Endpoints")),
         formatConfig = None
@@ -132,6 +133,7 @@ final class TapirSupportSpec
         new File("src/sbt-test/sbt-scraml/ct-api/reference/api-specs/api/api.raml"),
         new File("target/scraml-tapir-ct-api-test"),
         "scraml",
+        FieldMatchPolicy.Exact(),
         DefaultTypes(),
         librarySupport = Set(scraml.libs.CirceJsonSupport(), TapirSupport("Endpoints")),
         formatConfig = None

@@ -5,7 +5,7 @@ import java.io.File
 import cats.effect.unsafe.implicits.global
 import org.scalatest.diagrams.Diagrams
 import org.scalatest.wordspec.AnyWordSpec
-import scraml.{DefaultModelGen, DefaultTypes, ModelGenParams, ModelGenRunner}
+import scraml.{DefaultModelGen, DefaultTypes, FieldMatchPolicy, ModelGenParams, ModelGenRunner}
 
 class RefinedSupportSpec extends AnyWordSpec with Diagrams with SourceCodeFormatting {
   "RefinedSupport" must {
@@ -14,6 +14,7 @@ class RefinedSupportSpec extends AnyWordSpec with Diagrams with SourceCodeFormat
         new File("src/sbt-test/sbt-scraml/refined/api/refined.raml"),
         new File("target/scraml-refined-test"),
         "scraml",
+        FieldMatchPolicy.Exact(),
         DefaultTypes(),
         librarySupport = Set(CirceJsonSupport(), RefinedSupport),
         formatConfig = None,
@@ -201,6 +202,7 @@ class RefinedSupportSpec extends AnyWordSpec with Diagrams with SourceCodeFormat
         new File("src/sbt-test/sbt-scraml/refined/api/refined.raml"),
         new File("target/scraml-refined-test"),
         "scraml",
+        FieldMatchPolicy.Exact(),
         DefaultTypes(),
         librarySupport = Set(CirceJsonSupport(), RefinedSupport),
         formatConfig = None,
@@ -272,6 +274,7 @@ class RefinedSupportSpec extends AnyWordSpec with Diagrams with SourceCodeFormat
         new File("src/sbt-test/sbt-scraml/refined/api/refined.raml"),
         new File("target/scraml-refined-test"),
         "scraml",
+        FieldMatchPolicy.Exact(),
         DefaultTypes(),
         librarySupport = Set(CirceJsonSupport(), RefinedSupport),
         formatConfig = None,
@@ -404,6 +407,7 @@ class RefinedSupportSpec extends AnyWordSpec with Diagrams with SourceCodeFormat
         new File("src/sbt-test/sbt-scraml/refined/api/refined.raml"),
         new File("target/scraml-refined-test"),
         "scraml",
+        FieldMatchPolicy.Exact(),
         DefaultTypes(),
         librarySupport = Set(CirceJsonSupport(), RefinedSupport),
         formatConfig = None,

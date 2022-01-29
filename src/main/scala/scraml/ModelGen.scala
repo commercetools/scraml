@@ -39,6 +39,7 @@ final case class ModelGenParams(
     raml: File,
     targetDir: File,
     basePackage: String,
+    fieldMatchPolicy: FieldMatchPolicy,
     defaultTypes: DefaultTypes,
     librarySupport: Set[LibrarySupport],
     scalaVersion: Option[(Long, Long)] = Some((2, 12)),
@@ -118,10 +119,10 @@ final case class ModelGenContext(
   lazy val leafTypes: TreeSet[AnyType] =
     RMFUtil.leafTypes(objectType)
 
-  lazy val typeProperties: Seq[Property] = RMFUtil.typeProperties(objectType).toSeq
+  lazy val typeProperties: Seq[Property] = params.fieldMatchPolicy.namedProperties(objectType)
   lazy val isSealed: Boolean = getDirectSubTypes.forall(getPackageName(_).contains(packageName))
   lazy val isMapType: Option[MapTypeSpec] = ModelGen.isMapType(objectType, anyTypeName)(this)
-  lazy val isSingleton: Boolean           = isMapType.isEmpty && typeProperties.isEmpty
+  lazy val isSingleton: Boolean           = isMapType.isEmpty && params.fieldMatchPolicy.isSingleton(objectType)(this)
 
   def isLibraryEnabled[A <: LibrarySupport: ClassTag](): Boolean =
     params.allLibraries.exists(ls =>
@@ -141,6 +142,25 @@ final case class ModelGenContext(
       defaultAnyTypeName: String
   ): Option[TypeRef] =
     ModelGen.scalaTypeRef(apiType, optional, typeName, defaultAnyTypeName)(this)
+
+  def scalaTypeRefFromProperty(property: Property): Option[TypeRef] =
+    scalaTypeRefFromProperty(property, !property.getRequired)
+
+  def scalaTypeRefFromProperty(
+    property: Property,
+    optional: Boolean
+  ): Option[TypeRef] = {
+    val scalaTypeAnnotation = Option(
+      property.getAnnotation("scala-type")
+    ).map(_.getValue.getValue.toString)
+
+    scalaTypeRef(
+      property.getType,
+      optional,
+      typeName = scalaTypeAnnotation,
+      defaultAnyTypeName = anyTypeName
+    )
+  }
 
   def typeParams: List[Term.Param] = isMapType match {
     case Some(mapTypeSpec) =>
@@ -166,7 +186,8 @@ final case class ModelGenContext(
           if (mapTypeSpec.optional) Some(Term.Name("None")) else None
         )
       )
-    case None => typeProperties.flatMap(ModelGen.scalaProperty(_)(this.anyTypeName)(this)).toList
+    case None =>
+      typeProperties.flatMap(ModelGen.scalaProperty(_)(this.anyTypeName)(this)).toList
   }
 
   def warn(message: => String): Unit =
@@ -234,6 +255,11 @@ trait LibrarySupport {
       names.forall(n => defn.ctor.paramss.head.exists(_.name.value == n))
   }
 
+  def modifyAdditionalProperties(classDef: Defn.Class, companion: Option[Defn.Object])(
+    implicit context: ModelGenContext
+  ): DefnWithCompanion[Defn.Class] =
+    DefnWithCompanion(classDef, companion)
+
   def modifyClass(classDef: Defn.Class, companion: Option[Defn.Object])(implicit
       context: ModelGenContext
   ): DefnWithCompanion[Defn.Class] =
@@ -277,6 +303,18 @@ object LibrarySupport {
   implicit val ordering: Ordering[LibrarySupport] =
     (x: LibrarySupport, y: LibrarySupport) => x.order.compare(y.order)
 
+  /**
+   * Applies all LibrarySupport instances to the definition of each generated
+   * class's ''AdditionalProperties'' type.
+   */
+  def applyAdditionalProperties(
+    defn: Defn.Class,
+    companion: Option[Defn.Object]
+  )(libs: List[LibrarySupport], context: ModelGenContext): DefnWithCompanion[Defn.Class] =
+    libs.foldLeft(DefnWithCompanion(defn, companion)) { case (acc, lib) =>
+      lib.modifyAdditionalProperties(acc.defn, acc.companion)(context)
+    }
+
   def applyClass(
       defn: Defn.Class,
       companion: Option[Defn.Object]
@@ -284,12 +322,14 @@ object LibrarySupport {
     libs.foldLeft(DefnWithCompanion(defn, companion)) { case (acc, lib) =>
       lib.modifyClass(acc.defn, acc.companion)(context)
     }
+
   def applyObject(
       defn: Defn.Object
   )(libs: List[LibrarySupport], context: ModelGenContext): DefnWithCompanion[Defn.Object] =
     libs.foldLeft(DefnWithCompanion(defn, None)) { case (acc, lib) =>
       lib.modifyObject(acc.defn)(context)
     }
+
   def applyTrait(
       defn: Defn.Trait,
       companion: Option[Defn.Object]
@@ -297,12 +337,14 @@ object LibrarySupport {
     libs.foldLeft(DefnWithCompanion(defn, companion)) { case (acc, lib) =>
       lib.modifyTrait(acc.defn, acc.companion)(context)
     }
+
   def applyPackageObject(
       packageObject: Pkg.Object
   )(libs: List[LibrarySupport], context: ModelGenContext, api: Api): Pkg.Object =
     libs.foldLeft(packageObject: Pkg.Object) { case (acc, lib) =>
       lib.modifyPackageObject(libs, api)(context)(acc)
     }
+
   def applyEnum(enumType: StringType)(enumTrait: Defn.Trait, companion: Defn.Object)(
       libs: List[LibrarySupport]
   ): DefnWithCompanion[Defn.Trait] =
@@ -448,7 +490,7 @@ object ModelGen {
       context: ModelGenContext
   ): Boolean =
     ModelGen.isMapType(objectType, anyTypeName).isEmpty &&
-      RMFUtil.typeProperties(objectType).isEmpty
+      context.params.fieldMatchPolicy.isSingleton(objectType)
 
   def isMapType(objectType: ObjectType, anyTypeName: String)(implicit
       context: ModelGenContext
@@ -465,35 +507,9 @@ object ModelGen {
           mapTypeToScala(anyTypeName)(valueType)
         )
 
-      case _ =>
-        RMFUtil
-          .typeProperties(objectType)
-          .filter(prop => Option(prop.getPattern).isDefined)
-          .flatMap { prop =>
-            lazy val isSingle = prop.getName != "//"
-            lazy val optional = !prop.getRequired
-            val scalaTypeAnnotation =
-              Option(prop.getAnnotation("scala-type")).map(_.getValue.getValue.toString)
-
-            val scalaMapRequired =
-              Option(prop.getAnnotation("scala-map-required"))
-                .forall(_.getValue.getValue.toString.toBoolean)
-
-            ModelGen.scalaTypeRef(prop.getType, optional, scalaTypeAnnotation, anyTypeName).map {
-              valueType =>
-                MapTypeSpec(
-                  typeFromName(context.params.defaultTypes.map),
-                  Type.Name("String"),
-                  valueType.scalaType,
-                  isSingle,
-                  !scalaMapRequired
-                )
-            }
-          }
-          .find(_ => true)
+      case _ => None
     }
   }
-
 }
 
 object ModelGenRunner {

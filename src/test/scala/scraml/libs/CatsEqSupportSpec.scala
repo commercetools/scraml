@@ -5,7 +5,7 @@ import java.io.File
 import cats.effect.unsafe.implicits.global
 import org.scalatest.diagrams.Diagrams
 import org.scalatest.wordspec.AnyWordSpec
-import scraml.{DefaultModelGen, DefaultTypes, ModelGenParams, ModelGenRunner}
+import scraml.{DefaultModelGen, DefaultTypes, FieldMatchPolicy, ModelGenParams, ModelGenRunner}
 
 final class CatsEqSupportSpec extends AnyWordSpec with Diagrams {
   "CatsEqSupport" must {
@@ -14,6 +14,7 @@ final class CatsEqSupportSpec extends AnyWordSpec with Diagrams {
         new File("src/sbt-test/sbt-scraml/simple/api/simple.raml"),
         new File("target/scraml-cats-eq-test"),
         "scraml",
+        FieldMatchPolicy.Exact(),
         DefaultTypes(),
         librarySupport = Set(CatsEqSupport),
         formatConfig = None,
