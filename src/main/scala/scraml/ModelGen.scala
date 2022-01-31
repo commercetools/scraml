@@ -122,7 +122,8 @@ final case class ModelGenContext(
   lazy val typeProperties: Seq[Property] = params.fieldMatchPolicy.namedProperties(objectType)
   lazy val isSealed: Boolean = getDirectSubTypes.forall(getPackageName(_).contains(packageName))
   lazy val isMapType: Option[MapTypeSpec] = ModelGen.isMapType(objectType, anyTypeName)(this)
-  lazy val isSingleton: Boolean           = isMapType.isEmpty && params.fieldMatchPolicy.isSingleton(objectType)(this)
+  lazy val isSingleton: Boolean =
+    isMapType.isEmpty && params.fieldMatchPolicy.isSingleton(objectType)(this)
 
   def isLibraryEnabled[A <: LibrarySupport: ClassTag](): Boolean =
     params.allLibraries.exists(ls =>
@@ -147,8 +148,8 @@ final case class ModelGenContext(
     scalaTypeRefFromProperty(property, !property.getRequired)
 
   def scalaTypeRefFromProperty(
-    property: Property,
-    optional: Boolean
+      property: Property,
+      optional: Boolean
   ): Option[TypeRef] = {
     val scalaTypeAnnotation = Option(
       property.getAnnotation("scala-type")
@@ -255,8 +256,8 @@ trait LibrarySupport {
       names.forall(n => defn.ctor.paramss.head.exists(_.name.value == n))
   }
 
-  def modifyAdditionalProperties(classDef: Defn.Class, companion: Option[Defn.Object])(
-    implicit context: ModelGenContext
+  def modifyAdditionalProperties(classDef: Defn.Class, companion: Option[Defn.Object])(implicit
+      context: ModelGenContext
   ): DefnWithCompanion[Defn.Class] =
     DefnWithCompanion(classDef, companion)
 
@@ -292,7 +293,7 @@ trait LibrarySupport {
     }
 
   final protected def generatePropertiesCode(defn: Defn.Trait)(
-    f: Decl.Def => List[Stat]
+      f: Decl.Def => List[Stat]
   ): List[Stat] =
     defn.templ.stats
       .collect {
@@ -305,13 +306,12 @@ object LibrarySupport {
   implicit val ordering: Ordering[LibrarySupport] =
     (x: LibrarySupport, y: LibrarySupport) => x.order.compare(y.order)
 
-  /**
-   * Applies all LibrarySupport instances to the definition of each generated
-   * class's ''AdditionalProperties'' type.
-   */
+  /** Applies all LibrarySupport instances to the definition of each generated class's
+    * ''AdditionalProperties'' type.
+    */
   def applyAdditionalProperties(
-    defn: Defn.Class,
-    companion: Option[Defn.Object]
+      defn: Defn.Class,
+      companion: Option[Defn.Object]
   )(libs: List[LibrarySupport], context: ModelGenContext): DefnWithCompanion[Defn.Class] =
     libs.foldLeft(DefnWithCompanion(defn, companion)) { case (acc, lib) =>
       lib.modifyAdditionalProperties(acc.defn, acc.companion)(context)

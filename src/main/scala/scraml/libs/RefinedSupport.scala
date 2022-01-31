@@ -4,7 +4,15 @@ import scala.meta._
 
 import _root_.io.vrap.rmf.raml.model.types._
 import _root_.io.vrap.rmf.raml.model.values.RegExp
-import scraml.{AdditionalProperties, DefnWithCompanion, FieldMatchPolicy, LibrarySupport, MetaUtil, ModelGenContext, RMFUtil}
+import scraml.{
+  AdditionalProperties,
+  DefnWithCompanion,
+  FieldMatchPolicy,
+  LibrarySupport,
+  MetaUtil,
+  ModelGenContext,
+  RMFUtil
+}
 
 object RefinedSupport extends LibrarySupport {
   import LibrarySupport.appendObjectStats
@@ -667,21 +675,18 @@ object RefinedSupport extends LibrarySupport {
 
           ${
           def genFlatmaps(
-            terms: List[Term.Param],
-            remaining: List[Term.Param],
-            additionalProperties: Option[AdditionalProperties]
+              terms: List[Term.Param],
+              remaining: List[Term.Param],
+              additionalProperties: Option[AdditionalProperties]
           ): Term.Apply =
             remaining match {
               case Nil =>
                 q"""
                   Right(
                    ${Term.Name(context.objectType.getName)}()(
-                    ..${
-                  additionalProperties.map { ap =>
-                    Term.Name(ap.propertyName)
-                  }
-                    .toList
-                }
+                    ..${additionalProperties.map { ap =>
+                  Term.Name(ap.propertyName)
+                }.toList}
                    )
                  )
                  """
@@ -712,12 +717,9 @@ object RefinedSupport extends LibrarySupport {
                     term
                   case p =>
                     Term.Name(p.name.value)
-                }})(..${
-                  additionalProperties.map { ap =>
-                      Term.Name(ap.propertyName)
-                }
-                    .toList
-                   }
+                }})(..${additionalProperties.map { ap =>
+                  Term.Name(ap.propertyName)
+                }.toList}
                  )
                  }
                  """
@@ -750,8 +752,7 @@ object RefinedSupport extends LibrarySupport {
               map.copy(name = Name("_values"))
           }
 
-          val additional = context.params
-            .fieldMatchPolicy
+          val additional = context.params.fieldMatchPolicy
             .additionalProperties(context.objectType)(context)
 
           genFlatmaps(
@@ -841,9 +842,7 @@ object RefinedSupport extends LibrarySupport {
   ): Type = {
     val propDef = context.objectType.getProperty(name)
 
-    context.scalaTypeRefFromProperty(propDef, optional = false)
-      .get
-      .scalaType
+    context.scalaTypeRefFromProperty(propDef, optional = false).get.scalaType
   }
 
   private def predicates(prop: Decl.Def)(implicit

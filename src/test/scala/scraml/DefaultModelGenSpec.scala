@@ -103,7 +103,7 @@ class DefaultModelGenSpec extends AnyFlatSpec with Matchers {
 
         someMapType.source.companion.map(_.toString()) should be(
           Some(
-          """object SomeMapType {
+            """object SomeMapType {
             |  import scala.language.dynamics
             |  final case class AdditionalProperties(private val underlying: scala.collection.immutable.TreeMap[String, Any]) extends scala.Dynamic {
             |    override def toString(): String = underlying.mkString(", ")

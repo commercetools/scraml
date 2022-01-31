@@ -9,7 +9,6 @@ import java.io.File
 import java.time.LocalDateTime
 import scala.meta._
 
-
 sealed trait GeneratedSource {
   def name: String
   def packageName: String
@@ -55,8 +54,8 @@ object DefaultModelGen extends ModelGen {
     */
   private class EmptyObjectType extends impl.ObjectTypeImpl
 
-  private def caseClassSource(additionalProperties: Option[AdditionalProperties])(
-    implicit context: ModelGenContext
+  private def caseClassSource(additionalProperties: Option[AdditionalProperties])(implicit
+      context: ModelGenContext
   ): Defn.Class = {
     Defn.Class(
       mods = List(Mod.Final(), Mod.Case()),
@@ -65,7 +64,8 @@ object DefaultModelGen extends ModelGen {
       ctor = Ctor.Primary(
         mods = Nil,
         name = Name.Anonymous(),
-        paramss = additionalProperties.map(_.declareOwnerProperty())
+        paramss = additionalProperties
+          .map(_.declareOwnerProperty())
           .fold(List(context.typeParams))(extra => List(context.typeParams) ::: List(List(extra)))
       ),
       templ = Template(
@@ -240,12 +240,12 @@ object DefaultModelGen extends ModelGen {
 
             val additionalPropertiesDefn =
               additionalProperties.map { props =>
-                  val defn = LibrarySupport.applyAdditionalProperties(
-                    props.classDefinition(),
-                    Some(props.companionDefinition())
-                  )(params.allLibraries, context)
+                val defn = LibrarySupport.applyAdditionalProperties(
+                  props.classDefinition(),
+                  Some(props.companionDefinition())
+                )(params.allLibraries, context)
 
-                  props.ownerCompanionSource(defn)
+                props.ownerCompanionSource(defn)
               }
 
             LibrarySupport.applyClass(

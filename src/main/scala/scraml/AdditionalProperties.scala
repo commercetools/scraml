@@ -5,15 +5,14 @@ import scala.meta._
 import _root_.io.vrap.rmf.raml.model.types.ObjectType
 import scraml.MetaUtil.typeFromName
 
-/**
- * Defines the logic for supporting
- * [[https://github.com/raml-org/raml-spec/blob/master/versions/raml-10/raml-10.md#additional-properties additional properties]]
- * in
- * [[https://github.com/raml-org/raml-spec/blob/master/versions/raml-10/raml-10.md#object-type object types]]
- * which result in `case class` generation.
- */
+/** Defines the logic for supporting
+  * [[https://github.com/raml-org/raml-spec/blob/master/versions/raml-10/raml-10.md#additional-properties additional properties]]
+  * in
+  * [[https://github.com/raml-org/raml-spec/blob/master/versions/raml-10/raml-10.md#object-type object types]]
+  * which result in `case class` generation.
+  */
 protected[scraml] final case class AdditionalProperties(
-  objectType: ObjectType
+    objectType: ObjectType
 )(implicit private val context: ModelGenContext) {
   import context.params.fieldMatchPolicy
 
@@ -51,23 +50,20 @@ protected[scraml] final case class AdditionalProperties(
       object AdditionalProperties {
         import scala.util.matching.Regex
         val propertyNames: Seq[String] = Seq(
-          ..${
-            fieldMatchPolicy.namedProperties(objectType).map { property =>
-                Lit.String(property.getName)
-            }
-    }
+          ..${fieldMatchPolicy.namedProperties(objectType).map { property =>
+      Lit.String(property.getName)
+    }}
         )
         val allowedNames: Seq[Regex] = Seq(
-          ..${
-            fieldMatchPolicy.patternProperties(objectType).map { property =>
-              val pattern = if (property.getName == "//")
-                Lit.String("\"^.*$\"")
-              else
-                Lit.String(property.getPattern.toString)
+          ..${fieldMatchPolicy.patternProperties(objectType).map { property =>
+      val pattern =
+        if (property.getName == "//")
+          Lit.String("\"^.*$\"")
+        else
+          Lit.String(property.getPattern.toString)
 
-              q"${pattern}.r"
-            }
-    }
+      q"${pattern}.r"
+    }}
         )
       }
      """

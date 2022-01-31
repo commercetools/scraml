@@ -44,7 +44,9 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers with SourceCodeForm
           mapLike ::
           packageObject ::
           Nil =>
-        noDiscBase.source.source.toString().stripTrailingSpaces should be("sealed trait NoDiscriminatorBase")
+        noDiscBase.source.source.toString().stripTrailingSpaces should be(
+          "sealed trait NoDiscriminatorBase"
+        )
         noDiscBase.source.companion.map(_.toString().stripTrailingSpaces) should be(
           Some(s"""object NoDiscriminatorBase {
                   |  import io.circe.Decoder.Result
@@ -65,7 +67,9 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers with SourceCodeForm
         baseType.source.source.toString().stripTrailingSpaces should be(
           "sealed trait BaseType extends Any { def id: String }"
         )
-        baseType.source.companion.map(_.toString().stripTrailingSpaces) should be(Some(s"""object BaseType {
+        baseType.source.companion.map(_.toString().stripTrailingSpaces) should be(
+          Some(
+            s"""object BaseType {
                                                                       |  import io.circe.Decoder.Result
                                                                       |  import io.circe._
                                                                       |  implicit lazy val decoder: Decoder[BaseType] = new Decoder[BaseType] {
@@ -86,7 +90,9 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers with SourceCodeForm
                                                                       |        GrandchildType.encoder(grandchildtype)
                                                                       |    }
                                                                       |  }
-                                                                      |}""".stripMargin.stripTrailingSpaces))
+                                                                      |}""".stripMargin.stripTrailingSpaces
+          )
+        )
 
         baseType.source.name should be("BaseType")
         baseType.file.getPath should be("target/scraml-circe-json-test/scraml/datatypes.scala")
@@ -96,17 +102,23 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers with SourceCodeForm
           "final case class DataType(id: String, foo: Option[String] = None, customTypeProp: scala.math.BigDecimal, customArrayTypeProp: Vector[scala.math.BigDecimal] = Vector.empty) extends BaseType"
         )
         dataType.source.name should be("DataType")
-        dataType.source.companion.map(_.toString().stripTrailingSpaces) should be(Some(s"""object DataType {
+        dataType.source.companion.map(_.toString().stripTrailingSpaces) should be(
+          Some(
+            s"""object DataType {
                                                                       |  import io.circe._
                                                                       |  import io.circe.generic.semiauto._
                                                                       |  import io.circe.syntax._
                                                                       |  import scraml.Formats._
                                                                       |  implicit lazy val decoder: Decoder[DataType] = deriveDecoder[DataType]
                                                                       |  implicit lazy val encoder: Encoder[DataType] = deriveEncoder[DataType].mapJsonObject(_ +: "type" -> Json.fromString("data"))
-                                                                      |}""".stripMargin.stripTrailingSpaces))
+                                                                      |}""".stripMargin.stripTrailingSpaces
+          )
+        )
 
         emptyBase.source.source.toString().stripTrailingSpaces should be("sealed trait EmptyBase")
-        emptyBase.source.companion.map(_.toString().stripTrailingSpaces) should be(Some(s"""object EmptyBase {
+        emptyBase.source.companion.map(_.toString().stripTrailingSpaces) should be(
+          Some(
+            s"""object EmptyBase {
                                                                        |  import io.circe.Decoder.Result
                                                                        |  import io.circe._
                                                                        |  implicit lazy val decoder: Decoder[EmptyBase] = new Decoder[EmptyBase] {
@@ -123,7 +135,9 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers with SourceCodeForm
                                                                        |        NoProps.encoder(noprops)
                                                                        |    }
                                                                        |  }
-                                                                       |}""".stripMargin.stripTrailingSpaces))
+                                                                       |}""".stripMargin.stripTrailingSpaces
+          )
+        )
 
         noProps.source.source.toString().stripTrailingSpaces should be(
           s"""case object NoProps extends EmptyBase {
@@ -143,7 +157,9 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers with SourceCodeForm
         )
 
         noSealedBase.source.source.toString().stripTrailingSpaces should be("trait NoSealedBase")
-        noSealedBase.source.companion.map(_.toString().stripTrailingSpaces) should be(Some(s"""object NoSealedBase {
+        noSealedBase.source.companion.map(_.toString().stripTrailingSpaces) should be(
+          Some(
+            s"""object NoSealedBase {
                                                                           |  import io.circe.Decoder.Result
                                                                           |  import io.circe._
                                                                           |  implicit lazy val decoder: Decoder[NoSealedBase] = new Decoder[NoSealedBase] {
@@ -164,25 +180,33 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers with SourceCodeForm
                                                                           |        OtherSub.encoder(othersub)
                                                                           |    }
                                                                           |  }
-                                                                          |}""".stripMargin.stripTrailingSpaces))
+                                                                          |}""".stripMargin.stripTrailingSpaces
+          )
+        )
         mapLike.source.source.toString().stripTrailingSpaces should be(
           s"""final case class MapLike(values: scala.collection.immutable.Map[String, String]) extends NoSealedBase""".stripMargin.stripTrailingSpaces
         )
 
-        mapLike.source.companion.map(_.toString().stripTrailingSpaces) should be(Some(s"""object MapLike {
+        mapLike.source.companion.map(_.toString().stripTrailingSpaces) should be(
+          Some(
+            s"""object MapLike {
                                                                      |  import io.circe._
                                                                      |  import io.circe.syntax._
                                                                      |  import io.circe.generic.semiauto._
                                                                      |  import io.circe.Decoder.Result
                                                                      |  implicit lazy val decoder: Decoder[MapLike] = new Decoder[MapLike] { override def apply(c: HCursor): Result[MapLike] = c.as[scala.collection.immutable.Map[String, String]].map(MapLike.apply) }
                                                                      |  implicit lazy val encoder: Encoder[MapLike] = new Encoder[MapLike] { override def apply(a: MapLike): Json = a.values.asJson }
-                                                                     |}""".stripMargin.stripTrailingSpaces))
+                                                                     |}""".stripMargin.stripTrailingSpaces
+          )
+        )
 
         someEnum.source.source.toString().stripTrailingSpaces should be(
           s"""sealed trait SomeEnum""".stripMargin.stripTrailingSpaces
         )
 
-        someEnum.source.companion.map(_.toString().stripTrailingSpaces) should be(Some(s"""object SomeEnum {
+        someEnum.source.companion.map(_.toString().stripTrailingSpaces) should be(
+          Some(
+            s"""object SomeEnum {
                                                                       |  case object A extends SomeEnum
                                                                       |  case object B extends SomeEnum
                                                                       |  import io.circe._
@@ -198,7 +222,9 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers with SourceCodeForm
                                                                       |    case other =>
                                                                       |      Left(s"invalid enum value: $$other")
                                                                       |  })
-                                                                      |}""".stripMargin.stripTrailingSpaces))
+                                                                      |}""".stripMargin.stripTrailingSpaces
+          )
+        )
 
         otherSub.source.source.toString().stripTrailingSpaces should be(
           """final case class OtherSub(id: String) extends NoSealedBase"""
@@ -217,7 +243,8 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers with SourceCodeForm
           )
         )
 
-        packageObject.source.source.toString.stripTrailingSpaces should be(s"""package object scraml {
+        packageObject.source.source.toString.stripTrailingSpaces should be(
+          s"""package object scraml {
              |  import io.circe.Decoder.Result
              |  import io.circe.{ HCursor, Json, Decoder, Encoder }
              |  implicit def eitherEncoder[A, B](implicit aEncoder: Encoder[A], bEncoder: Encoder[B]): Encoder[Either[A, B]] = new Encoder[Either[A, B]] {
@@ -230,7 +257,8 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers with SourceCodeForm
              |  }
              |  implicit def eitherDecoder[A, B](implicit aDecoder: Decoder[A], bDecoder: Decoder[B]): Decoder[Either[A, B]] = new Decoder[Either[A, B]] { override def apply(c: HCursor): Result[Either[A, B]] = aDecoder.either(bDecoder)(c) }
              |  object Formats { implicit lazy val localDateTime = io.circe.Decoder.decodeLocalDateTime }
-             |}""".stripMargin.stripTrailingSpaces)
+             |}""".stripMargin.stripTrailingSpaces
+        )
 
         intermediateType.source.source.toString().stripTrailingSpaces should be(
           "sealed trait IntermediateType extends BaseType { def id: String }"
@@ -259,14 +287,18 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers with SourceCodeForm
         grandchildType.source.source.toString().stripTrailingSpaces should be(
           "final case class GrandchildType(id: String, foo: Option[String] = None, aDouble: scala.math.BigDecimal, aFloat: scala.math.BigDecimal, anInt: Int, aLong: scala.math.BigInt, customTypeProp: scala.math.BigDecimal, customArrayTypeProp: Vector[scala.math.BigDecimal] = Vector.empty) extends IntermediateType"
         )
-        grandchildType.source.companion.map(_.toString().stripTrailingSpaces) should be(Some(s"""object GrandchildType {
+        grandchildType.source.companion.map(_.toString().stripTrailingSpaces) should be(
+          Some(
+            s"""object GrandchildType {
                                                                             |  import io.circe._
                                                                             |  import io.circe.generic.semiauto._
                                                                             |  import io.circe.syntax._
                                                                             |  import scraml.Formats._
                                                                             |  implicit lazy val decoder: Decoder[GrandchildType] = deriveDecoder[GrandchildType]
                                                                             |  implicit lazy val encoder: Encoder[GrandchildType] = deriveEncoder[GrandchildType].mapJsonObject(_ +: "type" -> Json.fromString("grandchild"))
-                                                                            |}""".stripMargin.stripTrailingSpaces))
+                                                                            |}""".stripMargin.stripTrailingSpaces
+          )
+        )
     }
   }
 
@@ -292,21 +324,23 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers with SourceCodeForm
 
     generated.files match {
       case noDiscBase ::
-        _ ::
-        _ ::
-        baseType ::
-        intermediateType ::
-        grandchildType ::
-        dataType ::
-        emptyBase ::
-        noProps ::
-        noSealedBase ::
-        someEnum ::
-        otherSub ::
-        mapLike ::
-        packageObject ::
-        Nil =>
-        noDiscBase.source.source.toString().stripTrailingSpaces should be("sealed trait NoDiscriminatorBase")
+          _ ::
+          _ ::
+          baseType ::
+          intermediateType ::
+          grandchildType ::
+          dataType ::
+          emptyBase ::
+          noProps ::
+          noSealedBase ::
+          someEnum ::
+          otherSub ::
+          mapLike ::
+          packageObject ::
+          Nil =>
+        noDiscBase.source.source.toString().stripTrailingSpaces should be(
+          "sealed trait NoDiscriminatorBase"
+        )
         noDiscBase.source.companion.map(_.toString().stripTrailingSpaces) should be(
           Some(s"""object NoDiscriminatorBase {
                   |  import io.circe.Decoder.Result
@@ -327,7 +361,9 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers with SourceCodeForm
         baseType.source.source.toString().stripTrailingSpaces should be(
           "sealed trait BaseType extends Any { def id: String }"
         )
-        baseType.source.companion.map(_.toString().stripTrailingSpaces) should be(Some(s"""object BaseType {
+        baseType.source.companion.map(_.toString().stripTrailingSpaces) should be(
+          Some(
+            s"""object BaseType {
                                                                       |  import io.circe.Decoder.Result
                                                                       |  import io.circe._
                                                                       |  implicit lazy val decoder: Decoder[BaseType] = new Decoder[BaseType] {
@@ -348,7 +384,9 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers with SourceCodeForm
                                                                       |        GrandchildType.encoder(grandchildtype)
                                                                       |    }
                                                                       |  }
-                                                                      |}""".stripMargin.stripTrailingSpaces))
+                                                                      |}""".stripMargin.stripTrailingSpaces
+          )
+        )
 
         baseType.source.name should be("BaseType")
         baseType.file.getPath should be("target/scraml-circe-json-test/scraml/datatypes.scala")
@@ -423,12 +461,13 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers with SourceCodeForm
                   |    }
                   |  }
                   |  implicit lazy val encoder: Encoder[DataType] = new Encoder[DataType] { final def apply(instance: DataType): Json = AdditionalProperties.merge(Json.obj("type" -> Json.fromString("data"), "id" -> instance.id.asJson, "foo" -> instance.foo.asJson, "customTypeProp" -> instance.customTypeProp.asJson, "customArrayTypeProp" -> instance.customArrayTypeProp.asJson), instance.additionalProperties) }
-                  |}""".stripMargin.stripTrailingSpaces
-          )
+                  |}""".stripMargin.stripTrailingSpaces)
         )
 
         emptyBase.source.source.toString().stripTrailingSpaces should be("sealed trait EmptyBase")
-        emptyBase.source.companion.map(_.toString().stripTrailingSpaces) should be(Some(s"""object EmptyBase {
+        emptyBase.source.companion.map(_.toString().stripTrailingSpaces) should be(
+          Some(
+            s"""object EmptyBase {
                                                                        |  import io.circe.Decoder.Result
                                                                        |  import io.circe._
                                                                        |  implicit lazy val decoder: Decoder[EmptyBase] = new Decoder[EmptyBase] {
@@ -445,7 +484,9 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers with SourceCodeForm
                                                                        |        NoProps.encoder(noprops)
                                                                        |    }
                                                                        |  }
-                                                                       |}""".stripMargin.stripTrailingSpaces))
+                                                                       |}""".stripMargin.stripTrailingSpaces
+          )
+        )
 
         noProps.source.source.toString().stripTrailingSpaces should be(
           """final case class NoProps()(val additionalProperties: Option[NoProps.AdditionalProperties] = None) extends EmptyBase"""
@@ -514,7 +555,9 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers with SourceCodeForm
         )
 
         noSealedBase.source.source.toString().stripTrailingSpaces should be("trait NoSealedBase")
-        noSealedBase.source.companion.map(_.toString().stripTrailingSpaces) should be(Some(s"""object NoSealedBase {
+        noSealedBase.source.companion.map(_.toString().stripTrailingSpaces) should be(
+          Some(
+            s"""object NoSealedBase {
                                                                           |  import io.circe.Decoder.Result
                                                                           |  import io.circe._
                                                                           |  implicit lazy val decoder: Decoder[NoSealedBase] = new Decoder[NoSealedBase] {
@@ -535,25 +578,33 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers with SourceCodeForm
                                                                           |        OtherSub.encoder(othersub)
                                                                           |    }
                                                                           |  }
-                                                                          |}""".stripMargin.stripTrailingSpaces))
+                                                                          |}""".stripMargin.stripTrailingSpaces
+          )
+        )
         mapLike.source.source.toString().stripTrailingSpaces should be(
           s"""final case class MapLike(values: scala.collection.immutable.Map[String, String]) extends NoSealedBase""".stripMargin.stripTrailingSpaces
         )
 
-        mapLike.source.companion.map(_.toString().stripTrailingSpaces) should be(Some(s"""object MapLike {
+        mapLike.source.companion.map(_.toString().stripTrailingSpaces) should be(
+          Some(
+            s"""object MapLike {
                                                                      |  import io.circe._
                                                                      |  import io.circe.syntax._
                                                                      |  import io.circe.generic.semiauto._
                                                                      |  import io.circe.Decoder.Result
                                                                      |  implicit lazy val decoder: Decoder[MapLike] = new Decoder[MapLike] { override def apply(c: HCursor): Result[MapLike] = c.as[scala.collection.immutable.Map[String, String]].map(MapLike.apply) }
                                                                      |  implicit lazy val encoder: Encoder[MapLike] = new Encoder[MapLike] { override def apply(a: MapLike): Json = a.values.asJson }
-                                                                     |}""".stripMargin.stripTrailingSpaces))
+                                                                     |}""".stripMargin.stripTrailingSpaces
+          )
+        )
 
         someEnum.source.source.toString().stripTrailingSpaces should be(
           s"""sealed trait SomeEnum""".stripMargin.stripTrailingSpaces
         )
 
-        someEnum.source.companion.map(_.toString().stripTrailingSpaces) should be(Some(s"""object SomeEnum {
+        someEnum.source.companion.map(_.toString().stripTrailingSpaces) should be(
+          Some(
+            s"""object SomeEnum {
                                                                       |  case object A extends SomeEnum
                                                                       |  case object B extends SomeEnum
                                                                       |  import io.circe._
@@ -569,7 +620,9 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers with SourceCodeForm
                                                                       |    case other =>
                                                                       |      Left(s"invalid enum value: $$other")
                                                                       |  })
-                                                                      |}""".stripMargin.stripTrailingSpaces))
+                                                                      |}""".stripMargin.stripTrailingSpaces
+          )
+        )
 
         otherSub.source.source.toString().stripTrailingSpaces should be(
           """final case class OtherSub(id: String)(val additionalProperties: Option[OtherSub.AdditionalProperties] = None) extends NoSealedBase"""
@@ -639,7 +692,8 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers with SourceCodeForm
           )
         )
 
-        packageObject.source.source.toString.stripTrailingSpaces should be(s"""package object scraml {
+        packageObject.source.source.toString.stripTrailingSpaces should be(
+          s"""package object scraml {
                                                           |  import io.circe.Decoder.Result
                                                           |  import io.circe.{ HCursor, Json, Decoder, Encoder }
                                                           |  implicit def eitherEncoder[A, B](implicit aEncoder: Encoder[A], bEncoder: Encoder[B]): Encoder[Either[A, B]] = new Encoder[Either[A, B]] {
@@ -652,7 +706,8 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers with SourceCodeForm
                                                           |  }
                                                           |  implicit def eitherDecoder[A, B](implicit aDecoder: Decoder[A], bDecoder: Decoder[B]): Decoder[Either[A, B]] = new Decoder[Either[A, B]] { override def apply(c: HCursor): Result[Either[A, B]] = aDecoder.either(bDecoder)(c) }
                                                           |  object Formats { implicit lazy val localDateTime = io.circe.Decoder.decodeLocalDateTime }
-                                                          |}""".stripMargin.stripTrailingSpaces)
+                                                          |}""".stripMargin.stripTrailingSpaces
+        )
 
         intermediateType.source.source.toString().stripTrailingSpaces should be(
           "sealed trait IntermediateType extends BaseType { def id: String }"
