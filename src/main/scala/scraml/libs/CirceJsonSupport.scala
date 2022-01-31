@@ -314,26 +314,24 @@ class CirceJsonSupport(formats: Map[String, String]) extends LibrarySupport with
           q"""${Lit.String(name)} -> Json.fromString(${Lit.String(value)})"""
       }
 
+      lazy val pairs = context.params.fieldMatchPolicy.namedProperties(objectType).map { property =>
+        val scalaType = context.scalaTypeRefFromProperty(property)
+          .get
+          .scalaType
+
+        q"""
+          ${Lit.String(property.getName)} ->
+            instance.${Term.Name(property.getName)}.asJson
+        """
+      }
+
       val encoderDef: Defn.Val = context match {
         case FieldMatchPolicy(policy) if policy.areAdditionalPropertiesEnabled(objectType)(context) =>
-          val pairs = policy.namedProperties(objectType).map { property =>
-            val scalaType = context.scalaTypeRefFromProperty(property)
-              .get
-              .scalaType
-
-            q"""
-              ${Lit.String(property.getName)} ->
-              Encoder[$scalaType].apply(
-                instance.${Term.Name(property.getName)}
-              )
-            """
-          }
-
           q"""
             implicit lazy val encoder: Encoder[${Type.Name(objectType.getName)}] =
               new Encoder[${Type.Name(objectType.getName)}] {
                 final def apply(instance: ${Type.Name(objectType.getName)}): Json =
-                  AdditionalProperties.addFields(
+                  AdditionalProperties.merge(
                     Json.obj(
                       ..${discriminatorTuple.toList ::: pairs}
                     ),
@@ -358,17 +356,7 @@ class CirceJsonSupport(formats: Map[String, String]) extends LibrarySupport with
               """
           }
 
-        case FieldMatchPolicy(IgnoreExtra(policy)) =>
-          val pairs = policy.namedProperties(objectType).map { property =>
-            q"""(
-              ${Lit.String(property.getName)},
-              Encoder[${Type.Name(property.getType.getName)}](
-                instance.${Term.Name(property.getName)}
-              )
-            )
-            """
-          }
-
+        case FieldMatchPolicy(IgnoreExtra(_)) =>
           q"""
             implicit lazy val encoder: Encoder[${Type.Name(objectType.getName)}] =
               new Encoder[${Type.Name(objectType.getName)}] {
@@ -376,12 +364,19 @@ class CirceJsonSupport(formats: Map[String, String]) extends LibrarySupport with
                     Json.obj(..$pairs)
               }
           """
+
+        case _ =>
+          q"""
+            implicit lazy val encoder: Encoder[${Type.Name(objectType.getName)}] =
+              deriveEncoder[${Type.Name(objectType.getName)}]
+         """
         }
 
       lazy val packageObjectRef = packageTerm(context.params.basePackage)
 
       val importStats: List[Stat] = q"""import io.circe._
           import io.circe.generic.semiauto._
+          import io.circe.syntax._
           """.stats ++ formats.headOption.map(_ => q"import $packageObjectRef.Formats._").toList
 
       importStats ++
@@ -393,58 +388,139 @@ class CirceJsonSupport(formats: Map[String, String]) extends LibrarySupport with
   }
 
   private def deriveJsonClassDecoder(context: ModelGenContext, classDef: Defn.Class): List[Stat] = {
+    import context.objectType
+
     val objectTypeName = Type.Name(context.objectType.getName)
 
-    if (HasRefinements(context, classDef)) {
-      q"""
+    def genFlatmaps(args: List[Term.Param])(
+        genLastProperty: (Lit.String, Term.Name, Type, Term.Name) => Term.Apply
+    ): Term.Apply =
+      args match {
+        case last :: Nil =>
+          val fieldName     = Lit.String(last.name.value)
+          val paramName     = Term.Name("_" + last.name.value)
+          val companionName = Term.Name(classDef.name.value)
+
+          genLastProperty(fieldName, paramName, last.decltpe.get, companionName)
+
+        case head :: tail =>
+          val fieldName = Lit.String(head.name.value)
+          val paramName = Term.Name("_" + head.name.value)
+
+          q"""
+              c.downField($fieldName).as[${head.decltpe.get}].flatMap {
+                $paramName: ${head.decltpe.get} => ${genFlatmaps(tail)(genLastProperty)}
+              }
+           """
+      }
+
+    context match {
+      case FieldMatchPolicy(policy) if HasRefinements(context, classDef) =>
+        q"""
         import io.circe.refined._
 
         implicit lazy val decoder: Decoder[$objectTypeName] =
           new Decoder[$objectTypeName] {
             def apply(c: HCursor): Decoder.Result[$objectTypeName] = {
               ${
-        def genFlatmaps(args: List[Term.Param]): Term.Apply =
-          args match {
-            case last :: Nil =>
-              val fieldName     = Lit.String(last.name.value)
-              val paramName     = Term.Name("_" + last.name.value)
-              val companionName = Term.Name(classDef.name.value)
+          genFlatmaps(classDef.ctor.paramss.flatten) {
+            case (fieldName, paramName, paramType, companionName) =>
+              val maybeAdditional = policy.additionalProperties(objectType)(context).map { property =>
+                  Term.Name("_" + property.propertyName)
+                }.toList
 
               q"""
-                        c.downField($fieldName).as[${last.decltpe.get}].flatMap {
-                          $paramName: ${last.decltpe.get} =>
-                            $companionName.from(..${generatePropertiesCode(classDef) { prop =>
-                Term.Name("_" + prop.name.value) :: Nil
-              }.collect { case t: Term =>
-                t
-              }}).swap.map(
-                              e => DecodingFailure(e.getMessage, Nil)
-                            ).swap
-                        }
-                       """
-
-            case head :: tail =>
-              val fieldName = Lit.String(head.name.value)
-              val paramName = Term.Name("_" + head.name.value)
-
-              q"""
-                        c.downField($fieldName).as[${head.decltpe.get}].flatMap {
-                          $paramName: ${head.decltpe.get} => ${genFlatmaps(tail)}
-                        }
-                     """
-          }
-
-        genFlatmaps(classDef.ctor.paramss.flatten)
-      }
+              c.downField($fieldName).as[$paramType].flatMap {
+                $paramName: $paramType =>
+                  $companionName.from(..${
+                generatePropertiesCode(classDef) { prop =>
+                  Term.Name("_" + prop.name.value) :: Nil
+                }.collect {
+                  case t: Term =>
+                    t
+                } ::: maybeAdditional
+              }).swap.map(e => DecodingFailure(e.getMessage, Nil)).swap
+            }
+           """
           }
         }
+        }
+        }
        """.stats
-    } else
-      List(
+
+      case FieldMatchPolicy(policy) if policy.areAdditionalPropertiesEnabled(context.objectType)(context) =>
+        List(
+          q"""
+          implicit lazy val decoder: Decoder[$objectTypeName] =
+          new Decoder[$objectTypeName] {
+            def apply(c: HCursor): Decoder.Result[$objectTypeName] = {
+              ${
+            genFlatmaps(classDef.ctor.paramss.flatten) {
+              case (fieldName, paramName, paramType, companionName) =>
+                val maybeAdditional = policy.additionalProperties(objectType)(context).map { property =>
+                  Term.Name("_" + property.propertyName)
+                }.toList
+
+                q"""
+              c.downField($fieldName).as[$paramType].flatMap {
+                $paramName: $paramType =>
+                  Right(
+                    $companionName(..${
+                    generatePropertiesCode(classDef) { prop =>
+                      Term.Name("_" + prop.name.value) :: Nil
+                    }.collect {
+                      case t: Term =>
+                        t
+                    }
+                  })(..$maybeAdditional)
+                )
+            }
+           """
+            }
+          }
+        }
+        }
+       """
+        )
+
+      case FieldMatchPolicy(IgnoreExtra(_)) =>
+        List(
         q"""
+        implicit lazy val decoder: Decoder[$objectTypeName] =
+          new Decoder[$objectTypeName] {
+            def apply(c: HCursor): Decoder.Result[$objectTypeName] = {
+              ${
+          genFlatmaps(classDef.ctor.paramss.flatten) {
+            case (fieldName, paramName, paramType, companionName) =>
+              q"""
+              c.downField($fieldName).as[$paramType].flatMap {
+                $paramName: $paramType =>
+                  Right(
+                    $companionName(..${
+                  generatePropertiesCode(classDef) { prop =>
+                    Term.Name("_" + prop.name.value) :: Nil
+                  }.collect {
+                    case t: Term =>
+                      t
+                  }
+                })
+              )
+            }
+           """
+          }
+        }
+        }
+        }
+       """
+        )
+
+      case _ =>
+        List(
+          q"""
           implicit lazy val decoder: Decoder[$objectTypeName] = deriveDecoder[$objectTypeName]
          """
-      )
+        )
+    }
   }
 
   private def mapTypeCodec(context: ModelGenContext): List[Stat] =
@@ -515,11 +591,11 @@ class CirceJsonSupport(formats: Map[String, String]) extends LibrarySupport with
               }
             }
 
-            def addFields(into: Json, oap: Option[AdditionalProperties]): Json = {
-              oap.fold(into)(ap => Json.fromFields(ap.underlying).deepMerge(into))
+            def merge(into: Json, oap: Option[AdditionalProperties]): Json = {
+              oap.fold(into)(merge(into, _))
             }
 
-            def addFields(into: Json, ap: AdditionalProperties): Json = {
+            def merge(into: Json, ap: AdditionalProperties): Json = {
               Json.fromFields(ap.underlying).deepMerge(into)
             }
            """.stats
@@ -536,7 +612,7 @@ class CirceJsonSupport(formats: Map[String, String]) extends LibrarySupport with
       companion = companion.map(
         appendObjectStats(
           _,
-          if (context.isMapType.isDefined) mapTypeCodec(context) else deriveJson(context, classDef)
+          context.isMapType.fold(deriveJson(context, classDef))(_ => mapTypeCodec(context))
         )
       )
     )

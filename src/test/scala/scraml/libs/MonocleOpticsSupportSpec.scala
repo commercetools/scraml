@@ -3,11 +3,11 @@ package scraml.libs
 import java.io.File
 
 import cats.effect.unsafe.implicits.global
-import org.scalatest.diagrams.Diagrams
+import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import scraml.{DefaultModelGen, DefaultTypes, FieldMatchPolicy, ModelGenParams, ModelGenRunner}
 
-final class MonocleOpticsSupportSpec extends AnyWordSpec with Diagrams {
+final class MonocleOpticsSupportSpec extends AnyWordSpec with Matchers with SourceCodeFormatting {
   "MonocleOpticsSupport" must {
     "generate an 'Optics' object within the companion for a case class" in {
       val params = ModelGenParams(
@@ -23,17 +23,17 @@ final class MonocleOpticsSupportSpec extends AnyWordSpec with Diagrams {
 
       val generated = ModelGenRunner.run(DefaultModelGen)(params).unsafeRunSync()
 
-      assert(generated.files.nonEmpty)
+      generated.files.nonEmpty should be(true)
 
       val theCompanion = generated.files
         .find(_.source.name == "DataType")
         .flatMap(_.source.companion)
         .map(_.toString())
 
-      assert(
-        theCompanion.contains(
+      theCompanion.map(_.toString().stripTrailingSpaces) should be(
+        Some(
           """object DataType {
-            |  object Optics {
+            |  trait Optics {
             |    import monocle.Lens
             |    val id: Lens[DataType, String] = Lens[DataType, String](_.id) {
             |      a => s => s.copy(id = a)
@@ -48,6 +48,7 @@ final class MonocleOpticsSupportSpec extends AnyWordSpec with Diagrams {
             |      a => s => s.copy(customArrayTypeProp = a)
             |    }
             |  }
+            |  object Optics extends Optics
             |}""".stripMargin
         )
       )
@@ -67,20 +68,21 @@ final class MonocleOpticsSupportSpec extends AnyWordSpec with Diagrams {
 
       val generated = ModelGenRunner.run(DefaultModelGen)(params).unsafeRunSync()
 
-      assert(generated.files.nonEmpty)
+      generated.files.nonEmpty should be(true)
 
       val theCompanion = generated.files
         .find(_.source.name == "BaseType")
         .flatMap(_.source.companion)
         .map(_.toString())
 
-      assert(
-        theCompanion.contains(
+      theCompanion.map(_.toString().stripTrailingSpaces) should be(
+        Some(
           """object BaseType {
-            |  object Optics {
+            |  trait Optics {
             |    import monocle.Getter
             |    val id: Getter[BaseType, String] = Getter[BaseType, String](_.id)
             |  }
+            |  object Optics extends Optics
             |}""".stripMargin
         )
       )

@@ -287,11 +287,13 @@ trait LibrarySupport {
   final protected def generatePropertiesCode(defn: Defn.Class)(
       f: Term.Param => List[Stat]
   ): List[Stat] =
-    defn.ctor.paramss.flatMap(_.flatMap(f))
+    defn.ctor.paramss.headOption.fold(List.empty[Stat]) {
+      _.flatMap(f)
+    }
 
-  final protected def generatePropertiesCode(
-      defn: Defn.Trait
-  )(f: Decl.Def => List[Stat]): List[Stat] =
+  final protected def generatePropertiesCode(defn: Defn.Trait)(
+    f: Decl.Def => List[Stat]
+  ): List[Stat] =
     defn.templ.stats
       .collect {
         case prop: Decl.Def if prop.paramss.isEmpty => prop

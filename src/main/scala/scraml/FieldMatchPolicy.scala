@@ -14,10 +14,7 @@ sealed trait FieldMatchPolicy {
 
   def areAdditionalPropertiesEnabled(objectType: ObjectType)(
     implicit context: ModelGenContext
-  ): Boolean =
-    ModelGen.isMapType(objectType, context.anyTypeName).isEmpty &&
-      Option(objectType.getAdditionalProperties).map(_.booleanValue())
-        .getOrElse(true)
+  ): Boolean
 
   def isPolicyFor(objectType: ObjectType): Boolean
 
@@ -35,6 +32,14 @@ sealed trait FieldMatchPolicy {
       .filter(isPatternProperty)
       .toList
 
+  protected def hasDisplayName(objectType: ObjectType): Boolean =
+    objectType.getDisplayName ne null
+
+  protected def isNotMapType(objectType: ObjectType)(
+      implicit context: ModelGenContext
+  ): Boolean =
+    ModelGen.isMapType(objectType, context.anyTypeName).isEmpty
+
   private def isPatternProperty(property: Property): Boolean =
     property.getName == "//" || Option(property.getPattern).isDefined
 }
@@ -50,13 +55,42 @@ object FieldMatchPolicy {
         .exists(excluding.contains)
   }
 
+  final case class Default() extends FieldMatchPolicy {
+    override def areAdditionalPropertiesEnabled(objectType: ObjectType)(
+      implicit context: ModelGenContext
+    ): Boolean =
+      hasDisplayName(objectType) &&
+      isNotMapType(objectType) &&
+        Option(objectType.getAdditionalProperties).map(_.booleanValue())
+          .getOrElse(true)
+
+    override def isPolicyFor(objectType: ObjectType): Boolean = true
+
+    override def isSingleton(objectType: ObjectType)(
+      implicit context: ModelGenContext
+    ): Boolean =
+      !areAdditionalPropertiesEnabled(objectType) && namedProperties(objectType).isEmpty
+  }
+
+  object Default {
+    def unapply(policy: FieldMatchPolicy): Option[Default] =
+      policy match {
+        case default: Default =>
+          Some(default)
+        case _ =>
+          None
+      }
+  }
+
   final case class Exact(
     override val excluding: Set[String] = Set.empty
   ) extends FieldMatchPolicy with SetBasedPolicy {
     override def areAdditionalPropertiesEnabled(objectType: ObjectType)(
       implicit context: ModelGenContext
     ): Boolean =
-      super.areAdditionalPropertiesEnabled(objectType) && !patternProperties(objectType).isEmpty
+      hasDisplayName(objectType) &&
+        isNotMapType(objectType) &&
+        !patternProperties(objectType).isEmpty
 
     override def isSingleton(objectType: ObjectType)(
       implicit context: ModelGenContext
@@ -78,12 +112,13 @@ object FieldMatchPolicy {
     extends FieldMatchPolicy with SetBasedPolicy {
     override def areAdditionalPropertiesEnabled(objectType: ObjectType)(
         implicit context: ModelGenContext
-    ): Boolean = false
+    ): Boolean =
+      false
 
     override def isSingleton(objectType: ObjectType)(
       implicit context: ModelGenContext
     ): Boolean =
-      namedProperties(objectType).isEmpty
+      isNotMapType(objectType) && namedProperties(objectType).isEmpty
   }
 
   object IgnoreExtra {
@@ -99,6 +134,12 @@ object FieldMatchPolicy {
   final case class KeepExtra(
     override val excluding: Set[String] = Set.empty
   ) extends FieldMatchPolicy with SetBasedPolicy {
+    override def areAdditionalPropertiesEnabled(objectType: ObjectType)(
+      implicit context: ModelGenContext
+    ): Boolean =
+      hasDisplayName(objectType) &&
+      isNotMapType(objectType)
+
     override def isSingleton(objectType: ObjectType)(
       implicit context: ModelGenContext
     ): Boolean = false
@@ -116,7 +157,7 @@ object FieldMatchPolicy {
 
   final case class MatchInOrder(policies: Seq[FieldMatchPolicy]) extends FieldMatchPolicy {
     override def isPolicyFor(objectType: ObjectType): Boolean =
-      policies.find(_.isPolicyFor(objectType)).isDefined
+      policies.exists(_.isPolicyFor(objectType))
 
     override def isSingleton(objectType: ObjectType)(
       implicit context: ModelGenContext
@@ -130,10 +171,10 @@ object FieldMatchPolicy {
 
     private def policyFor(objectType: ObjectType): FieldMatchPolicy =
       policies.find(_.isPolicyFor(objectType))
-        .getOrElse(
-          throw new RuntimeException("no field match policy found for: " + objectType.getName)
-        )
+        .getOrElse(Default())
   }
+
+  private val default = Default()
 
   def unapply(context: ModelGenContext): Option[FieldMatchPolicy] =
     context.params.fieldMatchPolicy match {
@@ -146,6 +187,6 @@ object FieldMatchPolicy {
       case keep: KeepExtra if keep.isPolicyFor(context.objectType) =>
         Some(keep)
       case _ =>
-        None
+        Some(default)
     }
 }

@@ -98,7 +98,7 @@ class DefaultModelGenSpec extends AnyFlatSpec with Matchers {
     generated.files.toList match {
       case someMapType :: someMapTypeOpt :: _ :: Nil =>
         someMapType.source.source.toString() should be(
-          "final case class SomeMapType()(additionalProperties: Option[SomeMapType.AdditionalProperties] = None)"
+          "final case class SomeMapType()(val additionalProperties: Option[SomeMapType.AdditionalProperties] = None)"
         )
 
         someMapType.source.companion.map(_.toString()) should be(
@@ -129,7 +129,7 @@ class DefaultModelGenSpec extends AnyFlatSpec with Matchers {
         )
 
         someMapTypeOpt.source.source.toString() should be(
-          "final case class SomeMapTypeOpt()(additionalProperties: Option[SomeMapTypeOpt.AdditionalProperties] = None)"
+          "final case class SomeMapTypeOpt()(val additionalProperties: Option[SomeMapTypeOpt.AdditionalProperties] = None)"
         )
 
         someMapTypeOpt.source.companion.map(_.toString()) should be(

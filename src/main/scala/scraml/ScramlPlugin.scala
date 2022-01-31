@@ -32,7 +32,7 @@ object ScramlPlugin extends AutoPlugin {
   override lazy val globalSettings: Seq[Setting[_]] = Seq(
     ramlFile             := None,
     ramlDefinitions      := Seq.empty,
-    ramlFieldMatchPolicy := FieldMatchPolicy.KeepExtra(),
+    ramlFieldMatchPolicy := FieldMatchPolicy.Default(),
     basePackageName      := "scraml",
     defaultTypes         := DefaultTypes(),
     librarySupport       := Set.empty,
