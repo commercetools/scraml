@@ -110,7 +110,7 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers with SourceCodeForm
                                                                       |  import io.circe.syntax._
                                                                       |  import scraml.Formats._
                                                                       |  implicit lazy val decoder: Decoder[DataType] = deriveDecoder[DataType]
-                                                                      |  implicit lazy val encoder: Encoder[DataType] = deriveEncoder[DataType].mapJsonObject(_ +: "type" -> Json.fromString("data"))
+																	  |  implicit lazy val encoder: Encoder[DataType] = deriveEncoder[DataType].mapJsonObject(_.+:("type" -> Json.fromString("data")))
                                                                       |}""".stripMargin.stripTrailingSpaces
           )
         )
@@ -238,7 +238,7 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers with SourceCodeForm
             |  import io.circe.syntax._
             |  import scraml.Formats._
             |  implicit lazy val decoder: Decoder[OtherSub] = deriveDecoder[OtherSub]
-            |  implicit lazy val encoder: Encoder[OtherSub] = deriveEncoder[OtherSub].mapJsonObject(_ +: "typeId" -> Json.fromString("other-sub"))
+			|  implicit lazy val encoder: Encoder[OtherSub] = deriveEncoder[OtherSub].mapJsonObject(_.+:("typeId" -> Json.fromString("other-sub")))
             |}""".stripMargin.stripTrailingSpaces
           )
         )
@@ -295,7 +295,7 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers with SourceCodeForm
                                                                             |  import io.circe.syntax._
                                                                             |  import scraml.Formats._
                                                                             |  implicit lazy val decoder: Decoder[GrandchildType] = deriveDecoder[GrandchildType]
-                                                                            |  implicit lazy val encoder: Encoder[GrandchildType] = deriveEncoder[GrandchildType].mapJsonObject(_ +: "type" -> Json.fromString("grandchild"))
+																			|  implicit lazy val encoder: Encoder[GrandchildType] = deriveEncoder[GrandchildType].mapJsonObject(_.+:("type" -> Json.fromString("grandchild")))
                                                                             |}""".stripMargin.stripTrailingSpaces
           )
         )

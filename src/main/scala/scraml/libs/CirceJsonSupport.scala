@@ -348,7 +348,7 @@ class CirceJsonSupport(formats: Map[String, String]) extends LibrarySupport with
               q"""
                implicit lazy val encoder: Encoder[${Type.Name(objectType.getName)}] =
                  deriveEncoder[${Type.Name(objectType.getName)}].mapJsonObject(
-                   _ +: $tuple
+                   _.+:($tuple)
                )
               """
             case None =>
