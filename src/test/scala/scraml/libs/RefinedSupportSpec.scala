@@ -68,7 +68,7 @@ class RefinedSupportSpec extends AnyWordSpec with Matchers with SourceCodeFormat
             |      }
             |    }
             |  }
-			|  implicit lazy val encoder: Encoder[DataType] = deriveEncoder[DataType].mapJsonObject(_.+:("type" -> Json.fromString("data")))
+            |  implicit lazy val encoder: Encoder[DataType] = deriveEncoder[DataType].mapJsonObject(_.+:("type" -> Json.fromString("data")))
             |  import eu.timepit.refined.api.Refined
             |  import eu.timepit.refined.boolean.And
             |  import eu.timepit.refined.collection._
@@ -666,7 +666,7 @@ class RefinedSupportSpec extends AnyWordSpec with Matchers with SourceCodeFormat
             |      }
             |    }
             |  }
-			|  implicit lazy val encoder: Encoder[ChildWithFacetsType] = deriveEncoder[ChildWithFacetsType].mapJsonObject(_.+:("type" -> Json.fromString("child")))
+            |  implicit lazy val encoder: Encoder[ChildWithFacetsType] = deriveEncoder[ChildWithFacetsType].mapJsonObject(_.+:("type" -> Json.fromString("child")))
             |  import eu.timepit.refined.api.Refined
             |  import eu.timepit.refined.boolean.And
             |  import eu.timepit.refined.collection._
@@ -760,7 +760,7 @@ class RefinedSupportSpec extends AnyWordSpec with Matchers with SourceCodeFormat
             |      }
             |    }
             |  }
-			|  implicit lazy val encoder: Encoder[ChildOverridesAll] = deriveEncoder[ChildOverridesAll].mapJsonObject(_.+:("type" -> Json.fromString("overrides")))
+            |  implicit lazy val encoder: Encoder[ChildOverridesAll] = deriveEncoder[ChildOverridesAll].mapJsonObject(_.+:("type" -> Json.fromString("overrides")))
             |  import eu.timepit.refined.api.Refined
             |  import eu.timepit.refined.boolean.And
             |  import eu.timepit.refined.collection._
@@ -894,7 +894,7 @@ class RefinedSupportSpec extends AnyWordSpec with Matchers with SourceCodeFormat
             |      }
             |    }
             |  }
-			|  implicit lazy val encoder: Encoder[ChildInheritsAll] = deriveEncoder[ChildInheritsAll].mapJsonObject(_.+:("type" -> Json.fromString("inherited")))
+            |  implicit lazy val encoder: Encoder[ChildInheritsAll] = deriveEncoder[ChildInheritsAll].mapJsonObject(_.+:("type" -> Json.fromString("inherited")))
             |  import eu.timepit.refined.api.Refined
             |  import eu.timepit.refined.boolean.And
             |  import eu.timepit.refined.collection._

@@ -10,6 +10,10 @@ SCRAML allows to generate supporting types for a number of libraries:
 
 @@snip [build.sbt](../../../src/sbt-test/sbt-scraml/json/build.sbt) {}
 
+## monocle
+
+@@snip [build.sbt](../../../src/sbt-test/sbt-scraml/cats/build.sbt) {}
+
 ## refined (with cats and circe)
 
 @@snip [build.sbt](../../../src/sbt-test/sbt-scraml/refined/build.sbt) {}
