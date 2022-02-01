@@ -10,6 +10,19 @@ object RefinedTest extends App {
 
 
   def checkNoAdditional(): Unit = {
+    /// Because `SomeMapType` had explicit pattern properties and nothing else,
+    /// all of its properties are in `SomeMapType.AdditionalProperties`.
+    val someMapType = SomeMapType()(
+      Some(
+        SomeMapType.AdditionalProperties(
+          Map(
+            "a" -> Json.fromInt(1),
+            "b" -> Json.fromString("two")
+          )
+        )
+      )
+    )
+
     val noPropsWithout = NoProps.from()
     val dataTypeWithout = DataType.from(
       id = "valid-id",
@@ -23,6 +36,11 @@ object RefinedTest extends App {
 
     assert(noPropsWithout.isRight)
     assert(dataTypeWithout.isRight)
+    assert(
+      parse(someMapType.asJson.toString) == Right(someMapType.asJson),
+      s"JSON did not round trip:\nparse: ${parse(someMapType.asJson.toString)}"
+    )
+
     assert(
       noPropsWithout.flatMap(np => parse(np.asJson.toString)) == noPropsWithout.map(_.asJson),
       s"JSON did not round trip:\nparse: ${noPropsWithout.flatMap(np => parse(np.asJson.toString))}"

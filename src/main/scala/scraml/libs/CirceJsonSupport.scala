@@ -325,6 +325,10 @@ class CirceJsonSupport(formats: Map[String, String]) extends LibrarySupport with
       val encoderDef: Defn.Val = context match {
         case FieldMatchPolicy(policy)
             if policy.areAdditionalPropertiesEnabled(objectType)(context) =>
+          val additionalPropName = policy
+            .additionalProperties(objectType)(context)
+            .map(ap => Term.Name(ap.propertyName))
+
           q"""
             implicit lazy val encoder: Encoder[${Type.Name(objectType.getName)}] =
               new Encoder[${Type.Name(objectType.getName)}] {
@@ -333,7 +337,7 @@ class CirceJsonSupport(formats: Map[String, String]) extends LibrarySupport with
                     Json.obj(
                       ..${discriminatorTuple.toList ::: pairs}
                     ),
-                    instance.additionalProperties
+                    instance.${additionalPropName.get}
                   )
               }
            """

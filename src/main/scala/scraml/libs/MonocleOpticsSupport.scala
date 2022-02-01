@@ -47,16 +47,17 @@ object MonocleOpticsSupport extends LibrarySupport {
 
   private def generateOptics(classDef: Defn.Class)(implicit
       context: ModelGenContext
-  ): List[Stat] =
+  ): List[Stat] = {
+    val classType = classDef.name
+
     List[Stat](
       q"""
       trait Optics {
         import monocle.Lens
 
         ..${generatePropertiesCode(classDef) { prop =>
-        val classType = classDef.name
-        val propType  = prop.decltpe.get
-        val propName  = Term.Name(prop.name.value)
+        val propType = prop.decltpe.get
+        val propName = Term.Name(prop.name.value)
 
         context.params.fieldMatchPolicy.additionalProperties(context.objectType) match {
           case Some(descriptor) =>
@@ -83,8 +84,23 @@ object MonocleOpticsSupport extends LibrarySupport {
             )
         }
       }}
+
+      ..${context.params.fieldMatchPolicy
+        .additionalProperties(context.objectType)
+        .map { ap =>
+          val propName = Term.Name(ap.propertyName)
+
+          q"""
+                val ${Pat.Var(propName)}: Lens[$classType, Option[${ap.propertyType}]] =
+                  Lens[$classType, Option[${ap.propertyType}]](_.$propName) {
+                    a => s => s.copy()($propName = a)
+                  }
+           """
+        }
+        .toList}
       }
       """,
       q"""object Optics extends Optics"""
     )
+  }
 }

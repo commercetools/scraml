@@ -17,6 +17,8 @@ protected[scraml] final case class AdditionalProperties(
   import context.params.fieldMatchPolicy
 
   val propertyName = "additionalProperties"
+  val propertyType =
+    typeFromName(s"${objectType.getDisplayName.getValue}.AdditionalProperties")
 
   private val spec = MapTypeSpec(
     typeFromName(context.params.defaultTypes.map),
@@ -69,15 +71,14 @@ protected[scraml] final case class AdditionalProperties(
      """
 
   def declareOwnerProperty(): Term.Param = {
-    val tpe = typeFromName(s"${objectType.getDisplayName.getValue}.AdditionalProperties")
     val maybeOptional =
       if (spec.optional)
         Type.Apply(
           Type.Name("Option"),
-          tpe :: Nil
+          propertyType :: Nil
         )
       else
-        tpe
+        propertyType
 
     Term.Param(
       Mod.ValParam() :: Nil,

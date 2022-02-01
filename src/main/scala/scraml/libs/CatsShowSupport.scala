@@ -22,7 +22,9 @@ object CatsShowSupport extends LibrarySupport {
       case _ => super.modifyTrait(traitDef, companion)(context)
     }
 
-  private def generateShow(classDef: Defn.Class): List[Stat] =
+  private def generateShow(classDef: Defn.Class)(implicit
+      context: ModelGenContext
+  ): List[Stat] =
     q"""
       import cats.Show
       implicit val ${Pat
@@ -42,6 +44,18 @@ object CatsShowSupport extends LibrarySupport {
       )
     }}
 
+          ..${context.params.fieldMatchPolicy
+      .additionalProperties(context.objectType)(context)
+      .map { ap =>
+        List(
+          q"""buffer.append('\t')""",
+          q"""buffer.append(${ap.propertyName})""",
+          q"""buffer.append(": ")""",
+          q"""buffer.append(instance.${Term.Name(ap.propertyName)})""",
+          q"""buffer.append('\n')"""
+        )
+      }
+      .getOrElse(Nil)}
           buffer.toString()
       }""".stats
 
