@@ -13,7 +13,7 @@ inThisBuild(List(
     )
   ),
   githubWorkflowJavaVersions := Seq(
-    JavaSpec(JavaSpec.Distribution.Adopt, "adopt@1.15.0-2")
+    JavaSpec(JavaSpec.Distribution.Adopt, "1.15.0-2")
   ),
   githubWorkflowPublish := Seq(
     WorkflowStep.Sbt(
