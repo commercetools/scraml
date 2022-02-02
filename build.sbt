@@ -1,3 +1,5 @@
+import sbtghactions.JavaSpec
+
 inThisBuild(List(
   organization := "com.commercetools",
   homepage := Some(url("https://github.com/commercetools/scraml")),
@@ -9,6 +11,9 @@ inThisBuild(List(
       "priceless-backend@commercetools.com",
       url("https://commercetools.com")
     )
+  ),
+  githubWorkflowJavaVersions := Seq(
+    JavaSpec(JavaSpec.Distribution.Adopt, "adopt@1.15.0-2")
   ),
   githubWorkflowPublish := Seq(
     WorkflowStep.Sbt(
