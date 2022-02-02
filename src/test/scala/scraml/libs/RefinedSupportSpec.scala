@@ -442,19 +442,17 @@ class RefinedSupportSpec extends AnyWordSpec with Matchers with SourceCodeFormat
             |    val allowedNames: Seq[Regex] = Seq()
             |    import io.circe._
             |    import io.circe.generic.semiauto._
-            |    implicit lazy val decoder: Decoder[AdditionalProperties] = new Decoder[AdditionalProperties] {
-            |      final def apply(c: HCursor): Decoder.Result[AdditionalProperties] = {
-            |        val parent = c.up
-            |        val allKeys = parent.keys.fold(Set.empty[String])(_.toSet)
-            |        val builder = scala.collection.immutable.Map.newBuilder[String, Json]
-            |        val it = allKeys.filterNot(propertyNames.contains).iterator
-            |        val entries = it.foldLeft(builder)({
-            |          case (accum, key) =>
-            |            parent.field(key).focus.fold(accum) {
-            |              v => accum += key -> v
-            |            }
-            |        })
-            |        Right(AdditionalProperties(builder.result()))
+            |    implicit lazy val decoder: Decoder[Option[AdditionalProperties]] = new Decoder[Option[AdditionalProperties]] {
+            |      final def apply(c: HCursor): Decoder.Result[Option[AdditionalProperties]] = {
+            |        val allKeys = c.keys.fold(Set.empty[String])(_.toSet)
+            |        Right(Option(allKeys.filterNot(propertyNames.contains)).filterNot(_.isEmpty).map {
+            |          _.foldLeft(scala.collection.immutable.Map.newBuilder[String, Json])({
+            |            case (accum, key) =>
+            |              c.downField(key).focus.fold(accum) {
+            |                v => accum += key -> v
+            |              }
+            |          })
+            |        }.map(b => AdditionalProperties(b.result())))
             |      }
             |    }
             |    def merge(into: Json, oap: Option[AdditionalProperties]): Json = {
@@ -478,7 +476,7 @@ class RefinedSupportSpec extends AnyWordSpec with Matchers with SourceCodeFormat
             |                c.downField("customNumberProp").as[scala.math.BigDecimal].flatMap { (_customNumberProp: scala.math.BigDecimal) =>
             |                  c.downField("customArrayTypeProp").as[Vector[scala.math.BigDecimal]].flatMap { (_customArrayTypeProp: Vector[scala.math.BigDecimal]) =>
             |                    c.downField("optionalStringArray").as[Option[scala.collection.immutable.List[String]]].flatMap { (_optionalStringArray: Option[scala.collection.immutable.List[String]]) =>
-            |                      c.downField("additionalProperties").as[Option[DataType.AdditionalProperties]].flatMap {
+            |                      AdditionalProperties.decoder(c).flatMap {
             |                        (_additionalProperties: Option[DataType.AdditionalProperties]) => DataType.from(_id, _optionalCustomArrayTypeProp, _foo, _bar, _numberProp, _customNumberProp, _customArrayTypeProp, _optionalStringArray, _additionalProperties).swap.map(e => DecodingFailure(e.getMessage, Nil)).swap
             |                      }
             |                    }

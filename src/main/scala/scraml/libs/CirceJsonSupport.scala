@@ -416,8 +416,8 @@ class CirceJsonSupport(formats: Map[String, String]) extends LibrarySupport with
            """
       }
 
-    context match {
-      case FieldMatchPolicy(policy) if HasRefinements(context, classDef) =>
+    (context, context.params.fieldMatchPolicy.additionalProperties(objectType)(context)) match {
+      case (FieldMatchPolicy(_), Some(additional)) if HasRefinements(context, classDef) =>
         q"""
         import io.circe.refined._
 
@@ -426,21 +426,18 @@ class CirceJsonSupport(formats: Map[String, String]) extends LibrarySupport with
             def apply(c: HCursor): Decoder.Result[$objectTypeName] = {
               ${genFlatmaps(classDef.ctor.paramss.flatten) {
           case (fieldName, paramName, paramType, companionName) =>
-            val maybeAdditional = policy
-              .additionalProperties(objectType)(context)
-              .map { property =>
-                Term.Name("_" + property.propertyName)
-              }
-              .toList
+            val additionalParamName = Term.Name("_" + additional.propertyName)
 
             q"""
-              c.downField($fieldName).as[$paramType].flatMap {
-                $paramName: $paramType =>
-                  $companionName.from(..${generatePropertiesCode(classDef) { prop =>
+                AdditionalProperties.decoder(c).flatMap {
+                  $additionalParamName: Option[${additional.propertyType}] =>
+                    $companionName.from( ..${generatePropertiesCode(classDef) { prop =>
               Term.Name("_" + prop.name.value) :: Nil
             }.collect { case t: Term =>
               t
-            } ::: maybeAdditional}).swap.map(e => DecodingFailure(e.getMessage, Nil)).swap
+            }},
+            $additionalParamName
+            ).swap.map(e => DecodingFailure(e.getMessage, Nil)).swap
             }
            """
         }}
@@ -448,8 +445,31 @@ class CirceJsonSupport(formats: Map[String, String]) extends LibrarySupport with
         }
        """.stats
 
-      case FieldMatchPolicy(policy)
-          if policy.areAdditionalPropertiesEnabled(context.objectType)(context) =>
+      case (FieldMatchPolicy(_), None) if HasRefinements(context, classDef) =>
+        q"""
+        import io.circe.refined._
+
+        implicit lazy val decoder: Decoder[$objectTypeName] =
+          new Decoder[$objectTypeName] {
+            def apply(c: HCursor): Decoder.Result[$objectTypeName] = {
+              ${genFlatmaps(classDef.ctor.paramss.flatten) {
+          case (fieldName, paramName, paramType, companionName) =>
+            q"""
+              c.downField($fieldName).as[$paramType].flatMap {
+                $paramName: $paramType =>
+                  $companionName.from(..${generatePropertiesCode(classDef) { prop =>
+              Term.Name("_" + prop.name.value) :: Nil
+            }.collect { case t: Term =>
+              t
+            }}).swap.map(e => DecodingFailure(e.getMessage, Nil)).swap
+            }
+           """
+        }}
+        }
+        }
+       """.stats
+
+      case (FieldMatchPolicy(_), Some(additional)) =>
         List(
           q"""
           implicit lazy val decoder: Decoder[$objectTypeName] =
@@ -457,22 +477,18 @@ class CirceJsonSupport(formats: Map[String, String]) extends LibrarySupport with
             def apply(c: HCursor): Decoder.Result[$objectTypeName] = {
               ${genFlatmaps(classDef.ctor.paramss.flatten) {
             case (fieldName, paramName, paramType, companionName) =>
-              val maybeAdditional = policy
-                .additionalProperties(objectType)(context)
-                .map { property =>
-                  Term.Name("_" + property.propertyName)
-                }
-                .toList
+              val additionalParamName = Term.Name("_" + additional.propertyName)
 
               q"""
-              c.downField($fieldName).as[$paramType].flatMap {
-                $paramName: $paramType =>
+                AdditionalProperties.decoder(c).flatMap {
+                  $additionalParamName: Option[${additional.propertyType}] =>
                   Right(
                     $companionName(..${generatePropertiesCode(classDef) { prop =>
                 Term.Name("_" + prop.name.value) :: Nil
               }.collect { case t: Term =>
                 t
-              }})(..$maybeAdditional)
+              }}
+              )($additionalParamName)
                 )
             }
            """
@@ -482,7 +498,7 @@ class CirceJsonSupport(formats: Map[String, String]) extends LibrarySupport with
        """
         )
 
-      case FieldMatchPolicy(IgnoreExtra(_)) =>
+      case (FieldMatchPolicy(IgnoreExtra(_)), None) =>
         List(
           q"""
         implicit lazy val decoder: Decoder[$objectTypeName] =
@@ -568,20 +584,23 @@ class CirceJsonSupport(formats: Map[String, String]) extends LibrarySupport with
             import io.circe._
             import io.circe.generic.semiauto._
 
-            implicit lazy val decoder: Decoder[${classDef.name}] = new Decoder[${classDef.name}] {
-              final def apply(c: HCursor): Decoder.Result[${classDef.name}] = {
-                val parent = c.up
-                val allKeys = parent.keys.fold(Set.empty[String])(_.toSet)
-                val builder = $mapType.newBuilder[String, Json]
-                val it = allKeys.filterNot(propertyNames.contains).iterator
-                val entries = it.foldLeft(builder) {
-                  case (accum, key) =>
-                    parent.field(key).focus.fold(accum) { v =>
-                      accum += (key -> v)
-                    }
-                }
+            implicit lazy val decoder: Decoder[Option[${classDef.name}]] = new Decoder[Option[${classDef.name}]] {
+              final def apply(c: HCursor): Decoder.Result[Option[${classDef.name}]] = {
+                val allKeys = c.keys.fold(Set.empty[String])(_.toSet)
 
-                Right(AdditionalProperties(builder.result()))
+                Right(
+                  Option(allKeys.filterNot(propertyNames.contains))
+                    .filterNot(_.isEmpty)
+                    .map {
+                      _.foldLeft($mapType.newBuilder[String, Json]) {
+                        case (accum, key) =>
+                          c.downField(key).focus.fold(accum) {
+                            v => accum += (key -> v)
+                          }
+                      }
+                    }
+                    .map(b => AdditionalProperties(b.result()))
+                )
               }
             }
 

@@ -362,30 +362,28 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers with SourceCodeForm
           "sealed trait BaseType extends Any { def id: String }"
         )
         baseType.source.companion.map(_.toString().stripTrailingSpaces) should be(
-          Some(
-            s"""object BaseType {
-                                                                      |  import io.circe.Decoder.Result
-                                                                      |  import io.circe._
-                                                                      |  implicit lazy val decoder: Decoder[BaseType] = new Decoder[BaseType] {
-                                                                      |    override def apply(c: HCursor): Result[BaseType] = c.downField("type").as[String] match {
-                                                                      |      case Right("data") =>
-                                                                      |        DataType.decoder(c)
-                                                                      |      case Right("grandchild") =>
-                                                                      |        GrandchildType.decoder(c)
-                                                                      |      case other =>
-                                                                      |        Left(DecodingFailure(s"unknown discriminator: $$other", c.history))
-                                                                      |    }
-                                                                      |  }
-                                                                      |  implicit lazy val encoder: Encoder[BaseType] = new Encoder[BaseType] {
-                                                                      |    override def apply(basetype: BaseType): Json = basetype match {
-                                                                      |      case datatype: DataType =>
-                                                                      |        DataType.encoder(datatype)
-                                                                      |      case grandchildtype: GrandchildType =>
-                                                                      |        GrandchildType.encoder(grandchildtype)
-                                                                      |    }
-                                                                      |  }
-                                                                      |}""".stripMargin.stripTrailingSpaces
-          )
+          Some("""object BaseType {
+               |  import io.circe.Decoder.Result
+               |  import io.circe._
+               |  implicit lazy val decoder: Decoder[BaseType] = new Decoder[BaseType] {
+               |    override def apply(c: HCursor): Result[BaseType] = c.downField("type").as[String] match {
+               |      case Right("data") =>
+               |        DataType.decoder(c)
+               |      case Right("grandchild") =>
+               |        GrandchildType.decoder(c)
+               |      case other =>
+               |        Left(DecodingFailure(s"unknown discriminator: $other", c.history))
+               |    }
+               |  }
+               |  implicit lazy val encoder: Encoder[BaseType] = new Encoder[BaseType] {
+               |    override def apply(basetype: BaseType): Json = basetype match {
+               |      case datatype: DataType =>
+               |        DataType.encoder(datatype)
+               |      case grandchildtype: GrandchildType =>
+               |        GrandchildType.encoder(grandchildtype)
+               |    }
+               |  }
+               |}""".stripMargin.stripTrailingSpaces)
         )
 
         baseType.source.name should be("BaseType")
@@ -398,94 +396,90 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers with SourceCodeForm
         dataType.source.name should be("DataType")
         dataType.source.companion.map(_.toString().stripTrailingSpaces) should be(
           Some("""object DataType {
-                  |  import scala.language.dynamics
-                  |  final case class AdditionalProperties(private val underlying: scala.collection.immutable.Map[String, io.circe.Json]) extends scala.Dynamic {
-                  |    override def toString(): String = underlying.mkString(", ")
-                  |    def selectDynamic(field: String): Option[io.circe.Json] = underlying.get(field)
-                  |    def getOrElse[V >: io.circe.Json](key: String, default: => V): V = underlying.getOrElse(key, default)
-                  |    def isDefinedAt(key: String): Boolean = underlying.isDefinedAt(key)
-                  |    def isEmpty: Boolean = underlying.isEmpty
-                  |    def keySet: Set[String] = underlying.keySet
-                  |    def keys: Iterable[String] = underlying.keys
-                  |    def keysIterator: Iterator[String] = underlying.keysIterator
-                  |    def nonEmpty: Boolean = !underlying.isEmpty
-                  |    def size: Int = underlying.size
-                  |    def values: Iterable[io.circe.Json] = underlying.values
-                  |    def valuesIterator: Iterator[io.circe.Json] = underlying.valuesIterator
-                  |  }
-                  |  object AdditionalProperties {
-                  |    import scala.util.matching.Regex
-                  |    val propertyNames: Seq[String] = Seq("id", "foo", "customTypeProp", "customArrayTypeProp")
-                  |    val allowedNames: Seq[Regex] = Seq()
-                  |    import io.circe._
-                  |    import io.circe.generic.semiauto._
-                  |    implicit lazy val decoder: Decoder[AdditionalProperties] = new Decoder[AdditionalProperties] {
-                  |      final def apply(c: HCursor): Decoder.Result[AdditionalProperties] = {
-                  |        val parent = c.up
-                  |        val allKeys = parent.keys.fold(Set.empty[String])(_.toSet)
-                  |        val builder = scala.collection.immutable.Map.newBuilder[String, Json]
-                  |        val it = allKeys.filterNot(propertyNames.contains).iterator
-                  |        val entries = it.foldLeft(builder)({
-                  |          case (accum, key) =>
-                  |            parent.field(key).focus.fold(accum) {
-                  |              v => accum += key -> v
-                  |            }
-                  |        })
-                  |        Right(AdditionalProperties(builder.result()))
-                  |      }
-                  |    }
-                  |    def merge(into: Json, oap: Option[AdditionalProperties]): Json = {
-                  |      oap.fold(into)(merge(into, _))
-                  |    }
-                  |    def merge(into: Json, ap: AdditionalProperties): Json = {
-                  |      Json.fromFields(ap.underlying).deepMerge(into)
-                  |    }
-                  |  }
-                  |  import io.circe._
-                  |  import io.circe.generic.semiauto._
-                  |  import io.circe.syntax._
-                  |  import scraml.Formats._
-                  |  implicit lazy val decoder: Decoder[DataType] = new Decoder[DataType] {
-                  |    def apply(c: HCursor): Decoder.Result[DataType] = {
-                  |      c.downField("id").as[String].flatMap { (_id: String) =>
-                  |        c.downField("foo").as[Option[String]].flatMap { (_foo: Option[String]) =>
-                  |          c.downField("customTypeProp").as[scala.math.BigDecimal].flatMap { (_customTypeProp: scala.math.BigDecimal) =>
-                  |            c.downField("customArrayTypeProp").as[Vector[scala.math.BigDecimal]].flatMap { (_customArrayTypeProp: Vector[scala.math.BigDecimal]) =>
-                  |              c.downField("additionalProperties").as[Option[DataType.AdditionalProperties]].flatMap {
-                  |                (_additionalProperties: Option[DataType.AdditionalProperties]) => Right(DataType(_id, _foo, _customTypeProp, _customArrayTypeProp)(_additionalProperties))
-                  |              }
-                  |            }
-                  |          }
-                  |        }
-                  |      }
-                  |    }
-                  |  }
-                  |  implicit lazy val encoder: Encoder[DataType] = new Encoder[DataType] { final def apply(instance: DataType): Json = AdditionalProperties.merge(Json.obj("type" -> Json.fromString("data"), "id" -> instance.id.asJson, "foo" -> instance.foo.asJson, "customTypeProp" -> instance.customTypeProp.asJson, "customArrayTypeProp" -> instance.customArrayTypeProp.asJson), instance.additionalProperties) }
-                  |}""".stripMargin.stripTrailingSpaces)
+                 |  import scala.language.dynamics
+                 |  final case class AdditionalProperties(private val underlying: scala.collection.immutable.Map[String, io.circe.Json]) extends scala.Dynamic {
+                 |    override def toString(): String = underlying.mkString(", ")
+                 |    def selectDynamic(field: String): Option[io.circe.Json] = underlying.get(field)
+                 |    def getOrElse[V >: io.circe.Json](key: String, default: => V): V = underlying.getOrElse(key, default)
+                 |    def isDefinedAt(key: String): Boolean = underlying.isDefinedAt(key)
+                 |    def isEmpty: Boolean = underlying.isEmpty
+                 |    def keySet: Set[String] = underlying.keySet
+                 |    def keys: Iterable[String] = underlying.keys
+                 |    def keysIterator: Iterator[String] = underlying.keysIterator
+                 |    def nonEmpty: Boolean = !underlying.isEmpty
+                 |    def size: Int = underlying.size
+                 |    def values: Iterable[io.circe.Json] = underlying.values
+                 |    def valuesIterator: Iterator[io.circe.Json] = underlying.valuesIterator
+                 |  }
+                 |  object AdditionalProperties {
+                 |    import scala.util.matching.Regex
+                 |    val propertyNames: Seq[String] = Seq("id", "foo", "customTypeProp", "customArrayTypeProp")
+                 |    val allowedNames: Seq[Regex] = Seq()
+                 |    import io.circe._
+                 |    import io.circe.generic.semiauto._
+                 |    implicit lazy val decoder: Decoder[Option[AdditionalProperties]] = new Decoder[Option[AdditionalProperties]] {
+                 |      final def apply(c: HCursor): Decoder.Result[Option[AdditionalProperties]] = {
+                 |        val allKeys = c.keys.fold(Set.empty[String])(_.toSet)
+                 |        Right(Option(allKeys.filterNot(propertyNames.contains)).filterNot(_.isEmpty).map {
+                 |          _.foldLeft(scala.collection.immutable.Map.newBuilder[String, Json])({
+                 |            case (accum, key) =>
+                 |              c.downField(key).focus.fold(accum) {
+                 |                v => accum += key -> v
+                 |              }
+                 |          })
+                 |        }.map(b => AdditionalProperties(b.result())))
+                 |      }
+                 |    }
+                 |    def merge(into: Json, oap: Option[AdditionalProperties]): Json = {
+                 |      oap.fold(into)(merge(into, _))
+                 |    }
+                 |    def merge(into: Json, ap: AdditionalProperties): Json = {
+                 |      Json.fromFields(ap.underlying).deepMerge(into)
+                 |    }
+                 |  }
+                 |  import io.circe._
+                 |  import io.circe.generic.semiauto._
+                 |  import io.circe.syntax._
+                 |  import scraml.Formats._
+                 |  implicit lazy val decoder: Decoder[DataType] = new Decoder[DataType] {
+                 |    def apply(c: HCursor): Decoder.Result[DataType] = {
+                 |      c.downField("id").as[String].flatMap { (_id: String) =>
+                 |        c.downField("foo").as[Option[String]].flatMap { (_foo: Option[String]) =>
+                 |          c.downField("customTypeProp").as[scala.math.BigDecimal].flatMap { (_customTypeProp: scala.math.BigDecimal) =>
+                 |            c.downField("customArrayTypeProp").as[Vector[scala.math.BigDecimal]].flatMap { (_customArrayTypeProp: Vector[scala.math.BigDecimal]) =>
+                 |              AdditionalProperties.decoder(c).flatMap {
+                 |                (_additionalProperties: Option[DataType.AdditionalProperties]) => Right(DataType(_id, _foo, _customTypeProp, _customArrayTypeProp)(_additionalProperties))
+                 |              }
+                 |            }
+                 |          }
+                 |        }
+                 |      }
+                 |    }
+                 |  }
+                 |  implicit lazy val encoder: Encoder[DataType] = new Encoder[DataType] { final def apply(instance: DataType): Json = AdditionalProperties.merge(Json.obj("type" -> Json.fromString("data"), "id" -> instance.id.asJson, "foo" -> instance.foo.asJson, "customTypeProp" -> instance.customTypeProp.asJson, "customArrayTypeProp" -> instance.customArrayTypeProp.asJson), instance.additionalProperties) }
+                 |}""".stripMargin.stripTrailingSpaces)
         )
 
         emptyBase.source.source.toString().stripTrailingSpaces should be("sealed trait EmptyBase")
         emptyBase.source.companion.map(_.toString().stripTrailingSpaces) should be(
-          Some(
-            s"""object EmptyBase {
-                                                                       |  import io.circe.Decoder.Result
-                                                                       |  import io.circe._
-                                                                       |  implicit lazy val decoder: Decoder[EmptyBase] = new Decoder[EmptyBase] {
-                                                                       |    override def apply(c: HCursor): Result[EmptyBase] = c.downField("type").as[String] match {
-                                                                       |      case Right("nope") =>
-                                                                       |        NoProps.decoder(c)
-                                                                       |      case other =>
-                                                                       |        Left(DecodingFailure(s"unknown discriminator: $$other", c.history))
-                                                                       |    }
-                                                                       |  }
-                                                                       |  implicit lazy val encoder: Encoder[EmptyBase] = new Encoder[EmptyBase] {
-                                                                       |    override def apply(emptybase: EmptyBase): Json = emptybase match {
-                                                                       |      case noprops: NoProps =>
-                                                                       |        NoProps.encoder(noprops)
-                                                                       |    }
-                                                                       |  }
-                                                                       |}""".stripMargin.stripTrailingSpaces
-          )
+          Some("""object EmptyBase {
+                  |  import io.circe.Decoder.Result
+                  |  import io.circe._
+                  |  implicit lazy val decoder: Decoder[EmptyBase] = new Decoder[EmptyBase] {
+                  |    override def apply(c: HCursor): Result[EmptyBase] = c.downField("type").as[String] match {
+                  |      case Right("nope") =>
+                  |        NoProps.decoder(c)
+                  |      case other =>
+                  |        Left(DecodingFailure(s"unknown discriminator: $other", c.history))
+                  |    }
+                  |  }
+                  |  implicit lazy val encoder: Encoder[EmptyBase] = new Encoder[EmptyBase] {
+                  |    override def apply(emptybase: EmptyBase): Json = emptybase match {
+                  |      case noprops: NoProps =>
+                  |        NoProps.encoder(noprops)
+                  |    }
+                  |  }
+                  |}""".stripMargin.stripTrailingSpaces)
         )
 
         noProps.source.source.toString().stripTrailingSpaces should be(
@@ -516,19 +510,17 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers with SourceCodeForm
               |    val allowedNames: Seq[Regex] = Seq()
               |    import io.circe._
               |    import io.circe.generic.semiauto._
-              |    implicit lazy val decoder: Decoder[AdditionalProperties] = new Decoder[AdditionalProperties] {
-              |      final def apply(c: HCursor): Decoder.Result[AdditionalProperties] = {
-              |        val parent = c.up
-              |        val allKeys = parent.keys.fold(Set.empty[String])(_.toSet)
-              |        val builder = scala.collection.immutable.Map.newBuilder[String, Json]
-              |        val it = allKeys.filterNot(propertyNames.contains).iterator
-              |        val entries = it.foldLeft(builder)({
-              |          case (accum, key) =>
-              |            parent.field(key).focus.fold(accum) {
-              |              v => accum += key -> v
-              |            }
-              |        })
-              |        Right(AdditionalProperties(builder.result()))
+              |    implicit lazy val decoder: Decoder[Option[AdditionalProperties]] = new Decoder[Option[AdditionalProperties]] {
+              |      final def apply(c: HCursor): Decoder.Result[Option[AdditionalProperties]] = {
+              |        val allKeys = c.keys.fold(Set.empty[String])(_.toSet)
+              |        Right(Option(allKeys.filterNot(propertyNames.contains)).filterNot(_.isEmpty).map {
+              |          _.foldLeft(scala.collection.immutable.Map.newBuilder[String, Json])({
+              |            case (accum, key) =>
+              |              c.downField(key).focus.fold(accum) {
+              |                v => accum += key -> v
+              |              }
+              |          })
+              |        }.map(b => AdditionalProperties(b.result())))
               |      }
               |    }
               |    def merge(into: Json, oap: Option[AdditionalProperties]): Json = {
@@ -544,7 +536,7 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers with SourceCodeForm
               |  import scraml.Formats._
               |  implicit lazy val decoder: Decoder[NoProps] = new Decoder[NoProps] {
               |    def apply(c: HCursor): Decoder.Result[NoProps] = {
-              |      c.downField("additionalProperties").as[Option[NoProps.AdditionalProperties]].flatMap {
+              |      AdditionalProperties.decoder(c).flatMap {
               |        (_additionalProperties: Option[NoProps.AdditionalProperties]) => Right(NoProps()(_additionalProperties))
               |      }
               |    }
@@ -557,28 +549,28 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers with SourceCodeForm
         noSealedBase.source.source.toString().stripTrailingSpaces should be("trait NoSealedBase")
         noSealedBase.source.companion.map(_.toString().stripTrailingSpaces) should be(
           Some(
-            s"""object NoSealedBase {
-                                                                          |  import io.circe.Decoder.Result
-                                                                          |  import io.circe._
-                                                                          |  implicit lazy val decoder: Decoder[NoSealedBase] = new Decoder[NoSealedBase] {
-                                                                          |    override def apply(c: HCursor): Result[NoSealedBase] = c.downField("typeId").as[String] match {
-                                                                          |      case Right("map-like") =>
-                                                                          |        MapLike.decoder(c)
-                                                                          |      case Right("other-sub") =>
-                                                                          |        OtherSub.decoder(c)
-                                                                          |      case other =>
-                                                                          |        Left(DecodingFailure(s"unknown discriminator: $$other", c.history))
-                                                                          |    }
-                                                                          |  }
-                                                                          |  implicit lazy val encoder: Encoder[NoSealedBase] = new Encoder[NoSealedBase] {
-                                                                          |    override def apply(nosealedbase: NoSealedBase): Json = nosealedbase match {
-                                                                          |      case maplike: MapLike =>
-                                                                          |        MapLike.encoder(maplike)
-                                                                          |      case othersub: OtherSub =>
-                                                                          |        OtherSub.encoder(othersub)
-                                                                          |    }
-                                                                          |  }
-                                                                          |}""".stripMargin.stripTrailingSpaces
+            """object NoSealedBase {
+               |  import io.circe.Decoder.Result
+               |  import io.circe._
+               |  implicit lazy val decoder: Decoder[NoSealedBase] = new Decoder[NoSealedBase] {
+               |    override def apply(c: HCursor): Result[NoSealedBase] = c.downField("typeId").as[String] match {
+               |      case Right("map-like") =>
+               |        MapLike.decoder(c)
+               |      case Right("other-sub") =>
+               |        OtherSub.decoder(c)
+               |      case other =>
+               |        Left(DecodingFailure(s"unknown discriminator: $other", c.history))
+               |    }
+               |  }
+               |  implicit lazy val encoder: Encoder[NoSealedBase] = new Encoder[NoSealedBase] {
+               |    override def apply(nosealedbase: NoSealedBase): Json = nosealedbase match {
+               |      case maplike: MapLike =>
+               |        MapLike.encoder(maplike)
+               |      case othersub: OtherSub =>
+               |        OtherSub.encoder(othersub)
+               |    }
+               |  }
+               |}""".stripMargin.stripTrailingSpaces
           )
         )
         mapLike.source.source.toString().stripTrailingSpaces should be(
@@ -587,14 +579,14 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers with SourceCodeForm
 
         mapLike.source.companion.map(_.toString().stripTrailingSpaces) should be(
           Some(
-            s"""object MapLike {
-                                                                     |  import io.circe._
-                                                                     |  import io.circe.syntax._
-                                                                     |  import io.circe.generic.semiauto._
-                                                                     |  import io.circe.Decoder.Result
-                                                                     |  implicit lazy val decoder: Decoder[MapLike] = new Decoder[MapLike] { override def apply(c: HCursor): Result[MapLike] = c.as[scala.collection.immutable.Map[String, String]].map(MapLike.apply) }
-                                                                     |  implicit lazy val encoder: Encoder[MapLike] = new Encoder[MapLike] { override def apply(a: MapLike): Json = a.values.asJson }
-                                                                     |}""".stripMargin.stripTrailingSpaces
+            """object MapLike {
+              |  import io.circe._
+              |  import io.circe.syntax._
+              |  import io.circe.generic.semiauto._
+              |  import io.circe.Decoder.Result
+              |  implicit lazy val decoder: Decoder[MapLike] = new Decoder[MapLike] { override def apply(c: HCursor): Result[MapLike] = c.as[scala.collection.immutable.Map[String, String]].map(MapLike.apply) }
+              |  implicit lazy val encoder: Encoder[MapLike] = new Encoder[MapLike] { override def apply(a: MapLike): Json = a.values.asJson }
+              |}""".stripMargin.stripTrailingSpaces
           )
         )
 
@@ -604,23 +596,23 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers with SourceCodeForm
 
         someEnum.source.companion.map(_.toString().stripTrailingSpaces) should be(
           Some(
-            s"""object SomeEnum {
-                                                                      |  case object A extends SomeEnum
-                                                                      |  case object B extends SomeEnum
-                                                                      |  import io.circe._
-                                                                      |  implicit lazy val encoder: Encoder[SomeEnum] = Encoder[String].contramap({
-                                                                      |    case A => "A"
-                                                                      |    case B => "B"
-                                                                      |  })
-                                                                      |  implicit lazy val decoder: Decoder[SomeEnum] = Decoder[String].emap({
-                                                                      |    case "A" =>
-                                                                      |      Right(A)
-                                                                      |    case "B" =>
-                                                                      |      Right(B)
-                                                                      |    case other =>
-                                                                      |      Left(s"invalid enum value: $$other")
-                                                                      |  })
-                                                                      |}""".stripMargin.stripTrailingSpaces
+            """object SomeEnum {
+              |  case object A extends SomeEnum
+              |  case object B extends SomeEnum
+              |  import io.circe._
+              |  implicit lazy val encoder: Encoder[SomeEnum] = Encoder[String].contramap({
+              |    case A => "A"
+              |    case B => "B"
+              |  })
+              |  implicit lazy val decoder: Decoder[SomeEnum] = Decoder[String].emap({
+              |    case "A" =>
+              |      Right(A)
+              |    case "B" =>
+              |      Right(B)
+              |    case other =>
+              |      Left(s"invalid enum value: $other")
+              |  })
+              |}""".stripMargin.stripTrailingSpaces
           )
         )
 
@@ -652,19 +644,17 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers with SourceCodeForm
               |    val allowedNames: Seq[Regex] = Seq()
               |    import io.circe._
               |    import io.circe.generic.semiauto._
-              |    implicit lazy val decoder: Decoder[AdditionalProperties] = new Decoder[AdditionalProperties] {
-              |      final def apply(c: HCursor): Decoder.Result[AdditionalProperties] = {
-              |        val parent = c.up
-              |        val allKeys = parent.keys.fold(Set.empty[String])(_.toSet)
-              |        val builder = scala.collection.immutable.Map.newBuilder[String, Json]
-              |        val it = allKeys.filterNot(propertyNames.contains).iterator
-              |        val entries = it.foldLeft(builder)({
-              |          case (accum, key) =>
-              |            parent.field(key).focus.fold(accum) {
-              |              v => accum += key -> v
-              |            }
-              |        })
-              |        Right(AdditionalProperties(builder.result()))
+              |    implicit lazy val decoder: Decoder[Option[AdditionalProperties]] = new Decoder[Option[AdditionalProperties]] {
+              |      final def apply(c: HCursor): Decoder.Result[Option[AdditionalProperties]] = {
+              |        val allKeys = c.keys.fold(Set.empty[String])(_.toSet)
+              |        Right(Option(allKeys.filterNot(propertyNames.contains)).filterNot(_.isEmpty).map {
+              |          _.foldLeft(scala.collection.immutable.Map.newBuilder[String, Json])({
+              |            case (accum, key) =>
+              |              c.downField(key).focus.fold(accum) {
+              |                v => accum += key -> v
+              |              }
+              |          })
+              |        }.map(b => AdditionalProperties(b.result())))
               |      }
               |    }
               |    def merge(into: Json, oap: Option[AdditionalProperties]): Json = {
@@ -681,7 +671,7 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers with SourceCodeForm
               |  implicit lazy val decoder: Decoder[OtherSub] = new Decoder[OtherSub] {
               |    def apply(c: HCursor): Decoder.Result[OtherSub] = {
               |      c.downField("id").as[String].flatMap { (_id: String) =>
-              |        c.downField("additionalProperties").as[Option[OtherSub.AdditionalProperties]].flatMap {
+              |        AdditionalProperties.decoder(c).flatMap {
               |          (_additionalProperties: Option[OtherSub.AdditionalProperties]) => Right(OtherSub(_id)(_additionalProperties))
               |        }
               |      }
@@ -693,27 +683,27 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers with SourceCodeForm
         )
 
         packageObject.source.source.toString.stripTrailingSpaces should be(
-          s"""package object scraml {
-                                                          |  import io.circe.Decoder.Result
-                                                          |  import io.circe.{ HCursor, Json, Decoder, Encoder }
-                                                          |  implicit def eitherEncoder[A, B](implicit aEncoder: Encoder[A], bEncoder: Encoder[B]): Encoder[Either[A, B]] = new Encoder[Either[A, B]] {
-                                                          |    override def apply(a: Either[A, B]): Json = a match {
-                                                          |      case Right(b) =>
-                                                          |        bEncoder(b)
-                                                          |      case Left(a) =>
-                                                          |        aEncoder(a)
-                                                          |    }
-                                                          |  }
-                                                          |  implicit def eitherDecoder[A, B](implicit aDecoder: Decoder[A], bDecoder: Decoder[B]): Decoder[Either[A, B]] = new Decoder[Either[A, B]] { override def apply(c: HCursor): Result[Either[A, B]] = aDecoder.either(bDecoder)(c) }
-                                                          |  object Formats { implicit lazy val localDateTime = io.circe.Decoder.decodeLocalDateTime }
-                                                          |}""".stripMargin.stripTrailingSpaces
+          """package object scraml {
+            |  import io.circe.Decoder.Result
+            |  import io.circe.{ HCursor, Json, Decoder, Encoder }
+            |  implicit def eitherEncoder[A, B](implicit aEncoder: Encoder[A], bEncoder: Encoder[B]): Encoder[Either[A, B]] = new Encoder[Either[A, B]] {
+            |    override def apply(a: Either[A, B]): Json = a match {
+            |      case Right(b) =>
+            |        bEncoder(b)
+            |      case Left(a) =>
+            |        aEncoder(a)
+            |    }
+            |  }
+            |  implicit def eitherDecoder[A, B](implicit aDecoder: Decoder[A], bDecoder: Decoder[B]): Decoder[Either[A, B]] = new Decoder[Either[A, B]] { override def apply(c: HCursor): Result[Either[A, B]] = aDecoder.either(bDecoder)(c) }
+            |  object Formats { implicit lazy val localDateTime = io.circe.Decoder.decodeLocalDateTime }
+            |}""".stripMargin.stripTrailingSpaces
         )
 
         intermediateType.source.source.toString().stripTrailingSpaces should be(
           "sealed trait IntermediateType extends BaseType { def id: String }"
         )
         intermediateType.source.companion.map(_.toString().stripTrailingSpaces) should be(
-          Some(s"""object IntermediateType {
+          Some("""object IntermediateType {
                   |  import io.circe.Decoder.Result
                   |  import io.circe._
                   |  implicit lazy val decoder: Decoder[IntermediateType] = new Decoder[IntermediateType] {
@@ -721,7 +711,7 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers with SourceCodeForm
                   |      case Right("grandchild") =>
                   |        GrandchildType.decoder(c)
                   |      case other =>
-                  |        Left(DecodingFailure(s"unknown discriminator: $$other", c.history))
+                  |        Left(DecodingFailure(s"unknown discriminator: $other", c.history))
                   |    }
                   |  }
                   |  implicit lazy val encoder: Encoder[IntermediateType] = new Encoder[IntermediateType] {
@@ -737,79 +727,79 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers with SourceCodeForm
           "final case class GrandchildType(id: String, foo: Option[String] = None, aDouble: scala.math.BigDecimal, aFloat: scala.math.BigDecimal, anInt: Int, aLong: scala.math.BigInt, customTypeProp: scala.math.BigDecimal, customArrayTypeProp: Vector[scala.math.BigDecimal] = Vector.empty)(val additionalProperties: Option[GrandchildType.AdditionalProperties] = None) extends IntermediateType"
         )
         grandchildType.source.companion.map(_.toString().stripTrailingSpaces) should be(
-          Some("""object GrandchildType {
-                 |  import scala.language.dynamics
-                 |  final case class AdditionalProperties(private val underlying: scala.collection.immutable.Map[String, io.circe.Json]) extends scala.Dynamic {
-                 |    override def toString(): String = underlying.mkString(", ")
-                 |    def selectDynamic(field: String): Option[io.circe.Json] = underlying.get(field)
-                 |    def getOrElse[V >: io.circe.Json](key: String, default: => V): V = underlying.getOrElse(key, default)
-                 |    def isDefinedAt(key: String): Boolean = underlying.isDefinedAt(key)
-                 |    def isEmpty: Boolean = underlying.isEmpty
-                 |    def keySet: Set[String] = underlying.keySet
-                 |    def keys: Iterable[String] = underlying.keys
-                 |    def keysIterator: Iterator[String] = underlying.keysIterator
-                 |    def nonEmpty: Boolean = !underlying.isEmpty
-                 |    def size: Int = underlying.size
-                 |    def values: Iterable[io.circe.Json] = underlying.values
-                 |    def valuesIterator: Iterator[io.circe.Json] = underlying.valuesIterator
-                 |  }
-                 |  object AdditionalProperties {
-                 |    import scala.util.matching.Regex
-                 |    val propertyNames: Seq[String] = Seq("id", "foo", "aDouble", "aFloat", "anInt", "aLong", "customTypeProp", "customArrayTypeProp")
-                 |    val allowedNames: Seq[Regex] = Seq()
-                 |    import io.circe._
-                 |    import io.circe.generic.semiauto._
-                 |    implicit lazy val decoder: Decoder[AdditionalProperties] = new Decoder[AdditionalProperties] {
-                 |      final def apply(c: HCursor): Decoder.Result[AdditionalProperties] = {
-                 |        val parent = c.up
-                 |        val allKeys = parent.keys.fold(Set.empty[String])(_.toSet)
-                 |        val builder = scala.collection.immutable.Map.newBuilder[String, Json]
-                 |        val it = allKeys.filterNot(propertyNames.contains).iterator
-                 |        val entries = it.foldLeft(builder)({
-                 |          case (accum, key) =>
-                 |            parent.field(key).focus.fold(accum) {
-                 |              v => accum += key -> v
-                 |            }
-                 |        })
-                 |        Right(AdditionalProperties(builder.result()))
-                 |      }
-                 |    }
-                 |    def merge(into: Json, oap: Option[AdditionalProperties]): Json = {
-                 |      oap.fold(into)(merge(into, _))
-                 |    }
-                 |    def merge(into: Json, ap: AdditionalProperties): Json = {
-                 |      Json.fromFields(ap.underlying).deepMerge(into)
-                 |    }
-                 |  }
-                 |  import io.circe._
-                 |  import io.circe.generic.semiauto._
-                 |  import io.circe.syntax._
-                 |  import scraml.Formats._
-                 |  implicit lazy val decoder: Decoder[GrandchildType] = new Decoder[GrandchildType] {
-                 |    def apply(c: HCursor): Decoder.Result[GrandchildType] = {
-                 |      c.downField("id").as[String].flatMap { (_id: String) =>
-                 |        c.downField("foo").as[Option[String]].flatMap { (_foo: Option[String]) =>
-                 |          c.downField("aDouble").as[scala.math.BigDecimal].flatMap { (_aDouble: scala.math.BigDecimal) =>
-                 |            c.downField("aFloat").as[scala.math.BigDecimal].flatMap { (_aFloat: scala.math.BigDecimal) =>
-                 |              c.downField("anInt").as[Int].flatMap { (_anInt: Int) =>
-                 |                c.downField("aLong").as[scala.math.BigInt].flatMap { (_aLong: scala.math.BigInt) =>
-                 |                  c.downField("customTypeProp").as[scala.math.BigDecimal].flatMap { (_customTypeProp: scala.math.BigDecimal) =>
-                 |                    c.downField("customArrayTypeProp").as[Vector[scala.math.BigDecimal]].flatMap { (_customArrayTypeProp: Vector[scala.math.BigDecimal]) =>
-                 |                      c.downField("additionalProperties").as[Option[GrandchildType.AdditionalProperties]].flatMap {
-                 |                        (_additionalProperties: Option[GrandchildType.AdditionalProperties]) => Right(GrandchildType(_id, _foo, _aDouble, _aFloat, _anInt, _aLong, _customTypeProp, _customArrayTypeProp)(_additionalProperties))
-                 |                      }
-                 |                    }
-                 |                  }
-                 |                }
-                 |              }
-                 |            }
-                 |          }
-                 |        }
-                 |      }
-                 |    }
-                 |  }
-                 |  implicit lazy val encoder: Encoder[GrandchildType] = new Encoder[GrandchildType] { final def apply(instance: GrandchildType): Json = AdditionalProperties.merge(Json.obj("type" -> Json.fromString("grandchild"), "id" -> instance.id.asJson, "foo" -> instance.foo.asJson, "aDouble" -> instance.aDouble.asJson, "aFloat" -> instance.aFloat.asJson, "anInt" -> instance.anInt.asJson, "aLong" -> instance.aLong.asJson, "customTypeProp" -> instance.customTypeProp.asJson, "customArrayTypeProp" -> instance.customArrayTypeProp.asJson), instance.additionalProperties) }
-                 |}""".stripMargin.stripTrailingSpaces)
+          Some(
+            """object GrandchildType {
+              |  import scala.language.dynamics
+              |  final case class AdditionalProperties(private val underlying: scala.collection.immutable.Map[String, io.circe.Json]) extends scala.Dynamic {
+              |    override def toString(): String = underlying.mkString(", ")
+              |    def selectDynamic(field: String): Option[io.circe.Json] = underlying.get(field)
+              |    def getOrElse[V >: io.circe.Json](key: String, default: => V): V = underlying.getOrElse(key, default)
+              |    def isDefinedAt(key: String): Boolean = underlying.isDefinedAt(key)
+              |    def isEmpty: Boolean = underlying.isEmpty
+              |    def keySet: Set[String] = underlying.keySet
+              |    def keys: Iterable[String] = underlying.keys
+              |    def keysIterator: Iterator[String] = underlying.keysIterator
+              |    def nonEmpty: Boolean = !underlying.isEmpty
+              |    def size: Int = underlying.size
+              |    def values: Iterable[io.circe.Json] = underlying.values
+              |    def valuesIterator: Iterator[io.circe.Json] = underlying.valuesIterator
+              |  }
+              |  object AdditionalProperties {
+              |    import scala.util.matching.Regex
+              |    val propertyNames: Seq[String] = Seq("id", "foo", "aDouble", "aFloat", "anInt", "aLong", "customTypeProp", "customArrayTypeProp")
+              |    val allowedNames: Seq[Regex] = Seq()
+              |    import io.circe._
+              |    import io.circe.generic.semiauto._
+              |    implicit lazy val decoder: Decoder[Option[AdditionalProperties]] = new Decoder[Option[AdditionalProperties]] {
+              |      final def apply(c: HCursor): Decoder.Result[Option[AdditionalProperties]] = {
+              |        val allKeys = c.keys.fold(Set.empty[String])(_.toSet)
+              |        Right(Option(allKeys.filterNot(propertyNames.contains)).filterNot(_.isEmpty).map {
+              |          _.foldLeft(scala.collection.immutable.Map.newBuilder[String, Json])({
+              |            case (accum, key) =>
+              |              c.downField(key).focus.fold(accum) {
+              |                v => accum += key -> v
+              |              }
+              |          })
+              |        }.map(b => AdditionalProperties(b.result())))
+              |      }
+              |    }
+              |    def merge(into: Json, oap: Option[AdditionalProperties]): Json = {
+              |      oap.fold(into)(merge(into, _))
+              |    }
+              |    def merge(into: Json, ap: AdditionalProperties): Json = {
+              |      Json.fromFields(ap.underlying).deepMerge(into)
+              |    }
+              |  }
+              |  import io.circe._
+              |  import io.circe.generic.semiauto._
+              |  import io.circe.syntax._
+              |  import scraml.Formats._
+              |  implicit lazy val decoder: Decoder[GrandchildType] = new Decoder[GrandchildType] {
+              |    def apply(c: HCursor): Decoder.Result[GrandchildType] = {
+              |      c.downField("id").as[String].flatMap { (_id: String) =>
+              |        c.downField("foo").as[Option[String]].flatMap { (_foo: Option[String]) =>
+              |          c.downField("aDouble").as[scala.math.BigDecimal].flatMap { (_aDouble: scala.math.BigDecimal) =>
+              |            c.downField("aFloat").as[scala.math.BigDecimal].flatMap { (_aFloat: scala.math.BigDecimal) =>
+              |              c.downField("anInt").as[Int].flatMap { (_anInt: Int) =>
+              |                c.downField("aLong").as[scala.math.BigInt].flatMap { (_aLong: scala.math.BigInt) =>
+              |                  c.downField("customTypeProp").as[scala.math.BigDecimal].flatMap { (_customTypeProp: scala.math.BigDecimal) =>
+              |                    c.downField("customArrayTypeProp").as[Vector[scala.math.BigDecimal]].flatMap { (_customArrayTypeProp: Vector[scala.math.BigDecimal]) =>
+              |                      AdditionalProperties.decoder(c).flatMap {
+              |                        (_additionalProperties: Option[GrandchildType.AdditionalProperties]) => Right(GrandchildType(_id, _foo, _aDouble, _aFloat, _anInt, _aLong, _customTypeProp, _customArrayTypeProp)(_additionalProperties))
+              |                      }
+              |                    }
+              |                  }
+              |                }
+              |              }
+              |            }
+              |          }
+              |        }
+              |      }
+              |    }
+              |  }
+              |  implicit lazy val encoder: Encoder[GrandchildType] = new Encoder[GrandchildType] { final def apply(instance: GrandchildType): Json = AdditionalProperties.merge(Json.obj("type" -> Json.fromString("grandchild"), "id" -> instance.id.asJson, "foo" -> instance.foo.asJson, "aDouble" -> instance.aDouble.asJson, "aFloat" -> instance.aFloat.asJson, "anInt" -> instance.anInt.asJson, "aLong" -> instance.aLong.asJson, "customTypeProp" -> instance.customTypeProp.asJson, "customArrayTypeProp" -> instance.customArrayTypeProp.asJson), instance.additionalProperties) }
+              |}""".stripMargin.stripTrailingSpaces
+          )
         )
     }
   }
