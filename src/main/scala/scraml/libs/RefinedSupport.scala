@@ -4,7 +4,15 @@ import scala.meta._
 
 import _root_.io.vrap.rmf.raml.model.types._
 import _root_.io.vrap.rmf.raml.model.values.RegExp
-import scraml.{DefnWithCompanion, LibrarySupport, MetaUtil, ModelGenContext, RMFUtil}
+import scraml.{
+  AdditionalProperties,
+  DefnWithCompanion,
+  FieldMatchPolicy,
+  LibrarySupport,
+  MetaUtil,
+  ModelGenContext,
+  RMFUtil
+}
 
 object RefinedSupport extends LibrarySupport {
   import LibrarySupport.appendObjectStats
@@ -640,7 +648,7 @@ object RefinedSupport extends LibrarySupport {
     val from =
       List[Stat](
         q"""
-          def from( ..${classDef.ctor.paramss.flatten})
+          def from( ..${classDef.ctor.paramss.flatten.map(_.copy(mods = Nil))})
           : Either[IllegalArgumentException, ${classDef.name}] = {
             ..${generatePropertiesCode(classDef) {
           case prop if context.objectType.getProperty(prop.name.value) ne null =>
@@ -666,9 +674,24 @@ object RefinedSupport extends LibrarySupport {
         }}
 
           ${
-          def genFlatmaps(terms: List[Term.Param], remaining: List[Term.Param]): Term.Apply =
+          def genFlatmaps(
+              terms: List[Term.Param],
+              remaining: List[Term.Param],
+              additionalProperties: Option[AdditionalProperties]
+          ): Term.Apply =
             remaining match {
-              case last :: Nil =>
+              case Nil =>
+                q"""
+                  Right(
+                   ${Term.Name(context.objectType.getName)}()(
+                    ..${additionalProperties.map { ap =>
+                  Term.Name(ap.propertyName)
+                }.toList}
+                   )
+                 )
+                 """
+
+              case last :: Nil if additionalProperties.isEmpty =>
                 val termName  = Term.Name(last.name.value)
                 val paramName = Term.Name("_" + last.name.value)
 
@@ -680,20 +703,39 @@ object RefinedSupport extends LibrarySupport {
                   case p =>
                     Term.Name(p.name.value)
                 }})
-                   }
+                 }
                  """
+
+              case last :: Nil =>
+                val termName  = Term.Name(last.name.value)
+                val paramName = Term.Name("_" + last.name.value)
+
+                q"""
+                   $termName.map { $paramName: ${last.decltpe.get} =>
+                   ${Term.Name(context.objectType.getName)}( ..${terms.map {
+                  case RefinedPropertyConstructorUse(term) =>
+                    term
+                  case p =>
+                    Term.Name(p.name.value)
+                }})(..${additionalProperties.map { ap =>
+                  Term.Name(ap.propertyName)
+                }.toList}
+                 )
+                 }
+                 """
+
               case head :: tail =>
                 val termName  = Term.Name(head.name.value)
                 val paramName = Term.Name("_" + head.name.value)
 
                 q"""
                    $termName.flatMap { $paramName: ${head.decltpe.get} =>
-                     ${genFlatmaps(terms, tail)}
+                     ${genFlatmaps(terms, tail, additionalProperties)}
                    }
                  """
             }
 
-          val terms = classDef.ctor.paramss.flatten.map {
+          val primary = classDef.ctor.paramss.headOption.getOrElse(Nil).map {
             case prop: Term.Param if context.objectType.getProperty(prop.name.value) ne null =>
               prop match {
                 case RefinedPropertyType(typeName, _, _) =>
@@ -710,9 +752,13 @@ object RefinedSupport extends LibrarySupport {
               map.copy(name = Name("_values"))
           }
 
+          val additional = context.params.fieldMatchPolicy
+            .additionalProperties(context.objectType)(context)
+
           genFlatmaps(
-            terms.map(p => p.copy(name = Term.Name("_" + p.name.value))),
-            terms
+            primary.map(p => p.copy(name = Term.Name("_" + p.name.value))),
+            primary,
+            additional
           )
         }
       }
@@ -795,19 +841,8 @@ object RefinedSupport extends LibrarySupport {
       context: ModelGenContext
   ): Type = {
     val propDef = context.objectType.getProperty(name)
-    val scalaTypeAnnotation = Option(
-      propDef.getAnnotation("scala-type")
-    ).map(_.getValue.getValue.toString)
 
-    context
-      .scalaTypeRef(
-        propDef.getType,
-        optional = false,
-        typeName = scalaTypeAnnotation,
-        defaultAnyTypeName = context.anyTypeName
-      )
-      .get
-      .scalaType
+    context.scalaTypeRefFromProperty(propDef, optional = false).get.scalaType
   }
 
   private def predicates(prop: Decl.Def)(implicit

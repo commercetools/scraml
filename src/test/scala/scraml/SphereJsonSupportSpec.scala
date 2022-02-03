@@ -13,6 +13,7 @@ class SphereJsonSupportSpec extends AnyFlatSpec with Matchers {
       new File("src/sbt-test/sbt-scraml/json/api/json.raml"),
       new File("target/scraml-sphere-json-test"),
       "scraml",
+      FieldMatchPolicy.Exact(),
       DefaultTypes(),
       librarySupport = Set(SphereJsonSupport),
       None

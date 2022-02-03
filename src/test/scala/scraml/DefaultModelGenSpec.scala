@@ -1,7 +1,6 @@
 package scraml
 
 import cats.effect.unsafe.implicits.global
-import io.vrap.rmf.raml.model.types.ObjectType
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 
@@ -14,6 +13,7 @@ class DefaultModelGenSpec extends AnyFlatSpec with Matchers {
       new File("src/sbt-test/sbt-scraml/simple/api/simple.raml"),
       new File("target/scraml-test"),
       "scraml",
+      FieldMatchPolicy.Exact(),
       DefaultTypes(),
       Set.empty,
       None
@@ -87,6 +87,7 @@ class DefaultModelGenSpec extends AnyFlatSpec with Matchers {
       new File(getClass.getClassLoader.getResource("maptype/maptype.raml").toURI),
       new File("target/scraml-maptype-test"),
       "scraml",
+      FieldMatchPolicy.Exact(),
       DefaultTypes(map = "scala.collection.immutable.TreeMap"),
       Set.empty,
       None
@@ -97,11 +98,67 @@ class DefaultModelGenSpec extends AnyFlatSpec with Matchers {
     generated.files.toList match {
       case someMapType :: someMapTypeOpt :: _ :: Nil =>
         someMapType.source.source.toString() should be(
-          "final case class SomeMapType(values: scala.collection.immutable.TreeMap[String, String])"
+          "final case class SomeMapType()(val additionalProperties: Option[SomeMapType.AdditionalProperties] = None)"
         )
+
+        someMapType.source.companion.map(_.toString()) should be(
+          Some(
+            """object SomeMapType {
+            |  import scala.language.dynamics
+            |  final case class AdditionalProperties(private val underlying: scala.collection.immutable.TreeMap[String, Any]) extends scala.Dynamic {
+            |    override def toString(): String = underlying.mkString(", ")
+            |    def selectDynamic(field: String): Option[Any] = underlying.get(field)
+            |    def getOrElse[V >: Any](key: String, default: => V): V = underlying.getOrElse(key, default)
+            |    def isDefinedAt(key: String): Boolean = underlying.isDefinedAt(key)
+            |    def isEmpty: Boolean = underlying.isEmpty
+            |    def keySet: Set[String] = underlying.keySet
+            |    def keys: Iterable[String] = underlying.keys
+            |    def keysIterator: Iterator[String] = underlying.keysIterator
+            |    def nonEmpty: Boolean = !underlying.isEmpty
+            |    def size: Int = underlying.size
+            |    def values: Iterable[Any] = underlying.values
+            |    def valuesIterator: Iterator[Any] = underlying.valuesIterator
+            |  }
+            |  object AdditionalProperties {
+            |    import scala.util.matching.Regex
+            |    val propertyNames: Seq[String] = Seq()
+            |    val allowedNames: Seq[Regex] = Seq("^extra\\d+$".r, "\"^.*$\"".r)
+            |  }
+            |}""".stripMargin
+          )
+        )
+
         someMapTypeOpt.source.source.toString() should be(
-          "final case class SomeMapTypeOpt(values: Option[scala.collection.immutable.TreeMap[String, String]] = None)"
+          "final case class SomeMapTypeOpt()(val additionalProperties: Option[SomeMapTypeOpt.AdditionalProperties] = None)"
         )
+
+        someMapTypeOpt.source.companion.map(_.toString()) should be(
+          Some(
+            """object SomeMapTypeOpt {
+              |  import scala.language.dynamics
+              |  final case class AdditionalProperties(private val underlying: scala.collection.immutable.TreeMap[String, Any]) extends scala.Dynamic {
+              |    override def toString(): String = underlying.mkString(", ")
+              |    def selectDynamic(field: String): Option[Any] = underlying.get(field)
+              |    def getOrElse[V >: Any](key: String, default: => V): V = underlying.getOrElse(key, default)
+              |    def isDefinedAt(key: String): Boolean = underlying.isDefinedAt(key)
+              |    def isEmpty: Boolean = underlying.isEmpty
+              |    def keySet: Set[String] = underlying.keySet
+              |    def keys: Iterable[String] = underlying.keys
+              |    def keysIterator: Iterator[String] = underlying.keysIterator
+              |    def nonEmpty: Boolean = !underlying.isEmpty
+              |    def size: Int = underlying.size
+              |    def values: Iterable[Any] = underlying.values
+              |    def valuesIterator: Iterator[Any] = underlying.valuesIterator
+              |  }
+              |  object AdditionalProperties {
+              |    import scala.util.matching.Regex
+              |    val propertyNames: Seq[String] = Seq()
+              |    val allowedNames: Seq[Regex] = Seq("\"^.*$\"".r)
+              |  }
+              |}""".stripMargin
+          )
+        )
+
       case _ => fail()
     }
   }

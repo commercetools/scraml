@@ -8,7 +8,9 @@ import scala.meta._
 object CatsEqSupport extends LibrarySupport {
   object IsVersionedEntity extends HasProperties("id" :: "version" :: Nil)
 
-  private def eqStats(classDef: Defn.Class): List[Stat] =
+  private def eqStats(classDef: Defn.Class)(implicit
+      context: ModelGenContext
+  ): List[Stat] =
     q"""
       import cats.kernel.Eq
       implicit val ${Pat.Var(Term.Name(classDef.name.value + "Eq"))}: Eq[${classDef.name}] =
@@ -19,9 +21,16 @@ object CatsEqSupport extends LibrarySupport {
         case IsVersionedEntity() =>
           List[Term](q"a.id.equals(b.id)", q"a.version == b.version")
         case _ =>
+          val checkAdditional = context.params.fieldMatchPolicy
+            .additionalProperties(context.objectType)(context)
+            .map { ap =>
+              val propName = Term.Name(ap.propertyName)
+              q"""a.$propName == b.$propName"""
+            }
+
           generatePropertiesCode(classDef) { prop =>
             List[Term](q"""a.${Term.Name(prop.name.value)} == b.${Term.Name(prop.name.value)}""")
-          }
+          } ::: checkAdditional.toList
       }
 
       checks match {

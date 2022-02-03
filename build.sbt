@@ -1,3 +1,5 @@
+import sbtghactions.JavaSpec
+
 inThisBuild(List(
   organization := "com.commercetools",
   homepage := Some(url("https://github.com/commercetools/scraml")),
@@ -9,6 +11,9 @@ inThisBuild(List(
       "priceless-backend@commercetools.com",
       url("https://commercetools.com")
     )
+  ),
+  githubWorkflowJavaVersions := Seq(
+    JavaSpec(JavaSpec.Distribution.Adopt, "15.0.2+7")
   ),
   githubWorkflowPublish := Seq(
     WorkflowStep.Sbt(
@@ -32,7 +37,7 @@ lazy val root = (project in file("."))
   .enablePlugins(SbtPlugin, ParadoxSitePlugin, GhpagesPlugin)
   .settings(
     name := "sbt-scraml",
-    libraryDependencies += "com.commercetools.rmf" % "raml-model" % "0.2.0-20210817071658",
+    libraryDependencies += "com.commercetools.rmf" % "raml-model" % "0.2.0-20211203200453",
     libraryDependencies += "org.scalameta" %% "scalameta" % "4.4.20",
     libraryDependencies += "org.scalameta" %% "scalafmt-dynamic" % "3.0.0-RC6",
     libraryDependencies += "org.typelevel" %% "cats-effect" % "3.1.1",
