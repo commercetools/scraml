@@ -32,7 +32,7 @@
 <span class="home-icon">⌂</span>SCRAML
 </a>
 <div class="version-number">
-0.10.3
+0.11.0
 </div>
 </div>
 <div class="nav-toc">
@@ -41,6 +41,7 @@
   <li><a href="api.html" class="page">Specify an API</a></li>
   <li><a href="run.html" class="page">Run</a></li>
   <li><a href="libs.html" class="active page">Library Support</a></li>
+  <li><a href="migrating.html" class="page">Migration Guide</a></li>
 </ul>
 </div>
 
@@ -72,7 +73,7 @@ C16.952,7,17,6.553,17,6c0-0.553-0.048-1-0.6-1H3.6C3.048,5,3,5.447,3,6C3,6.553,3.
 <span class="home-icon">⌂</span>SCRAML
 </a>
 <div class="version-number">
-0.10.3
+0.11.0
 </div>
 </div>
 <div class="nav-toc">
@@ -81,6 +82,7 @@ C16.952,7,17,6.553,17,6c0-0.553-0.048-1-0.6-1H3.6C3.048,5,3,5.447,3,6C3,6.553,3.
   <li><a href="api.html" class="page">Specify an API</a></li>
   <li><a href="run.html" class="page">Run</a></li>
   <li><a href="libs.html" class="active page">Library Support</a></li>
+  <li><a href="migrating.html" class="page">Migration Guide</a></li>
 </ul>
 </div>
 
@@ -108,7 +110,7 @@ C16.952,7,17,6.553,17,6c0-0.553-0.048-1-0.6-1H3.6C3.048,5,3,5.447,3,6C3,6.553,3.
 <h1><a href="#library-support" name="library-support" class="anchor"><span class="anchor-link"></span></a>Library Support</h1>
 <p>SCRAML allows to generate supporting types for a number of libraries:</p>
 <h2><a href="#cats" name="cats" class="anchor"><span class="anchor-link"></span></a>cats</h2>
-<pre class="prettyprint"><button class="snippet-button copy-snippet" title="Copy snippet to clipboard">copy</button><a class="snippet-button go-to-source" href="https://github.com/commercetools/scraml/tree/master/src/sbt-test/sbt-scraml/cats/build.sbt" target="_blank" title="Go to snippet source">source</a><code class="language-sbt">lazy val root = (project in file(&quot;.&quot;))
+<pre class="prettyprint"><button class="snippet-button copy-snippet" title="Copy snippet to clipboard">copy</button><a class="snippet-button go-to-source" href="https://github.com/commercetools/scraml/tree/v0.11.0/src/sbt-test/sbt-scraml/cats/build.sbt" target="_blank" title="Go to snippet source">source</a><code class="language-sbt">lazy val root = (project in file(&quot;.&quot;))
   .settings(
     scalaVersion := &quot;2.13.6&quot;,
     name := &quot;scraml-cats-test&quot;,
@@ -126,7 +128,7 @@ C16.952,7,17,6.553,17,6c0-0.553-0.048-1-0.6-1H3.6C3.048,5,3,5.447,3,6C3,6.553,3.
     )
   )</code></pre>
 <h2><a href="#circe" name="circe" class="anchor"><span class="anchor-link"></span></a>circe</h2>
-<pre class="prettyprint"><button class="snippet-button copy-snippet" title="Copy snippet to clipboard">copy</button><a class="snippet-button go-to-source" href="https://github.com/commercetools/scraml/tree/master/src/sbt-test/sbt-scraml/json/build.sbt" target="_blank" title="Go to snippet source">source</a><code class="language-sbt">val circeVersion = &quot;0.14.1&quot;
+<pre class="prettyprint"><button class="snippet-button copy-snippet" title="Copy snippet to clipboard">copy</button><a class="snippet-button go-to-source" href="https://github.com/commercetools/scraml/tree/v0.11.0/src/sbt-test/sbt-scraml/json/build.sbt" target="_blank" title="Go to snippet source">source</a><code class="language-sbt">val circeVersion = &quot;0.14.1&quot;
 
 lazy val root = (project in file(&quot;.&quot;))
   .settings(
@@ -144,16 +146,64 @@ lazy val root = (project in file(&quot;.&quot;))
         &quot;io.circe&quot; %% &quot;circe-parser&quot;
     ).map(_ % circeVersion)
   )</code></pre>
+<h2><a href="#monocle" name="monocle" class="anchor"><span class="anchor-link"></span></a>monocle</h2>
+<pre class="prettyprint"><button class="snippet-button copy-snippet" title="Copy snippet to clipboard">copy</button><a class="snippet-button go-to-source" href="https://github.com/commercetools/scraml/tree/v0.11.0/src/sbt-test/sbt-scraml/cats/build.sbt" target="_blank" title="Go to snippet source">source</a><code class="language-sbt">lazy val root = (project in file(&quot;.&quot;))
+  .settings(
+    scalaVersion := &quot;2.13.6&quot;,
+    name := &quot;scraml-cats-test&quot;,
+    version := &quot;0.1&quot;,
+    ramlFile := Some(file(&quot;api/simple.raml&quot;)),
+    librarySupport := Set(
+      scraml.libs.CatsEqSupport,
+      scraml.libs.CatsShowSupport,
+      scraml.libs.MonocleOpticsSupport
+    ),
+    Compile / sourceGenerators += runScraml,
+    libraryDependencies ++= Seq(
+      &quot;org.typelevel&quot; %% &quot;cats-core&quot; % &quot;2.6.1&quot;,
+      &quot;dev.optics&quot; %% &quot;monocle-core&quot; % &quot;3.0.0&quot;,
+    )
+  )</code></pre>
 <h2><a href="#refined-with-cats-and-circe-" name="refined-with-cats-and-circe-" class="anchor"><span class="anchor-link"></span></a>refined (with cats and circe)</h2>
-<pre class="prettyprint"><button class="snippet-button copy-snippet" title="Copy snippet to clipboard">copy</button><a class="snippet-button go-to-source" href="https://github.com/commercetools/scraml/tree/master/src/sbt-test/sbt-scraml/refined/build.sbt" target="_blank" title="Go to snippet source">source</a><code class="language-sbt">val circeVersion = &quot;0.14.1&quot;
+<pre class="prettyprint"><button class="snippet-button copy-snippet" title="Copy snippet to clipboard">copy</button><a class="snippet-button go-to-source" href="https://github.com/commercetools/scraml/tree/v0.11.0/src/sbt-test/sbt-scraml/refined/build.sbt" target="_blank" title="Go to snippet source">source</a><code class="language-sbt">import scraml.FieldMatchPolicy._
+
+val circeVersion = &quot;0.14.1&quot;
 val refinedVersion = &quot;0.9.27&quot;
 
 lazy val root = (project in file(&quot;.&quot;))
   .settings(
-    scalaVersion := &quot;2.13.6&quot;,
+    scalaVersion := &quot;2.13.8&quot;,
     name := &quot;scraml-refined-test&quot;,
     version := &quot;0.1&quot;,
     ramlFile := Some(file(&quot;api/refined.raml&quot;)),
+    // Override the default field match policy.
+    ramlFieldMatchPolicy := MatchInOrder(
+      // Generate exact field matching code except for these types.
+      // Note that the exclusion set includes types which the next
+      // policy is configured to exclude as well.  This allows them
+      // to &quot;fall through&quot; to the last policy.
+      Exact(
+        excluding = Set(
+          &quot;ChildInheritsAll&quot;,
+          &quot;ChildOverridesAll&quot;,
+          &quot;DataType&quot;,
+          &quot;NoProps&quot;
+        )
+      ) ::
+      // Generate field matching code which ignores properties not
+      // explicitly defined in the RAML *and* not matched above,
+      // unless &quot;excluding&quot; matches.
+      IgnoreExtra(
+        excluding = Set(
+          &quot;DataType&quot;,
+          &quot;NoProps&quot;
+        )
+      ) ::
+      // If the above policies don&#39;t match, then try this one (which
+      // will always match as its &quot;excluding&quot; Set is empty.
+      KeepExtra() ::
+      Nil
+    ),
     librarySupport := Set(
       scraml.libs.CatsEqSupport,
       scraml.libs.CatsShowSupport,
@@ -165,7 +215,7 @@ lazy val root = (project in file(&quot;.&quot;))
       scraml.libs.RefinedSupport
     ),
     Compile / sourceGenerators += runScraml,
-	libraryDependencies += &quot;com.chuusai&quot; %% &quot;shapeless&quot; % &quot;2.3.7&quot;,
+    libraryDependencies += &quot;com.chuusai&quot; %% &quot;shapeless&quot; % &quot;2.3.7&quot;,
     libraryDependencies ++= Seq(
       &quot;eu.timepit&quot; %% &quot;refined&quot;,
       &quot;eu.timepit&quot; %% &quot;refined-cats&quot;
@@ -176,9 +226,10 @@ lazy val root = (project in file(&quot;.&quot;))
         &quot;io.circe&quot; %% &quot;circe-parser&quot;,
         &quot;io.circe&quot; %% &quot;circe-refined&quot;
     ).map(_ % circeVersion)
-  )</code></pre>
+  )
+</code></pre>
 <h2><a href="#sphere-json" name="sphere-json" class="anchor"><span class="anchor-link"></span></a>Sphere JSON</h2>
-<pre class="prettyprint"><button class="snippet-button copy-snippet" title="Copy snippet to clipboard">copy</button><a class="snippet-button go-to-source" href="https://github.com/commercetools/scraml/tree/master/src/sbt-test/sbt-scraml/ct-api-sphere/build.sbt" target="_blank" title="Go to snippet source">source</a><code class="language-sbt">val circeVersion = &quot;0.14.1&quot;
+<pre class="prettyprint"><button class="snippet-button copy-snippet" title="Copy snippet to clipboard">copy</button><a class="snippet-button go-to-source" href="https://github.com/commercetools/scraml/tree/v0.11.0/src/sbt-test/sbt-scraml/ct-api-sphere/build.sbt" target="_blank" title="Go to snippet source">source</a><code class="language-sbt">val circeVersion = &quot;0.14.1&quot;
 
 lazy val root = (project in file(&quot;.&quot;))
   .settings(
@@ -195,7 +246,7 @@ lazy val root = (project in file(&quot;.&quot;))
 <h2><a href="#tapir" name="tapir" class="anchor"><span class="anchor-link"></span></a>tapir</h2>
 <p>the <a href="https://github.com/softwaremill/tapir">tapir</a> support generating endpoint values:</p>
 <h3><a href="#example-tapir-build-sbt" name="example-tapir-build-sbt" class="anchor"><span class="anchor-link"></span></a>Example tapir build.sbt</h3>
-<pre class="prettyprint"><button class="snippet-button copy-snippet" title="Copy snippet to clipboard">copy</button><a class="snippet-button go-to-source" href="https://github.com/commercetools/scraml/tree/master/examples/build.sbt" target="_blank" title="Go to snippet source">source</a><code class="language-sbt">scalaVersion := &quot;2.13.6&quot;
+<pre class="prettyprint"><button class="snippet-button copy-snippet" title="Copy snippet to clipboard">copy</button><a class="snippet-button go-to-source" href="https://github.com/commercetools/scraml/tree/v0.11.0/examples/build.sbt" target="_blank" title="Go to snippet source">source</a><code class="language-sbt">scalaVersion := &quot;2.13.6&quot;
 
 val circeVersion = &quot;0.14.1&quot;
 val tapirVersion = &quot;0.19.0-M9&quot;
@@ -220,12 +271,12 @@ lazy val examples = (project in file(&quot;.&quot;))
 
     ramlFile := Some(file(&quot;../src/sbt-test/sbt-scraml/simple/api/simple.raml&quot;)),
     basePackageName := &quot;scraml.examples&quot;,
-    librarySupport := Set(scraml.libs.CirceJsonSupport, scraml.libs.TapirSupport(&quot;Endpoints&quot;)),
+    librarySupport := Set(scraml.libs.CirceJsonSupport(), scraml.libs.TapirSupport(&quot;Endpoints&quot;)),
     Compile / sourceGenerators += runScraml
   )</code></pre>
 <h3><a href="#interpreting-tapir-endpoints" name="interpreting-tapir-endpoints" class="anchor"><span class="anchor-link"></span></a>Interpreting tapir endpoints</h3>
 <p>usage of the generated <code>Endpoints.Greeting.getGreeting</code> type from the previous <a href="api.html">api</a> example:</p>
-<pre class="prettyprint"><button class="snippet-button copy-snippet" title="Copy snippet to clipboard">copy</button><a class="snippet-button go-to-source" href="https://github.com/commercetools/scraml/tree/master/examples/src/main/scala/examples/GreetingExample.scala" target="_blank" title="Go to snippet source">source</a><code class="language-scala">package examples
+<pre class="prettyprint"><button class="snippet-button copy-snippet" title="Copy snippet to clipboard">copy</button><a class="snippet-button go-to-source" href="https://github.com/commercetools/scraml/tree/v0.11.0/examples/src/main/scala/examples/GreetingExample.scala" target="_blank" title="Go to snippet source">source</a><code class="language-scala">package examples
 
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
@@ -308,9 +359,12 @@ object GreetingApp extends IOApp {
   } yield ExitCode.Success
 }</code></pre>
 <div class="source-github">
-The source code for this page can be found <a href="https://github.com/commercetools/scraml/tree/master/src/main/paradox/libs.md">here</a>.
+The source code for this page can be found <a href="https://github.com/commercetools/scraml/tree/v0.11.0/src/main/paradox/libs.md">here</a>.
 </div>
 
+<div class="nav-next">
+<p><strong>Next:</strong> <a href="migrating.html">Migration Guide</a></p>
+</div>
 </div>
 <div class="large-3 show-for-large column" data-sticky-container>
 <nav class="sidebar sticky" data-sticky data-anchor="docs" data-sticky-on="large">
@@ -322,6 +376,7 @@ The source code for this page can be found <a href="https://github.com/commercet
   <ul>
     <li><a href="libs.html#cats" class="header">cats</a></li>
     <li><a href="libs.html#circe" class="header">circe</a></li>
+    <li><a href="libs.html#monocle" class="header">monocle</a></li>
     <li><a href="libs.html#refined-with-cats-and-circe-" class="header">refined (with cats and circe)</a></li>
     <li><a href="libs.html#sphere-json" class="header">Sphere JSON</a></li>
     <li><a href="libs.html#tapir" class="header">tapir</a></li>
@@ -367,7 +422,7 @@ The source code for this page can be found <a href="https://github.com/commercet
 
 <!--
 <div class="copyright">
-<span class="text">&copy; 2021</span>
+<span class="text">&copy; 2022</span>
 <a href="https://www.example.com" class="logo">logo</a>
 </div>
 -->
@@ -392,7 +447,7 @@ The source code for this page can be found <a href="https://github.com/commercet
 <script type="text/javascript" src="lib/prettify/prettify.js"></script>
 <script type="text/javascript" src="lib/prettify/lang-scala.js"></script>
 <script type="text/javascript">jQuery(function(){window.prettyPrint && prettyPrint()});</script>
-<script type="text/javascript">jQuery(function(jq){initOldVersionWarnings(jq, '0.10.3', 'https://github.com/commercetools/scraml')});</script>
+<script type="text/javascript">jQuery(function(jq){initOldVersionWarnings(jq, '0.11.0', 'https://github.com/commercetools/scraml')});</script>
 
 
 </html>

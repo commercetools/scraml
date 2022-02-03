@@ -32,7 +32,7 @@
 <span class="home-icon">⌂</span>SCRAML
 </a>
 <div class="version-number">
-0.10.3
+0.11.0
 </div>
 </div>
 <div class="nav-toc">
@@ -41,6 +41,7 @@
   <li><a href="api.html" class="page">Specify an API</a></li>
   <li><a href="run.html" class="page">Run</a></li>
   <li><a href="libs.html" class="page">Library Support</a></li>
+  <li><a href="migrating.html" class="page">Migration Guide</a></li>
 </ul>
 </div>
 
@@ -72,7 +73,7 @@ C16.952,7,17,6.553,17,6c0-0.553-0.048-1-0.6-1H3.6C3.048,5,3,5.447,3,6C3,6.553,3.
 <span class="home-icon">⌂</span>SCRAML
 </a>
 <div class="version-number">
-0.10.3
+0.11.0
 </div>
 </div>
 <div class="nav-toc">
@@ -81,6 +82,7 @@ C16.952,7,17,6.553,17,6c0-0.553-0.048-1-0.6-1H3.6C3.048,5,3,5.447,3,6C3,6.553,3.
   <li><a href="api.html" class="page">Specify an API</a></li>
   <li><a href="run.html" class="page">Run</a></li>
   <li><a href="libs.html" class="page">Library Support</a></li>
+  <li><a href="migrating.html" class="page">Migration Guide</a></li>
 </ul>
 </div>
 
@@ -108,19 +110,164 @@ C16.952,7,17,6.553,17,6c0-0.553-0.048-1-0.6-1H3.6C3.048,5,3,5.447,3,6C3,6.553,3.
 <h1><a href="#setup" name="setup" class="anchor"><span class="anchor-link"></span></a>Setup</h1>
 <h2><a href="#add-the-dependency-to-your-build" name="add-the-dependency-to-your-build" class="anchor"><span class="anchor-link"></span></a>Add the dependency to your build</h2>
 <p><code>project/plugins.sbt</code>:</p>
-<pre class="prettyprint"><code class="language-scala"> addSbtPlugin(&quot;com.commercetools&quot; % &quot;sbt-scraml&quot; % &quot;0.10.3&quot;)
+<pre class="prettyprint"><code class="language-scala"> addSbtPlugin(&quot;com.commercetools&quot; % &quot;sbt-scraml&quot; % &quot;0.11.0&quot;)
 </code></pre>
 <h2><a href="#configure-your-build" name="configure-your-build" class="anchor"><span class="anchor-link"></span></a>Configure your build</h2>
+<p>For projects which have one <a href="https://raml.org/">RAML API specification</a> root document, each SCRAML setting can be specified individually, with <code>ramlFile</code> being the only required setting for <code>runScraml</code>.</p>
 <p><code>build.sbt</code>:</p>
-<pre class="prettyprint"><button class="snippet-button copy-snippet" title="Copy snippet to clipboard">copy</button><a class="snippet-button go-to-source" href="https://github.com/commercetools/scraml/tree/master/src/sbt-test/sbt-scraml/simple/build.sbt" target="_blank" title="Go to snippet source">source</a><code class="language-sbt">lazy val root = (project in file(&quot;.&quot;))
+<pre class="prettyprint"><button class="snippet-button copy-snippet" title="Copy snippet to clipboard">copy</button><a class="snippet-button go-to-source" href="https://github.com/commercetools/scraml/tree/v0.11.0/src/sbt-test/sbt-scraml/simple/build.sbt" target="_blank" title="Go to snippet source">source</a><code class="language-sbt">lazy val root = (project in file(&quot;.&quot;))
   .settings(
     name := &quot;scraml-simple-test&quot;,
     version := &quot;0.1&quot;,
     ramlFile := Some(file(&quot;api/simple.raml&quot;)),
     Compile / sourceGenerators += runScraml
   )</code></pre>
+<p>Projects which have two or more <a href="https://raml.org/">RAML API specification</a> root documents must use the <code>ramlDefinitions</code> setting and <strong>not</strong> <code>ramlFile</code>. If both are set, <code>ramlFile</code> will take precedence and <code>ramlDefinitions</code> will be ignored.</p>
+<p><code>build.sbt</code>:</p>
+<pre class="prettyprint"><button class="snippet-button copy-snippet" title="Copy snippet to clipboard">copy</button><a class="snippet-button go-to-source" href="https://github.com/commercetools/scraml/tree/v0.11.0/src/sbt-test/sbt-scraml/two-specifications/build.sbt" target="_blank" title="Go to snippet source">source</a><code class="language-sbt">lazy val root = (project in file(&quot;.&quot;))
+  .settings(
+    scalaVersion := &quot;2.13.6&quot;,
+    name := &quot;scraml-two-specifications&quot;,
+    version := &quot;0.1&quot;,
+    librarySupport := Set(
+      scraml.libs.CatsEqSupport,
+      scraml.libs.CatsShowSupport,
+      scraml.libs.MonocleOpticsSupport
+    ),
+    ramlDefinitions := Seq(
+      scraml.ModelDefinition(
+        raml = file(&quot;api/inline-types.raml&quot;),
+        basePackage = &quot;scraml.inline&quot;,
+        // Explicitly override the default Scala types for this definition.
+        defaultTypes = scraml.DefaultTypes(
+          float = &quot;Double&quot;,
+          number = &quot;scala.math.BigDecimal&quot;
+        ),
+        // Use DataTypes for RAML type definitions which do not have a
+        // (package) annotation.
+        defaultPackageAnnotation = Some(&quot;DataTypes&quot;),
+        // Explicitly override the global librarySupport setting.
+        librarySupport = Set(scraml.libs.CatsShowSupport),
+        formatConfig = None,
+        generateDateCreated = true
+        ),
+      scraml.ModelDefinition(
+        raml = file(&quot;api/simple.raml&quot;),
+        basePackage = &quot;scraml.simple&quot;,
+        defaultPackageAnnotation = None,
+        formatConfig = None,
+        generateDateCreated = true
+        ),
+      ),
+    Compile / sourceGenerators += runScraml,
+    libraryDependencies ++= Seq(
+      &quot;org.typelevel&quot; %% &quot;cats-core&quot; % &quot;2.7.0&quot;,
+      &quot;dev.optics&quot; %% &quot;monocle-core&quot; % &quot;3.1.0&quot;
+    )
+  )
+</code></pre>
+<p>Notes:</p>
+<ul>
+  <li>Each <code>basePackage</code> <strong>must</strong> be unique across all <code>scraml.ModelDefinition</code>s.</li>
+  <li>The <code>defaultTypes</code> can be set globally and will be used for each <code>scraml.ModelDefinition</code> which has a <code>defaultTypes</code> with all default values.</li>
+  <li>The <code>libraryDefinitions</code> can be set globally and will be used for each <code>scraml.ModelDefinition</code> which has an empty <code>Set</code>.</li>
+</ul>
+<h2><a href="#tuning-code-generation" name="tuning-code-generation" class="anchor"><span class="anchor-link"></span></a>Tuning Code Generation</h2>
+<p>A project can tune what type of code is generated both by the <code>LibrarySupport</code> enabled as well as specifying a <code>FieldMatchPolicy</code>. The former is documented in the <a href="libs.html">Library Support</a> page and will not be covered here.</p>
+<p>A <code>FieldMatchPolicy</code> determines whether or not <code>additionalProperties</code> are supported for a RAML type definition as well as what Circe will do in the presence of them (if Circe is enabled). There are four distinct policies available and a <code>MatchInOrder</code> policy which allows the specification of one or more <code>FieldMatchPolicy</code> instances applied in the order given.</p>
+<p>To select a <code>FieldMatchPolicy</code>, set the project-wide <code>ramlFieldMatchPolicy</code> or specify the <code>ramlFieldMatchPolicy</code> <code>Option</code> in each <code>scraml.ModelDefinition</code> as desired. If a <code>scraml.ModelDefinition</code> does not specify a <code>ramlFieldMatchPolicy</code>, the project-wide <code>ramlFieldMatchPolicy</code> setting is used.</p>
+<p>All policies which support <code>additionalProperties</code> for a given <a href="https://github.com/raml-org/raml-spec/blob/master/versions/raml-10/raml-10.md/#object-type">RAML Object Type</a> have an additional <code>case class</code> constructor argument list generated of the form:</p>
+<pre class="prettyprint"><code class="language-scala">final case class Generated(...)(
+  val additionalProperties: Option[Generated.AdditionalProperties] = None
+)
+</code></pre>
+<p>Where <code>Generated</code> is the name of the Scala class created by <code>scraml</code>.</p>
+<p>Types resulting in <code>case class</code> generation which do <strong>not</strong> have <code>additionalProperties</code> enabled will <strong>not</strong> have the additional constructor argument list. For example:</p>
+<pre class="prettyprint"><code class="language-scala">final case class NoAdditionalAllowed(...)
+</code></pre>
+<p>Note that <code>trait</code>s and <code>object</code>s will not have <code>additionalProperties</code> generated for them.</p>
+<p>Also note that use of the custom <code>asMap</code> annotation initiates an alternate code generation flow, bypassing the <code>FieldMatchPolicy</code> all together.</p>
+<h3><a href="#default" name="default" class="anchor"><span class="anchor-link"></span></a>Default</h3>
+<p>This is the policy <code>scraml</code> will use if no other is specified. It adheres to the <a href="https://github.com/raml-org/raml-spec/blob/master/versions/raml-10/raml-10.md/#additional-properties">RAML Additional Properties</a> specification as closely as possible by enabling <code>additionalProperties</code> support unless the <code>additionalProperties</code> facet is set to <code>false</code> for a <a href="https://github.com/raml-org/raml-spec/blob/master/versions/raml-10/raml-10.md/#object-type">RAML Object Type</a>.</p>
+<p>If Circe support is enabled, named properties will be used in the generated <code>Decoder</code> and any additional properties are kept in the <code>additionalProperties</code> property for <a href="https://github.com/raml-org/raml-spec/blob/master/versions/raml-10/raml-10.md/#object-type">RAML Object Types</a> which have <code>additionalProperties</code> enabled. Additional properties will not cause the <code>Decoder</code> to fail for types which have <code>additionalProperties</code> disabled.</p>
+<p>Note that <code>Default</code> will match <strong>all</strong> <a href="https://github.com/raml-org/raml-spec/blob/master/versions/raml-10/raml-10.md/#object-type">RAML Object Types</a>. Since it is the default used and is the fallback policy for <code>MatchInOrder</code>, there is no need to explicitly configure this policy.</p>
+<h3><a href="#exact" name="exact" class="anchor"><span class="anchor-link"></span></a>Exact</h3>
+<p>The <code>Exact</code> policy only generates <code>additionalProperties</code> support when one or more pattern properties are present in a <a href="https://github.com/raml-org/raml-spec/blob/master/versions/raml-10/raml-10.md/#object-type">RAML Object Type</a>.</p>
+<p>If Circe support is enabled, a derived <code>Decoder</code> is generated unless <code>additionalProperties</code> are allowed. Additional properties present for types which disallow <code>additionalProperties</code> will cause the <code>Decoder</code> to fail.</p>
+<h3><a href="#ignoreextra" name="ignoreextra" class="anchor"><span class="anchor-link"></span></a>IgnoreExtra</h3>
+<p>The <code>IgnoreExtra</code> policy never generates <code>additionalProperties</code> support.</p>
+<p>If Circe support is enabled, only named properties for a <a href="https://github.com/raml-org/raml-spec/blob/master/versions/raml-10/raml-10.md/#object-type">RAML Object Type</a> will be used in the generated <code>Decoder</code>. Additional properties will not cause the <code>Decoder</code> to fail.</p>
+<h3><a href="#keepextra" name="keepextra" class="anchor"><span class="anchor-link"></span></a>KeepExtra</h3>
+<p>The <code>KeepExtra</code> policy always generates <code>additionalProperties</code> support. This also implies there will be no singleton types generated as there could always be a possibility of <code>additionalProperties</code> being present on a per-instance basis.</p>
+<p>If Circe support is enabled, named properties will be used in the generated <code>Decoder</code>. Additional properties will not cause the <code>Decoder</code> to fail.</p>
+<h3><a href="#matchinorder" name="matchinorder" class="anchor"><span class="anchor-link"></span></a>MatchInOrder</h3>
+<p>The <code>MatchInOrder</code> policy is a model of the composite pattern and allows a project to specify in which order each policy will be applied. In order for policies specified after others to be considered, <code>Exact</code>, <code>IgnoreExtra</code>, and <code>KeepExtra</code> have an <code>excluding: Set[String]</code> constructor argument (defaulting to <code>Set.empty</code>). If a <a href="https://github.com/raml-org/raml-spec/blob/master/versions/raml-10/raml-10.md/#object-type">RAML Object Type</a> has a <code>displayName</code> which matches a policy&rsquo;s <code>excluding</code> configuration, that policy will not be applied and the next one will be attempted. If no policy matches, the <code>Default</code> policy is used.</p>
+<p><code>build.sbt</code>:</p>
+<pre class="prettyprint"><button class="snippet-button copy-snippet" title="Copy snippet to clipboard">copy</button><a class="snippet-button go-to-source" href="https://github.com/commercetools/scraml/tree/v0.11.0/src/sbt-test/sbt-scraml/refined/build.sbt" target="_blank" title="Go to snippet source">source</a><code class="language-sbt">import scraml.FieldMatchPolicy._
+
+val circeVersion = &quot;0.14.1&quot;
+val refinedVersion = &quot;0.9.27&quot;
+
+lazy val root = (project in file(&quot;.&quot;))
+  .settings(
+    scalaVersion := &quot;2.13.8&quot;,
+    name := &quot;scraml-refined-test&quot;,
+    version := &quot;0.1&quot;,
+    ramlFile := Some(file(&quot;api/refined.raml&quot;)),
+    // Override the default field match policy.
+    ramlFieldMatchPolicy := MatchInOrder(
+      // Generate exact field matching code except for these types.
+      // Note that the exclusion set includes types which the next
+      // policy is configured to exclude as well.  This allows them
+      // to &quot;fall through&quot; to the last policy.
+      Exact(
+        excluding = Set(
+          &quot;ChildInheritsAll&quot;,
+          &quot;ChildOverridesAll&quot;,
+          &quot;DataType&quot;,
+          &quot;NoProps&quot;
+        )
+      ) ::
+      // Generate field matching code which ignores properties not
+      // explicitly defined in the RAML *and* not matched above,
+      // unless &quot;excluding&quot; matches.
+      IgnoreExtra(
+        excluding = Set(
+          &quot;DataType&quot;,
+          &quot;NoProps&quot;
+        )
+      ) ::
+      // If the above policies don&#39;t match, then try this one (which
+      // will always match as its &quot;excluding&quot; Set is empty.
+      KeepExtra() ::
+      Nil
+    ),
+    librarySupport := Set(
+      scraml.libs.CatsEqSupport,
+      scraml.libs.CatsShowSupport,
+      scraml.libs.CirceJsonSupport(
+        formats = Map(
+          &quot;localDateTime&quot; -&gt; &quot;io.circe.Decoder.decodeLocalDateTime&quot;
+        )
+      ),
+      scraml.libs.RefinedSupport
+    ),
+    Compile / sourceGenerators += runScraml,
+    libraryDependencies += &quot;com.chuusai&quot; %% &quot;shapeless&quot; % &quot;2.3.7&quot;,
+    libraryDependencies ++= Seq(
+      &quot;eu.timepit&quot; %% &quot;refined&quot;,
+      &quot;eu.timepit&quot; %% &quot;refined-cats&quot;
+    ).map(_ % refinedVersion),
+    libraryDependencies ++= Seq(
+        &quot;io.circe&quot; %% &quot;circe-core&quot;,
+        &quot;io.circe&quot; %% &quot;circe-generic&quot;,
+        &quot;io.circe&quot; %% &quot;circe-parser&quot;,
+        &quot;io.circe&quot; %% &quot;circe-refined&quot;
+    ).map(_ % circeVersion)
+  )
+</code></pre>
 <div class="source-github">
-The source code for this page can be found <a href="https://github.com/commercetools/scraml/tree/master/src/main/paradox/setup.md">here</a>.
+The source code for this page can be found <a href="https://github.com/commercetools/scraml/tree/v0.11.0/src/main/paradox/setup.md">here</a>.
 </div>
 
 <div class="nav-next">
@@ -137,6 +284,7 @@ The source code for this page can be found <a href="https://github.com/commercet
   <ul>
     <li><a href="setup.html#add-the-dependency-to-your-build" class="header">Add the dependency to your build</a></li>
     <li><a href="setup.html#configure-your-build" class="header">Configure your build</a></li>
+    <li><a href="setup.html#tuning-code-generation" class="header">Tuning Code Generation</a></li>
   </ul></li>
 </ul>
 </div>
@@ -179,7 +327,7 @@ The source code for this page can be found <a href="https://github.com/commercet
 
 <!--
 <div class="copyright">
-<span class="text">&copy; 2021</span>
+<span class="text">&copy; 2022</span>
 <a href="https://www.example.com" class="logo">logo</a>
 </div>
 -->
@@ -204,7 +352,7 @@ The source code for this page can be found <a href="https://github.com/commercet
 <script type="text/javascript" src="lib/prettify/prettify.js"></script>
 <script type="text/javascript" src="lib/prettify/lang-scala.js"></script>
 <script type="text/javascript">jQuery(function(){window.prettyPrint && prettyPrint()});</script>
-<script type="text/javascript">jQuery(function(jq){initOldVersionWarnings(jq, '0.10.3', 'https://github.com/commercetools/scraml')});</script>
+<script type="text/javascript">jQuery(function(jq){initOldVersionWarnings(jq, '0.11.0', 'https://github.com/commercetools/scraml')});</script>
 
 
 </html>

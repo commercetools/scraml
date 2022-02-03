@@ -2,11 +2,11 @@
 <html class="no-js" lang="en">
 
 <head>
-<title>SCRAML</title>
+<title>Migration Guide · SCRAML</title>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <meta name="description" content='sbt-scraml'/>
-<link rel="canonical" href="https://github.com/commercetools/scramlindex.html"/>
+<link rel="canonical" href="https://github.com/commercetools/scramlmigrating.html"/>
 <link href="https://fonts.googleapis.com/css?family=Roboto:100normal,100italic,300normal,300italic,400normal,400italic,500normal,500italic,700normal,700italic,900normal,900italicc" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="lib/jquery/jquery.min.js"></script>
 <script type="text/javascript" src="js/page.js"></script>
@@ -28,7 +28,7 @@
 <div class="off-canvas position-left" id="off-canvas-menu" data-off-canvas>
 <nav class="off-canvas-nav">
 <div class="nav-home">
-<a href="index.html" class="active">
+<a href="index.html" >
 <span class="home-icon">⌂</span>SCRAML
 </a>
 <div class="version-number">
@@ -41,7 +41,7 @@
   <li><a href="api.html" class="page">Specify an API</a></li>
   <li><a href="run.html" class="page">Run</a></li>
   <li><a href="libs.html" class="page">Library Support</a></li>
-  <li><a href="migrating.html" class="page">Migration Guide</a></li>
+  <li><a href="migrating.html" class="active page">Migration Guide</a></li>
 </ul>
 </div>
 
@@ -56,7 +56,7 @@
 H3.6C3.048,13,3,13.447,3,14c0,0.553,0.048,1,0.6,1H16.4c0.552,0,0.6-0.447,0.6-1C17,13.447,16.952,13,16.4,13z M3.6,7H16.4
 C16.952,7,17,6.553,17,6c0-0.553-0.048-1-0.6-1H3.6C3.048,5,3,5.447,3,6C3,6.553,3.048,7,3.6,7z"/></svg>
 </a>
-<div class="title"><a href="index.html" class="active">SCRAML</a></div>
+<div class="title"><a href="index.html">SCRAML</a></div>
 
 <!--
 <a href="https://www.example.com" class="logo show-for-medium">logo</a>
@@ -69,7 +69,7 @@ C16.952,7,17,6.553,17,6c0-0.553-0.048-1-0.6-1H3.6C3.048,5,3,5.447,3,6C3,6.553,3.
 <div class="medium-3 large-2 show-for-medium column">
 <nav class="site-nav">
 <div class="nav-home">
-<a href="index.html" class="active">
+<a href="index.html" >
 <span class="home-icon">⌂</span>SCRAML
 </a>
 <div class="version-number">
@@ -82,7 +82,7 @@ C16.952,7,17,6.553,17,6c0-0.553-0.048-1-0.6-1H3.6C3.048,5,3,5.447,3,6C3,6.553,3.
   <li><a href="api.html" class="page">Specify an API</a></li>
   <li><a href="run.html" class="page">Run</a></li>
   <li><a href="libs.html" class="page">Library Support</a></li>
-  <li><a href="migrating.html" class="page">Migration Guide</a></li>
+  <li><a href="migrating.html" class="active page">Migration Guide</a></li>
 </ul>
 </div>
 
@@ -96,27 +96,32 @@ C16.952,7,17,6.553,17,6c0-0.553-0.048-1-0.6-1H3.6C3.048,5,3,5.447,3,6C3,6.553,3.
 
 <div class="page-header row">
 <div class="medium-12 show-for-medium column">
+<div class="nav-breadcrumbs">
+<ul>
+  <li><a href="index.html">SCRAML</a></li>
+  <li>Migration Guide</li>
+</ul>
+</div>
 </div>
 </div>
 
 <div class="page-content row">
 <div class="small-12 large-9 column" id="docs">
-<h1><a href="#scraml" name="scraml" class="anchor"><span class="anchor-link"></span></a>SCRAML</h1>
-<p><a href="https://search.maven.org/search?q=g:com.commercetools%20AND%20a:sbt-scraml"><img src="https://shields.io/badge/-Maven_Central-lightgrey?style=flat&logo=scala" alt="latest release" /></a></p>
-<p><code>sbt</code> plugin that generates code from RAML files at build time.</p>
-<p>Built on top of the <a href="https://github.com/commercetools/rest-modeling-framework">commercetools/rest-modeling-framework</a> and <a href="https://scalameta.org/">scalameta</a>.</p>
-<h2><a href="#how-to-use" name="how-to-use" class="anchor"><span class="anchor-link"></span></a>How to use</h2>
-<p>check the <a href="https://commercetools.github.io/scraml">docs</a></p>
-<h3><a href="#license" name="license" class="anchor"><span class="anchor-link"></span></a>License</h3>
-<p>The code and artifacts of the <code>sbt-scraml</code> plugin are licensed under the terms of the <a href="License">Apache License Version 2.0</a>.</p>
-<p>The RAML specification files in the folder <code>src/sbt-test/sbt-scraml/ct-api</code>, <code>src/sbt-test/sbt-scraml/ct-api-sphere</code> folders are distributed under the conditions specified in the <a href="https://github.com/commercetools/commercetools-api-reference">source repository</a>.</p>
+<div class="toc ">
+<ul>
+  <li><a href="migrating.html#v0-10-x-v0-11-x" class="header">v0.10.x -&gt; v0.11.x</a></li>
+</ul>
+</div>
+<h1><a href="#migration-guide" name="migration-guide" class="anchor"><span class="anchor-link"></span></a>Migration Guide</h1>
+<h2><a href="#v0-10-x-v0-11-x" name="v0-10-x-v0-11-x" class="anchor"><span class="anchor-link"></span></a>v0.10.x -&gt; v0.11.x</h2>
+<p>Version <code>0.11.0</code> introduces a breaking change when <code>additionalProperties</code> support is enabled. A second constructor argument list is added to these types which did not exist in <code>0.10.x</code> and below.</p>
+<p>The <code>Default</code> policy is to emit code which adheres closely to the <a href="https://github.com/raml-org/raml-spec/blob/master/versions/raml-10/raml-10.md/#additional-properties">RAML Additional Properties</a> specification.</p>
+<p>See <a href="setup.html">Setup</a></p><div class="callout note "><div class="callout-title">Note</div>
+<p>Use the <code>scraml.FieldMatchPolicy.Exact</code> policy to produce generated code which behaves similarly to <code>0.10.x</code>.</p></div>
 <div class="source-github">
-The source code for this page can be found <a href="https://github.com/commercetools/scraml/tree/v0.11.0/src/main/paradox/index.md">here</a>.
+The source code for this page can be found <a href="https://github.com/commercetools/scraml/tree/v0.11.0/src/main/paradox/migrating.md">here</a>.
 </div>
 
-<div class="nav-next">
-<p><strong>Next:</strong> <a href="setup.html">Setup</a></p>
-</div>
 </div>
 <div class="large-3 show-for-large column" data-sticky-container>
 <nav class="sidebar sticky" data-sticky data-anchor="docs" data-sticky-on="large">
@@ -124,9 +129,9 @@ The source code for this page can be found <a href="https://github.com/commercet
 <div class="nav-title">On this page:</div>
 <div class="nav-toc">
 <ul>
-  <li><a href="index.html#scraml" class="header">SCRAML</a>
+  <li><a href="migrating.html#migration-guide" class="header">Migration Guide</a>
   <ul>
-    <li><a href="index.html#how-to-use" class="header">How to use</a></li>
+    <li><a href="migrating.html#v0-10-x-v0-11-x" class="header">v0.10.x -&gt; v0.11.x</a></li>
   </ul></li>
 </ul>
 </div>
