@@ -48,6 +48,7 @@ class SphereJsonSupportSpec extends AnyFlatSpec with Matchers {
             |  import io.sphere.json.ToJSON
             |  import io.sphere.json.FromJSON
             |  import io.sphere.json.JSONParseError
+            |  import org.json4s._
             |  import cats.implicits.toContravariantOps
             |  import cats.data.Validated
             |  import cats.syntax.validated._
