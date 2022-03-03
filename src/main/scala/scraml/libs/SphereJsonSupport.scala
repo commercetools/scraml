@@ -7,6 +7,7 @@ import scraml.RMFUtil.getAnnotation
 import scraml.{DefnWithCompanion, JsonSupport, LibrarySupport, ModelGenContext}
 
 import scala.meta._
+import _root_.io.vrap.rmf.raml.model.types.StringType
 
 object SphereJsonSupport extends LibrarySupport with JsonSupport {
   override def jsonType: String = "org.json4s.JsonAST.JValue"
@@ -142,4 +143,59 @@ object SphereJsonSupport extends LibrarySupport with JsonSupport {
         companion.map(appendObjectStats(_, stats))
       }
     )
+
+  override def modifyEnum(
+      enumType: StringType
+  )(enumTrait: Defn.Trait, companion: Option[Defn.Object]): DefnWithCompanion[Defn.Trait] = {
+    import scala.jdk.CollectionConverters._
+
+    val toJson = q""" 
+      implicit lazy val toJson: ToJSON[${Type
+      .Name(enumType.getName())}] = ToJSON.stringWriter.contramap(_.toString)
+    """
+
+    val other = Case(
+      Pat.Var(Term.Name("other")),
+      None,
+      q"""JSONParseError(s"not a instance of required enum: $$other").invalidNel"""
+    )
+
+    val matchEnumInstances = Term.PartialFunction(
+      enumType
+        .getEnum()
+        .asScala
+        .map(instance =>
+          Case(
+            Lit.String(instance.getValue().toString()),
+            None,
+            Term.Select(Term.Name(instance.getValue().toString()), Term.Name("valid"))
+          )
+        )
+        .toList ++ List(other)
+    )
+
+    val fromJson = q""" 
+    implicit lazy val fromJson: FromJSON[${Type
+      .Name(enumType.getName())}] = (jval: JsonAST.JValue) =>
+      FromJSON.stringReader
+        .read(jval)
+        .andThen($matchEnumInstances)
+    """
+
+    val stats =
+      q"""
+        import io.sphere.json.ToJSON
+        import io.sphere.json.FromJSON
+        import io.sphere.json.JSONParseError
+
+        import cats.implicits.toContravariantOps
+        import cats.data.Validated
+        import cats.syntax.validated._
+        $toJson
+        $fromJson
+       """.stats
+
+    DefnWithCompanion(enumTrait, companion.map(appendObjectStats(_, stats)))
+  }
+
 }

@@ -22,7 +22,7 @@ class SphereJsonSupportSpec extends AnyFlatSpec with Matchers {
     val generated = ModelGenRunner.run(DefaultModelGen)(params).unsafeRunSync()
 
     generated.files match {
-      case noDiscBase :: _ :: _ :: baseType :: _ :: _ :: dataType :: emptyBase :: noProps :: _ :: _ :: _ :: _ :: _ :: Nil =>
+      case noDiscBase :: _ :: _ :: baseType :: _ :: _ :: dataType :: emptyBase :: noProps :: _ :: someEnum :: _ :: _ :: _ :: Nil =>
         noDiscBase.source.source.toString() should be("sealed trait NoDiscriminatorBase")
         noDiscBase.source.companion.map(_.toString()) should be(
           Some(s"""object NoDiscriminatorBase {
@@ -40,6 +40,27 @@ class SphereJsonSupportSpec extends AnyFlatSpec with Matchers {
              |  }
              |}""".stripMargin)
         )
+
+        someEnum.source.source.toString() should be("sealed trait SomeEnum")
+        someEnum.source.companion.map(_.toString()) should be(Some(s"""object SomeEnum {
+            |  case object A extends SomeEnum
+            |  case object B extends SomeEnum
+            |  import io.sphere.json.ToJSON
+            |  import io.sphere.json.FromJSON
+            |  import io.sphere.json.JSONParseError
+            |  import cats.implicits.toContravariantOps
+            |  import cats.data.Validated
+            |  import cats.syntax.validated._
+            |  implicit lazy val toJson: ToJSON[SomeEnum] = ToJSON.stringWriter.contramap(_.toString)
+            |  implicit lazy val fromJson: FromJSON[SomeEnum] = (jval: JsonAST.JValue) => FromJSON.stringReader.read(jval).andThen({
+            |    case "A" =>
+            |      A.valid
+            |    case "B" =>
+            |      B.valid
+            |    case other =>
+            |      JSONParseError(s"not a instance of required enum: $$other").invalidNel
+            |  })
+            |}""".stripMargin))
 
         baseType.source.packageName should be("datatypes")
         baseType.source.source.toString() should be(
