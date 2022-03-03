@@ -188,6 +188,8 @@ object SphereJsonSupport extends LibrarySupport with JsonSupport {
         import io.sphere.json.FromJSON
         import io.sphere.json.JSONParseError
 
+        import org.json4s._
+
         import cats.implicits.toContravariantOps
         import cats.data.Validated
         import cats.syntax.validated._
