@@ -22,7 +22,7 @@ class DefaultModelGenSpec extends AnyFlatSpec with Matchers {
     val generated = ModelGenRunner.run(DefaultModelGen)(params).unsafeRunSync()
 
     generated.files match {
-      case baseType :: dataType :: emptyBase :: noProps :: enumType :: packageObject :: Nil =>
+      case baseType :: dataType :: defaultProperty :: emptyBase :: noProps :: enumType :: packageObject :: Nil =>
         baseType.source.packageName should be("datatypes")
         baseType.source.source.toString() should be(
           "sealed trait BaseType extends Any { def id: String }"
@@ -41,6 +41,16 @@ class DefaultModelGenSpec extends AnyFlatSpec with Matchers {
         dataType.source.name should be("DataType")
         dataType.file.getPath should be("target/scraml-test/scraml/datatypes.scala")
 
+        defaultProperty.source.packageName should be("datatypes")
+        defaultProperty.source.name should be("DefaultProperty")
+        defaultProperty.file.getPath should be("target/scraml-test/scraml/datatypes.scala")
+        defaultProperty.source.source.toString() should be(
+          """final case class DefaultProperty(message: String = "this is a default message")"""
+        )
+        defaultProperty.source.companion.map(_.toString()) should be(
+          Some("""object DefaultProperty""")
+        )
+
         emptyBase.source.source.toString() should be("sealed trait EmptyBase")
         noProps.source.source.toString() should be(
           s"""case object NoProps extends EmptyBase""".stripMargin
@@ -54,7 +64,7 @@ class DefaultModelGenSpec extends AnyFlatSpec with Matchers {
 
         packageObject.source.source.toString should be("package object scraml")
 
-      case _ => fail()
+      case _ => fail("unexpected number of generated source files")
     }
   }
 

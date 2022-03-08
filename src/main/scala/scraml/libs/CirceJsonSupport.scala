@@ -16,6 +16,14 @@ class CirceJsonSupport(formats: Map[String, String]) extends LibrarySupport with
   import scala.meta._
   import scala.collection.JavaConverters._
 
+  object HasAnyDefaults {
+    def unapply(context: ModelGenContext): Boolean =
+      Option(context.objectType.getAllProperties)
+        .map(_.asScala.toList)
+        .getOrElse(Nil)
+        .exists(_.getType.getDefault ne null)
+  }
+
   object HasRefinements extends HasFacets {
     def apply(context: ModelGenContext, classDef: Defn.Class): Boolean =
       context.isLibraryEnabled[RefinedSupport.type]() &&
@@ -351,6 +359,7 @@ class CirceJsonSupport(formats: Map[String, String]) extends LibrarySupport with
                    _.+:($tuple)
                )
               """
+
             case None =>
               q"""
                implicit lazy val encoder: Encoder[${Type.Name(objectType.getName)}] =
@@ -392,10 +401,43 @@ class CirceJsonSupport(formats: Map[String, String]) extends LibrarySupport with
   private def deriveJsonClassDecoder(context: ModelGenContext, classDef: Defn.Class): List[Stat] = {
     import context.objectType
 
-    val objectTypeName = Type.Name(context.objectType.getName)
+    val objectTypeName = Type.Name(objectType.getName)
+
+    def defaultValueFor(param: Term.Param): Option[Term] = {
+      val property     = Option(objectType.getProperty(param.name.value))
+      val propertyType = property.map(_.getType)
+      val isRequired   = property.fold(true)(_.getRequired)
+
+      propertyType
+        .flatMap(pt => Option(pt.getDefault))
+        .flatMap { instance =>
+          propertyType match {
+            case Some(_: StringType) if isRequired =>
+              val raw = instance.getValue.toString
+
+              Option(Lit.String(raw))
+
+            case Some(_: StringType) =>
+              val raw = instance.getValue.toString
+
+              Option(q"""Some(${Lit.String(raw)})""")
+
+            case Some(_) if isRequired =>
+              instance.getValue.toString.parse[Term].toOption
+
+            case Some(_) =>
+              instance.getValue.toString.parse[Term].toOption.map { term =>
+                q"""Some($term)"""
+              }
+
+            case None =>
+              None
+          }
+        }
+    }
 
     def genFlatmaps(args: List[Term.Param])(
-        genLastProperty: (Lit.String, Term.Name, Type, Term.Name) => Term.Apply
+        genLastProperty: (Lit.String, Term.Name, Type, Term.Name, Option[Term]) => Term.Apply
     ): Term.Apply =
       args match {
         case last :: Nil =>
@@ -403,17 +445,31 @@ class CirceJsonSupport(formats: Map[String, String]) extends LibrarySupport with
           val paramName     = Term.Name("_" + last.name.value)
           val companionName = Term.Name(classDef.name.value)
 
-          genLastProperty(fieldName, paramName, last.decltpe.get, companionName)
+          genLastProperty(
+            fieldName,
+            paramName,
+            last.decltpe.get,
+            companionName,
+            defaultValueFor(last)
+          )
 
         case head :: tail =>
           val fieldName = Lit.String(head.name.value)
           val paramName = Term.Name("_" + head.name.value)
 
-          q"""
+          defaultValueFor(head).fold(
+            q"""
               c.downField($fieldName).as[${head.decltpe.get}].flatMap {
                 $paramName: ${head.decltpe.get} => ${genFlatmaps(tail)(genLastProperty)}
               }
            """
+          ) { value =>
+            q"""
+              c.getOrElse[${head.decltpe.get}]($fieldName)($value).flatMap {
+                $paramName: ${head.decltpe.get} => ${genFlatmaps(tail)(genLastProperty)}
+              }
+           """
+          }
       }
 
     (context, context.params.fieldMatchPolicy.additionalProperties(objectType)(context)) match {
@@ -425,7 +481,7 @@ class CirceJsonSupport(formats: Map[String, String]) extends LibrarySupport with
           new Decoder[$objectTypeName] {
             def apply(c: HCursor): Decoder.Result[$objectTypeName] = {
               ${genFlatmaps(classDef.ctor.paramss.flatten) {
-          case (fieldName, paramName, paramType, companionName) =>
+          case (fieldName, paramName, paramType, companionName, _) =>
             val additionalParamName = Term.Name("_" + additional.propertyName)
 
             q"""
@@ -453,7 +509,19 @@ class CirceJsonSupport(formats: Map[String, String]) extends LibrarySupport with
           new Decoder[$objectTypeName] {
             def apply(c: HCursor): Decoder.Result[$objectTypeName] = {
               ${genFlatmaps(classDef.ctor.paramss.flatten) {
-          case (fieldName, paramName, paramType, companionName) =>
+          case (fieldName, paramName, paramType, companionName, Some(default)) =>
+            q"""
+              c.getOrElse[$paramType]($fieldName)($default).flatMap {
+                $paramName: $paramType =>
+                  $companionName.from(..${generatePropertiesCode(classDef) { prop =>
+              Term.Name("_" + prop.name.value) :: Nil
+            }.collect { case t: Term =>
+              t
+            }}).swap.map(e => DecodingFailure(e.getMessage, Nil)).swap
+            }
+           """
+
+          case (fieldName, paramName, paramType, companionName, None) =>
             q"""
               c.downField($fieldName).as[$paramType].flatMap {
                 $paramName: $paramType =>
@@ -476,20 +544,18 @@ class CirceJsonSupport(formats: Map[String, String]) extends LibrarySupport with
           new Decoder[$objectTypeName] {
             def apply(c: HCursor): Decoder.Result[$objectTypeName] = {
               ${genFlatmaps(classDef.ctor.paramss.flatten) {
-            case (fieldName, paramName, paramType, companionName) =>
+            case (fieldName, paramName, paramType, companionName, _) =>
               val additionalParamName = Term.Name("_" + additional.propertyName)
 
               q"""
-                AdditionalProperties.decoder(c).flatMap {
+                AdditionalProperties.decoder(c).map {
                   $additionalParamName: Option[${additional.propertyType}] =>
-                  Right(
                     $companionName(..${generatePropertiesCode(classDef) { prop =>
                 Term.Name("_" + prop.name.value) :: Nil
               }.collect { case t: Term =>
                 t
               }}
               )($additionalParamName)
-                )
             }
            """
           }}
@@ -498,26 +564,37 @@ class CirceJsonSupport(formats: Map[String, String]) extends LibrarySupport with
        """
         )
 
-      case (FieldMatchPolicy(IgnoreExtra(_)), None) =>
+      case (FieldMatchPolicy(IgnoreExtra(_)) | HasAnyDefaults(), None) =>
         List(
           q"""
         implicit lazy val decoder: Decoder[$objectTypeName] =
           new Decoder[$objectTypeName] {
             def apply(c: HCursor): Decoder.Result[$objectTypeName] = {
               ${genFlatmaps(classDef.ctor.paramss.flatten) {
-            case (fieldName, paramName, paramType, companionName) =>
+            case (fieldName, paramName, paramType, companionName, Some(default)) =>
               q"""
-              c.downField($fieldName).as[$paramType].flatMap {
+              c.getOrElse[$paramType]($fieldName)($default).map {
                 $paramName: $paramType =>
-                  Right(
                     $companionName(..${generatePropertiesCode(classDef) { prop =>
                 Term.Name("_" + prop.name.value) :: Nil
               }.collect { case t: Term =>
                 t
               }})
-              )
             }
            """
+
+            case (fieldName, paramName, paramType, companionName, None) =>
+              q"""
+              c.downField($fieldName).as[$paramType].map {
+                $paramName: $paramType =>
+                    $companionName(..${generatePropertiesCode(classDef) { prop =>
+                Term.Name("_" + prop.name.value) :: Nil
+              }.collect { case t: Term =>
+                t
+              }})
+            }
+           """
+
           }}
         }
         }
