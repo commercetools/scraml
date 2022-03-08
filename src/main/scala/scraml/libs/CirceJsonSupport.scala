@@ -3,7 +3,7 @@ package scraml.libs
 import io.vrap.rmf.raml.model.modules.Api
 import scraml.LibrarySupport._
 import scraml.MetaUtil._
-import scraml.RMFUtil.getAnnotation
+import scraml.RMFUtil.{getAnnotation, isEnumType}
 import scraml._
 import io.vrap.rmf.raml.model.types.{AnyType, ObjectType, StringType}
 
@@ -322,8 +322,6 @@ class CirceJsonSupport(formats: Map[String, String]) extends LibrarySupport with
       }
 
       lazy val pairs = context.params.fieldMatchPolicy.namedProperties(objectType).map { property =>
-        val scalaType = context.scalaTypeRefFromProperty(property).get.scalaType
-
         q"""
           ${Lit.String(property.getName)} ->
             instance.${Term.Name(property.getName)}.asJson
@@ -412,6 +410,15 @@ class CirceJsonSupport(formats: Map[String, String]) extends LibrarySupport with
         .flatMap(pt => Option(pt.getDefault))
         .flatMap { instance =>
           propertyType match {
+            case Some(stringEnum: StringType) if isEnumType(stringEnum) =>
+              val enumType     = Term.Name(stringEnum.getName)
+              val enumInstance = Term.Name(stringEnum.getDefault.getValue.toString)
+
+              if (isRequired)
+                Option(q"$enumType.$enumInstance")
+              else
+                Option(q"""Some($enumType.$enumInstance)""")
+
             case Some(_: StringType) if isRequired =>
               val raw = instance.getValue.toString
 

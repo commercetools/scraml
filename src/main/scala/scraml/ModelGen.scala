@@ -4,7 +4,7 @@ import cats.effect.IO
 import io.vrap.rmf.raml.model.modules.Api
 import io.vrap.rmf.raml.model.types._
 import scraml.MetaUtil.{packageTerm, typeFromName}
-import scraml.RMFUtil.{getAnnotation, getPackageName}
+import scraml.RMFUtil.{getAnnotation, getPackageName, isEnumType}
 import java.io.File
 import scala.collection.immutable.TreeSet
 import scala.meta._
@@ -392,6 +392,15 @@ object ModelGen {
       defaultValue: Option[Term] = None,
       isCollection: Boolean = false
   ) {
+    def addDefaultEnum(property: StringType): TypeRefDetails = {
+      Option(property.getDefault).fold(this) { instance =>
+        val enumType     = Term.Name(property.getName)
+        val enumInstance = Term.Name(instance.getValue.toString)
+
+        copy(defaultValue = Option(q"$enumType.$enumInstance"))
+      }
+    }
+
     def addDefaultValue[A <: AnyType](property: A): TypeRefDetails =
       Option(property.getDefault).fold(this) { instance =>
         property match {
@@ -422,19 +431,27 @@ object ModelGen {
     lazy val mappedType = apiType match {
       case boolean: BooleanType =>
         overrideTypeOr(boolean, context.params.defaultTypes.boolean).addDefaultValue(boolean)
+
       case integer: IntegerType =>
         overrideTypeOr(integer, context.params.defaultTypes.integer).addDefaultValue(integer)
+
       case number: NumberType =>
         overrideTypeOr(number, numberTypeString(number)).addDefaultValue(number)
+
       // only use enum type names on top-level defined enums
       // we would need to generate types for property types otherwise
-      case string: StringType if apiType.eContainer().eClass().getName == "Property" =>
-        TypeRefDetails(Type.Name("String")).addDefaultValue(string)
-      case stringEnum: StringType
-          if Option(stringEnum.getEnum).forall(!_.isEmpty) && stringEnum.getName != "string" =>
-        TypeRefDetails(Type.Name(stringEnum.getName))
+      case string: StringType
+          if (string.getName eq null) ||
+            (apiType.eContainer().eClass().getName == "Property" && string.getName == "string") ||
+            Option(string.getType).flatMap(t => Option(t.getEnum)).exists(_.isEmpty) =>
+        TypeRefDetails(typeFromName(context.params.defaultTypes.string)).addDefaultValue(string)
+
+      case stringEnum: StringType if isEnumType(stringEnum) =>
+        TypeRefDetails(Type.Name(stringEnum.getName)).addDefaultEnum(stringEnum)
+
       case string: StringType =>
         overrideTypeOr(string, context.params.defaultTypes.string).addDefaultValue(string)
+
       case array: ArrayType =>
         val arrayType = getAnnotation(array)("scala-array-type")
           .map(_.getValue.getValue.toString)
@@ -455,8 +472,10 @@ object ModelGen {
           Some(Term.Select(packageTerm(arrayType), Term.Name("empty"))),
           isCollection = true
         )
+
       case objectType: ObjectType if objectType.getName != "object" =>
         TypeRefDetails(Type.Name(objectType.getName), getPackageName(objectType), None)
+
       case union: UnionType =>
         TypeRefDetails(
           Type.Apply(
@@ -467,13 +486,18 @@ object ModelGen {
               .toList
           )
         )
+
       case dateTime: DateTimeType =>
         overrideTypeOr(dateTime, context.params.defaultTypes.dateTime).addDefaultValue(dateTime)
+
       case date: DateOnlyType =>
         overrideTypeOr(date, context.params.defaultTypes.date).addDefaultValue(date)
+
       case time: TimeOnlyType =>
         overrideTypeOr(time, context.params.defaultTypes.time).addDefaultValue(time)
-      case _ => TypeRefDetails(typeFromName(defaultAnyTypeName))
+
+      case _ =>
+        TypeRefDetails(typeFromName(defaultAnyTypeName))
     }
 
     val typeRefDetails = typeName match {

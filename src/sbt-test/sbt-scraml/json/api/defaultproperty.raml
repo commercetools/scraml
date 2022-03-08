@@ -14,3 +14,13 @@ properties:
   limit?:
     type: integer
     default: 2
+  requiredEnum:
+    type: SomeEnum
+    default: B
+  optionalEnum:
+    type: SomeEnum
+    default: A
+    required: false
+  constrained:
+    type: ConstrainedString
+    default: AA

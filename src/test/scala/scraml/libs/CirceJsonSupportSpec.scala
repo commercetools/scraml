@@ -302,7 +302,7 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers with SourceCodeForm
         )
 
         defaultProperty.source.source.toString().stripTrailingSpaces should be(
-          """final case class DefaultProperty(message: String = "this is a default message", limit: Option[Int] = Some(2))"""
+          """final case class DefaultProperty(message: String = "this is a default message", limit: Option[Int] = Some(2), requiredEnum: SomeEnum = SomeEnum.B, optionalEnum: Option[SomeEnum] = Some(SomeEnum.A), constrained: String = "AA")"""
         )
         defaultProperty.source.companion.map(_.toString().stripTrailingSpaces) should be(
           Some(
@@ -314,8 +314,14 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers with SourceCodeForm
                |  implicit lazy val decoder: Decoder[DefaultProperty] = new Decoder[DefaultProperty] {
                |    def apply(c: HCursor): Decoder.Result[DefaultProperty] = {
                |      c.getOrElse[String]("message")("this is a default message").flatMap { (_message: String) =>
-               |        c.getOrElse[Option[Int]]("limit")(Some(2)).map {
-               |          (_limit: Option[Int]) => DefaultProperty(_message, _limit)
+               |        c.getOrElse[Option[Int]]("limit")(Some(2)).flatMap { (_limit: Option[Int]) =>
+               |          c.getOrElse[SomeEnum]("requiredEnum")(SomeEnum.B).flatMap { (_requiredEnum: SomeEnum) =>
+               |            c.getOrElse[Option[SomeEnum]]("optionalEnum")(Some(SomeEnum.A)).flatMap { (_optionalEnum: Option[SomeEnum]) =>
+               |              c.getOrElse[String]("constrained")("AA").map {
+               |                (_constrained: String) => DefaultProperty(_message, _limit, _requiredEnum, _optionalEnum, _constrained)
+               |              }
+               |            }
+               |          }
                |        }
                |      }
                |    }
@@ -829,7 +835,7 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers with SourceCodeForm
         )
 
         defaultProperty.source.source.toString().stripTrailingSpaces should be(
-          """final case class DefaultProperty(message: String = "this is a default message", limit: Option[Int] = Some(2))(val additionalProperties: Option[DefaultProperty.AdditionalProperties] = None)"""
+          """final case class DefaultProperty(message: String = "this is a default message", limit: Option[Int] = Some(2), requiredEnum: SomeEnum = SomeEnum.B, optionalEnum: Option[SomeEnum] = Some(SomeEnum.A), constrained: String = "AA")(val additionalProperties: Option[DefaultProperty.AdditionalProperties] = None)"""
         )
         defaultProperty.source.companion.map(_.toString().stripTrailingSpaces) should be(
           Some(
@@ -851,7 +857,7 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers with SourceCodeForm
                |  }
                |  object AdditionalProperties {
                |    import scala.util.matching.Regex
-               |    val propertyNames: Seq[String] = Seq("message", "limit")
+               |    val propertyNames: Seq[String] = Seq("message", "limit", "requiredEnum", "optionalEnum", "constrained")
                |    val allowedNames: Seq[Regex] = Seq()
                |    import io.circe._
                |    import io.circe.generic.semiauto._
@@ -883,14 +889,20 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers with SourceCodeForm
                |    def apply(c: HCursor): Decoder.Result[DefaultProperty] = {
                |      c.getOrElse[String]("message")("this is a default message").flatMap { (_message: String) =>
                |        c.getOrElse[Option[Int]]("limit")(Some(2)).flatMap { (_limit: Option[Int]) =>
-               |          AdditionalProperties.decoder(c).map {
-               |            (_additionalProperties: Option[DefaultProperty.AdditionalProperties]) => DefaultProperty(_message, _limit)(_additionalProperties)
+               |          c.getOrElse[SomeEnum]("requiredEnum")(SomeEnum.B).flatMap { (_requiredEnum: SomeEnum) =>
+               |            c.getOrElse[Option[SomeEnum]]("optionalEnum")(Some(SomeEnum.A)).flatMap { (_optionalEnum: Option[SomeEnum]) =>
+               |              c.getOrElse[String]("constrained")("AA").flatMap { (_constrained: String) =>
+               |                AdditionalProperties.decoder(c).map {
+               |                  (_additionalProperties: Option[DefaultProperty.AdditionalProperties]) => DefaultProperty(_message, _limit, _requiredEnum, _optionalEnum, _constrained)(_additionalProperties)
+               |                }
+               |              }
+               |            }
                |          }
                |        }
                |      }
                |    }
                |  }
-               |  implicit lazy val encoder: Encoder[DefaultProperty] = new Encoder[DefaultProperty] { final def apply(instance: DefaultProperty): Json = AdditionalProperties.merge(Json.obj("message" -> instance.message.asJson, "limit" -> instance.limit.asJson), instance.additionalProperties) }
+               |  implicit lazy val encoder: Encoder[DefaultProperty] = new Encoder[DefaultProperty] { final def apply(instance: DefaultProperty): Json = AdditionalProperties.merge(Json.obj("message" -> instance.message.asJson, "limit" -> instance.limit.asJson, "requiredEnum" -> instance.requiredEnum.asJson, "optionalEnum" -> instance.optionalEnum.asJson, "constrained" -> instance.constrained.asJson), instance.additionalProperties) }
                |}""".stripMargin.stripTrailingSpaces
           )
         )

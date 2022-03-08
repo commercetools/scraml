@@ -3,7 +3,7 @@ package scraml
 import cats.effect.IO
 import io.vrap.rmf.raml.model.RamlModelBuilder
 import io.vrap.rmf.raml.model.modules.Api
-import io.vrap.rmf.raml.model.types.{Annotation, AnyType, ObjectType, Property}
+import io.vrap.rmf.raml.model.types.{Annotation, AnyType, ObjectType, Property, StringType}
 import org.eclipse.emf.common.util.URI
 import java.io.File
 import scala.collection.immutable.TreeSet
@@ -22,6 +22,13 @@ object RMFUtil {
     override def compare(x: AnyType, y: AnyType): Int =
       x.getName.compareTo(y.getName)
   }
+
+  /** determines if '''string''' is an `enum` and not an aliased string.
+    */
+  def isEnumType(string: StringType): Boolean =
+    (string.getName ne null) &&
+      (string.getName != "string") &&
+      Option(string.getType).flatMap(t => Option(t.getEnum)).exists(!_.isEmpty)
 
   /** get all sub-types of '''aType''', excluding '''aType'''.
     */

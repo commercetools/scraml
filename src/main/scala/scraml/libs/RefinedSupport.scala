@@ -225,7 +225,7 @@ object RefinedSupport extends LibrarySupport {
         case Some((obj, nt: NumberType, required)) =>
           number(obj, name, nt, !required)
 
-        case Some((obj, st: StringType, required)) =>
+        case Some((obj, st: StringType, required)) if !RMFUtil.isEnumType(st) =>
           string(obj, name, st, !required)
 
         case _ =>

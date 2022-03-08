@@ -999,7 +999,7 @@ class RefinedSupportSpec extends AnyWordSpec with Matchers with SourceCodeFormat
 
       theSource should be(
         Some(
-          """final case class DefaultProperty(message: DefaultProperty.MessageType = DefaultProperty.MessageType.default, limit: DefaultProperty.LimitType = DefaultProperty.LimitType.default)"""
+          """final case class DefaultProperty(message: DefaultProperty.MessageType = DefaultProperty.MessageType.default, limit: DefaultProperty.LimitType = DefaultProperty.LimitType.default, requiredEnum: SomeEnum = SomeEnum.B, optionalEnum: Option[SomeEnum] = Some(SomeEnum.A), constrained: String = "AA")"""
         )
       )
 
@@ -1013,8 +1013,14 @@ class RefinedSupportSpec extends AnyWordSpec with Matchers with SourceCodeFormat
             |  implicit lazy val decoder: Decoder[DefaultProperty] = new Decoder[DefaultProperty] {
             |    def apply(c: HCursor): Decoder.Result[DefaultProperty] = {
             |      c.getOrElse[String]("message")("this is a default message").flatMap { (_message: String) =>
-            |        c.getOrElse[Option[Int]]("limit")(Some(2)).flatMap {
-            |          (_limit: Option[Int]) => DefaultProperty.from(_message, _limit).swap.map(e => DecodingFailure(e.getMessage, Nil)).swap
+            |        c.getOrElse[Option[Int]]("limit")(Some(2)).flatMap { (_limit: Option[Int]) =>
+            |          c.getOrElse[SomeEnum]("requiredEnum")(SomeEnum.B).flatMap { (_requiredEnum: SomeEnum) =>
+            |            c.getOrElse[Option[SomeEnum]]("optionalEnum")(Some(SomeEnum.A)).flatMap { (_optionalEnum: Option[SomeEnum]) =>
+            |              c.getOrElse[String]("constrained")("AA").flatMap {
+            |                (_constrained: String) => DefaultProperty.from(_message, _limit, _requiredEnum, _optionalEnum, _constrained).swap.map(e => DecodingFailure(e.getMessage, Nil)).swap
+            |              }
+            |            }
+            |          }
             |        }
             |      }
             |    }
@@ -1054,12 +1060,21 @@ class RefinedSupportSpec extends AnyWordSpec with Matchers with SourceCodeFormat
             |    def unapply(candidate: Option[Int]): Option[ResultType] = from(candidate).fold(_ => None, a => a)
             |    def unsafeFrom(candidate: Option[Int]): Option[ResultType] = candidate.map(rt.unsafeRefine)
             |  }
-            |  def from(message: String = "this is a default message", limit: Option[Int] = Some(2)): Either[IllegalArgumentException, DefaultProperty] = {
+            |  def from(message: String = "this is a default message", limit: Option[Int] = Some(2), requiredEnum: SomeEnum = SomeEnum.B, optionalEnum: Option[SomeEnum] = Some(SomeEnum.A), constrained: String = "AA"): Either[IllegalArgumentException, DefaultProperty] = {
             |    val _message = MessageType.from(message)
             |    val _limit = LimitType.from(limit)
+            |    val _requiredEnum = Right(requiredEnum)
+            |    val _optionalEnum = Right(optionalEnum)
+            |    val _constrained = Right(constrained)
             |    _message.flatMap { (__message: MessageType) =>
-            |      _limit.map {
-            |        (__limit: LimitType) => DefaultProperty(__message, __limit)
+            |      _limit.flatMap { (__limit: LimitType) =>
+            |        _requiredEnum.flatMap { (__requiredEnum: SomeEnum) =>
+            |          _optionalEnum.flatMap { (__optionalEnum: Option[SomeEnum]) =>
+            |            _constrained.map {
+            |              (__constrained: String) => DefaultProperty(__message, __limit, __requiredEnum, __optionalEnum, __constrained)
+            |            }
+            |          }
+            |        }
             |      }
             |    }
             |  }
