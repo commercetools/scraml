@@ -4,10 +4,10 @@ import cats.effect.IO
 import io.vrap.rmf.raml.model.modules.Api
 import io.vrap.rmf.raml.model.types._
 import scraml.MetaUtil.{packageTerm, typeFromName}
-import scraml.RMFUtil.{getAnnotation, getPackageName}
+import scraml.RMFUtil.{getAnnotation, getPackageName, isEnumType}
 import java.io.File
 import scala.collection.immutable.TreeSet
-import scala.meta.{Decl, Defn, Member, Pkg, Stat, Term, Type}
+import scala.meta._
 import scala.reflect.ClassTag
 
 import sbt.internal.util.ManagedLogger
@@ -220,6 +220,8 @@ trait LibrarySupport {
       anyType match {
         case at: ArrayType =>
           hasFacets(at)
+        case it: IntegerType =>
+          hasFacets(it)
         case nt: NumberType =>
           hasFacets(nt)
         case st: StringType =>
@@ -233,6 +235,10 @@ trait LibrarySupport {
         (at.getMinItems ne null) ||
         (at.getUniqueItems ne null) ||
         hasItemFacets(at)
+
+    final def hasFacets(it: IntegerType): Boolean =
+      (it.getMaximum ne null) ||
+        (it.getMinimum ne null)
 
     final def hasFacets(nt: NumberType): Boolean =
       (nt.getMaximum ne null) ||
@@ -383,8 +389,31 @@ object ModelGen {
   private case class TypeRefDetails(
       baseType: Type,
       packageName: Option[String] = None,
-      defaultValue: Option[Term] = None
-  )
+      defaultValue: Option[Term] = None,
+      isCollection: Boolean = false
+  ) {
+    def addDefaultEnum(property: StringType): TypeRefDetails = {
+      Option(property.getDefault).fold(this) { instance =>
+        val enumType     = Term.Name(property.getName)
+        val enumInstance = Term.Name(instance.getValue.toString)
+
+        copy(defaultValue = Option(q"$enumType.$enumInstance"))
+      }
+    }
+
+    def addDefaultValue[A <: AnyType](property: A): TypeRefDetails =
+      Option(property.getDefault).fold(this) { instance =>
+        property match {
+          case _: StringType =>
+            val raw = instance.getValue.toString
+
+            copy(defaultValue = Option(Lit.String(raw)))
+
+          case _ =>
+            copy(defaultValue = instance.getValue.toString.parse[Term].toOption)
+        }
+      }
+  }
 
   def scalaTypeRef(
       apiType: AnyType,
@@ -401,40 +430,52 @@ object ModelGen {
 
     lazy val mappedType = apiType match {
       case boolean: BooleanType =>
-        overrideTypeOr(boolean, context.params.defaultTypes.boolean)
+        overrideTypeOr(boolean, context.params.defaultTypes.boolean).addDefaultValue(boolean)
+
       case integer: IntegerType =>
-        overrideTypeOr(integer, context.params.defaultTypes.integer)
+        overrideTypeOr(integer, context.params.defaultTypes.integer).addDefaultValue(integer)
+
       case number: NumberType =>
-        overrideTypeOr(number, numberTypeString(number))
+        overrideTypeOr(number, numberTypeString(number)).addDefaultValue(number)
+
       // only use enum type names on top-level defined enums
       // we would need to generate types for property types otherwise
-      case _: StringType if apiType.eContainer().eClass().getName == "Property" =>
-        TypeRefDetails(Type.Name("String"))
-      case stringEnum: StringType
-          if Option(stringEnum.getEnum).forall(!_.isEmpty) && stringEnum.getName != "string" =>
-        TypeRefDetails(Type.Name(stringEnum.getName))
+      case string: StringType
+          if (string.getName eq null) ||
+            (apiType.eContainer().eClass().getName == "Property" && string.getName == "string") ||
+            Option(string.getType).flatMap(t => Option(t.getEnum)).exists(_.isEmpty) =>
+        TypeRefDetails(typeFromName(context.params.defaultTypes.string)).addDefaultValue(string)
+
+      case stringEnum: StringType if isEnumType(stringEnum) =>
+        TypeRefDetails(Type.Name(stringEnum.getName)).addDefaultEnum(stringEnum)
+
       case string: StringType =>
-        overrideTypeOr(string, context.params.defaultTypes.string)
+        overrideTypeOr(string, context.params.defaultTypes.string).addDefaultValue(string)
+
       case array: ArrayType =>
         val arrayType = getAnnotation(array)("scala-array-type")
           .map(_.getValue.getValue.toString)
           .getOrElse(context.params.defaultTypes.array)
         val itemTypeOverride = getAnnotation(array)("scala-type").map(_.getValue.getValue.toString)
         // we do not need to be optional inside an collection, hence setting it to false
+        // also, arrays do not support default values
         TypeRefDetails(
           Type.Apply(
             typeFromName(arrayType),
-            List(
-              scalaTypeRef(array.getItems, false, itemTypeOverride, defaultAnyTypeName).map(
+            scalaTypeRef(array.getItems, false, itemTypeOverride, defaultAnyTypeName)
+              .map(
                 _.scalaType
               )
-            ).flatten
+              .toList
           ),
           None,
-          Some(Term.Select(packageTerm(arrayType), Term.Name("empty")))
+          Some(Term.Select(packageTerm(arrayType), Term.Name("empty"))),
+          isCollection = true
         )
+
       case objectType: ObjectType if objectType.getName != "object" =>
         TypeRefDetails(Type.Name(objectType.getName), getPackageName(objectType), None)
+
       case union: UnionType =>
         TypeRefDetails(
           Type.Apply(
@@ -445,29 +486,56 @@ object ModelGen {
               .toList
           )
         )
+
       case dateTime: DateTimeType =>
-        overrideTypeOr(dateTime, context.params.defaultTypes.dateTime)
+        overrideTypeOr(dateTime, context.params.defaultTypes.dateTime).addDefaultValue(dateTime)
+
       case date: DateOnlyType =>
-        overrideTypeOr(date, context.params.defaultTypes.date)
+        overrideTypeOr(date, context.params.defaultTypes.date).addDefaultValue(date)
+
       case time: TimeOnlyType =>
-        overrideTypeOr(time, context.params.defaultTypes.time)
-      case _ => TypeRefDetails(typeFromName(defaultAnyTypeName))
+        overrideTypeOr(time, context.params.defaultTypes.time).addDefaultValue(time)
+
+      case _ =>
+        TypeRefDetails(typeFromName(defaultAnyTypeName))
     }
 
-    val typeRef = typeName match {
+    val typeRefDetails = typeName match {
       case Some(scalaTypeName) => TypeRefDetails(typeFromName(scalaTypeName), None, None)
       case None                => mappedType
     }
 
-    if (optional) {
-      Some(
-        TypeRef(
-          Type.Apply(Type.Name("Option"), List(typeRef.baseType)),
-          typeRef.packageName,
-          Some(Term.Name("None"))
+    typeRefDetails match {
+      case details: TypeRefDetails if !optional =>
+        Some(TypeRef(details.baseType, details.packageName, details.defaultValue))
+
+      case TypeRefDetails(baseType, packageName, Some(_), true) =>
+        Some(
+          TypeRef(
+            Type.Apply(Type.Name("Option"), List(baseType)),
+            packageName,
+            Some(q"None")
+          )
         )
-      )
-    } else Some(TypeRef(typeRef.baseType, typeRef.packageName, typeRef.defaultValue))
+
+      case TypeRefDetails(baseType, packageName, Some(defaultValue), false) =>
+        Some(
+          TypeRef(
+            Type.Apply(Type.Name("Option"), List(baseType)),
+            packageName,
+            Some(q"Some($defaultValue)")
+          )
+        )
+
+      case TypeRefDetails(baseType, packageName, None, _) =>
+        Some(
+          TypeRef(
+            Type.Apply(Type.Name("Option"), List(baseType)),
+            packageName,
+            Some(q"None")
+          )
+        )
+    }
   }
 
   def scalaProperty(prop: TypedElement)(fallbackType: String)(implicit

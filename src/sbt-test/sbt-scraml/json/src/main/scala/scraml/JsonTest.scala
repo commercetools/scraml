@@ -8,6 +8,7 @@ object JsonTest extends App {
 
   checkIntermediate()
   checkAdditional()
+  checkDefault()
 
 
   def checkIntermediate(): Unit = {
@@ -64,6 +65,17 @@ object JsonTest extends App {
       parse(grandchild.asJson.toString) == Right(grandchild.asJson),
       s"JSON did not round trip:\nparse: ${parse(grandchild.asJson.toString)}"
     )
+  }
+
+  def checkDefault(): Unit = {
+    val default = DefaultProperty()()
+
+    assert(default.message ne null)
+    assert(default.message != "")
+    assert(default.asJson == DefaultProperty.encoder(default))
+    assert(default.asJson.toString.contains("message"))
+    assert(default.asJson.toString.contains(default.message))
+    assert(default.asJson.toString.contains(default.limit.fold("<<missing>>")(_.toString)))
   }
 }
 

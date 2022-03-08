@@ -4,7 +4,7 @@ EmptyBase: !include emptybase.raml
 NoProps: !include noprops.raml
 SomeEnum: !include enum.raml
 
-# Verify inherited facets defintions
+# Verify inherited facets definitions
 BaseWithoutFacetsType: !include basewithoutfacetstype.raml
 ChildWithFacetsType: !include childwithfacetstype.raml
 
@@ -13,3 +13,9 @@ ChildInheritsAll: !include childinheritsall.raml
 ChildOverridesAll: !include childoverridesall.raml
 
 SomeMapType: !include somemaptype.raml
+
+# Verify support for default values with other facets
+DefaultProperty: !include defaultproperty.raml
+
+# Verify support for top-level strings with facets
+ConstrainedString: !include constrainedstring.raml

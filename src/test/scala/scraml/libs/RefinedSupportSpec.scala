@@ -91,6 +91,7 @@ class RefinedSupportSpec extends AnyWordSpec with Matchers with SourceCodeFormat
             |    import eu.timepit.refined.api._
             |    type ResultType = Refined[Set[scala.math.BigDecimal], And[MinSize[Witness.`1`.T], And[MaxSize[Witness.`100`.T], Forall[OptionalCustomArrayTypePropItemPredicate]]]]
             |    private val rt = RefinedType.apply[ResultType]
+            |    lazy val default: Option[ResultType] = None
             |    def apply(candidate: Set[scala.math.BigDecimal]): Either[IllegalArgumentException, Option[ResultType]] = from(Option(candidate))
             |    def apply(candidate: Option[Set[scala.math.BigDecimal]]): Either[IllegalArgumentException, Option[ResultType]] = from(candidate)
             |    def from(candidate: Option[Set[scala.math.BigDecimal]]): Either[IllegalArgumentException, Option[ResultType]] = candidate match {
@@ -107,6 +108,7 @@ class RefinedSupportSpec extends AnyWordSpec with Matchers with SourceCodeFormat
             |    import eu.timepit.refined.api._
             |    type ResultType = Refined[String, MatchesRegex[Witness.`"^[A-z]+$"`.T]]
             |    private val rt = RefinedType.apply[ResultType]
+            |    lazy val default: Option[ResultType] = unsafeFrom(None)
             |    def apply(candidate: String): Either[IllegalArgumentException, Option[ResultType]] = from(Option(candidate))
             |    def apply(candidate: Option[String]): Either[IllegalArgumentException, Option[ResultType]] = from(candidate)
             |    def from(candidate: Option[String]): Either[IllegalArgumentException, Option[ResultType]] = candidate match {
@@ -155,6 +157,7 @@ class RefinedSupportSpec extends AnyWordSpec with Matchers with SourceCodeFormat
             |    import eu.timepit.refined.api._
             |    type ResultType = Refined[scala.collection.immutable.List[String], Forall[OptionalStringArrayItemPredicate]]
             |    private val rt = RefinedType.apply[ResultType]
+            |    lazy val default: Option[ResultType] = None
             |    def apply(candidate: scala.collection.immutable.List[String]): Either[IllegalArgumentException, Option[ResultType]] = from(Option(candidate))
             |    def apply(candidate: Option[scala.collection.immutable.List[String]]): Either[IllegalArgumentException, Option[ResultType]] = from(candidate)
             |    def from(candidate: Option[scala.collection.immutable.List[String]]): Either[IllegalArgumentException, Option[ResultType]] = candidate match {
@@ -280,6 +283,7 @@ class RefinedSupportSpec extends AnyWordSpec with Matchers with SourceCodeFormat
             |    import eu.timepit.refined.api._
             |    type ResultType = Refined[Set[scala.math.BigDecimal], And[MinSize[Witness.`1`.T], And[MaxSize[Witness.`100`.T], Forall[OptionalCustomArrayTypePropItemPredicate]]]]
             |    private val rt = RefinedType.apply[ResultType]
+            |    lazy val default: Option[ResultType] = None
             |    def apply(candidate: Set[scala.math.BigDecimal]): Either[IllegalArgumentException, Option[ResultType]] = from(Option(candidate))
             |    def apply(candidate: Option[Set[scala.math.BigDecimal]]): Either[IllegalArgumentException, Option[ResultType]] = from(candidate)
             |    def from(candidate: Option[Set[scala.math.BigDecimal]]): Either[IllegalArgumentException, Option[ResultType]] = candidate match {
@@ -296,6 +300,7 @@ class RefinedSupportSpec extends AnyWordSpec with Matchers with SourceCodeFormat
             |    import eu.timepit.refined.api._
             |    type ResultType = Refined[String, MatchesRegex[Witness.`"^[A-z]+$"`.T]]
             |    private val rt = RefinedType.apply[ResultType]
+            |    lazy val default: Option[ResultType] = unsafeFrom(None)
             |    def apply(candidate: String): Either[IllegalArgumentException, Option[ResultType]] = from(Option(candidate))
             |    def apply(candidate: Option[String]): Either[IllegalArgumentException, Option[ResultType]] = from(candidate)
             |    def from(candidate: Option[String]): Either[IllegalArgumentException, Option[ResultType]] = candidate match {
@@ -344,6 +349,7 @@ class RefinedSupportSpec extends AnyWordSpec with Matchers with SourceCodeFormat
             |    import eu.timepit.refined.api._
             |    type ResultType = Refined[scala.collection.immutable.List[String], Forall[OptionalStringArrayItemPredicate]]
             |    private val rt = RefinedType.apply[ResultType]
+            |    lazy val default: Option[ResultType] = None
             |    def apply(candidate: scala.collection.immutable.List[String]): Either[IllegalArgumentException, Option[ResultType]] = from(Option(candidate))
             |    def apply(candidate: Option[scala.collection.immutable.List[String]]): Either[IllegalArgumentException, Option[ResultType]] = from(candidate)
             |    def from(candidate: Option[scala.collection.immutable.List[String]]): Either[IllegalArgumentException, Option[ResultType]] = candidate match {
@@ -512,6 +518,7 @@ class RefinedSupportSpec extends AnyWordSpec with Matchers with SourceCodeFormat
             |    import eu.timepit.refined.api._
             |    type ResultType = Refined[Set[scala.math.BigDecimal], And[MinSize[Witness.`1`.T], And[MaxSize[Witness.`100`.T], Forall[OptionalCustomArrayTypePropItemPredicate]]]]
             |    private val rt = RefinedType.apply[ResultType]
+            |    lazy val default: Option[ResultType] = None
             |    def apply(candidate: Set[scala.math.BigDecimal]): Either[IllegalArgumentException, Option[ResultType]] = from(Option(candidate))
             |    def apply(candidate: Option[Set[scala.math.BigDecimal]]): Either[IllegalArgumentException, Option[ResultType]] = from(candidate)
             |    def from(candidate: Option[Set[scala.math.BigDecimal]]): Either[IllegalArgumentException, Option[ResultType]] = candidate match {
@@ -528,6 +535,7 @@ class RefinedSupportSpec extends AnyWordSpec with Matchers with SourceCodeFormat
             |    import eu.timepit.refined.api._
             |    type ResultType = Refined[String, MatchesRegex[Witness.`"^[A-z]+$"`.T]]
             |    private val rt = RefinedType.apply[ResultType]
+            |    lazy val default: Option[ResultType] = unsafeFrom(None)
             |    def apply(candidate: String): Either[IllegalArgumentException, Option[ResultType]] = from(Option(candidate))
             |    def apply(candidate: Option[String]): Either[IllegalArgumentException, Option[ResultType]] = from(candidate)
             |    def from(candidate: Option[String]): Either[IllegalArgumentException, Option[ResultType]] = candidate match {
@@ -576,6 +584,7 @@ class RefinedSupportSpec extends AnyWordSpec with Matchers with SourceCodeFormat
             |    import eu.timepit.refined.api._
             |    type ResultType = Refined[scala.collection.immutable.List[String], Forall[OptionalStringArrayItemPredicate]]
             |    private val rt = RefinedType.apply[ResultType]
+            |    lazy val default: Option[ResultType] = None
             |    def apply(candidate: scala.collection.immutable.List[String]): Either[IllegalArgumentException, Option[ResultType]] = from(Option(candidate))
             |    def apply(candidate: Option[scala.collection.immutable.List[String]]): Either[IllegalArgumentException, Option[ResultType]] = from(candidate)
             |    def from(candidate: Option[scala.collection.immutable.List[String]]): Either[IllegalArgumentException, Option[ResultType]] = candidate match {
@@ -950,6 +959,120 @@ class RefinedSupportSpec extends AnyWordSpec with Matchers with SourceCodeFormat
             |        _atMost100.flatMap { (__atMost100: AtMost100Type) =>
             |          _stringArray.map {
             |            (__stringArray: StringArrayType) => ChildInheritsAll(__id, __count, __atMost100, __stringArray)
+            |          }
+            |        }
+            |      }
+            |    }
+            |  }
+            |}""".stripMargin.stripTrailingSpaces
+        )
+      )
+    }
+
+    "support default values (scalar)" in {
+      val params = ModelGenParams(
+        new File("src/sbt-test/sbt-scraml/refined/api/refined.raml"),
+        new File("target/scraml-refined-test"),
+        "scraml",
+        FieldMatchPolicy.Exact(),
+        DefaultTypes(),
+        librarySupport = Set(CirceJsonSupport(), RefinedSupport),
+        formatConfig = None,
+        generateDateCreated = true
+      )
+
+      val generated = ModelGenRunner.run(DefaultModelGen)(params).unsafeRunSync()
+
+      generated.files.nonEmpty should be(true)
+
+      val theSource = generated.files
+        .find(_.source.name == "DefaultProperty")
+        .map(_.source.source.toString().stripTrailingSpaces)
+
+      val theCompanion = generated.files
+        .find(_.source.name == "DefaultProperty")
+        .flatMap(_.source.companion)
+        .map(_.toString().stripTrailingSpaces)
+
+      theSource.isDefined should be(true)
+      theCompanion.isDefined should be(true)
+
+      theSource should be(
+        Some(
+          """final case class DefaultProperty(message: DefaultProperty.MessageType = DefaultProperty.MessageType.default, limit: DefaultProperty.LimitType = DefaultProperty.LimitType.default, requiredEnum: SomeEnum = SomeEnum.B, optionalEnum: Option[SomeEnum] = Some(SomeEnum.A), constrained: String = "AA")"""
+        )
+      )
+
+      theCompanion should be(
+        Some(
+          """object DefaultProperty {
+            |  import io.circe._
+            |  import io.circe.generic.semiauto._
+            |  import io.circe.syntax._
+            |  import io.circe.refined._
+            |  implicit lazy val decoder: Decoder[DefaultProperty] = new Decoder[DefaultProperty] {
+            |    def apply(c: HCursor): Decoder.Result[DefaultProperty] = {
+            |      c.getOrElse[String]("message")("this is a default message").flatMap { (_message: String) =>
+            |        c.getOrElse[Option[Int]]("limit")(Some(2)).flatMap { (_limit: Option[Int]) =>
+            |          c.getOrElse[SomeEnum]("requiredEnum")(SomeEnum.B).flatMap { (_requiredEnum: SomeEnum) =>
+            |            c.getOrElse[Option[SomeEnum]]("optionalEnum")(Some(SomeEnum.A)).flatMap { (_optionalEnum: Option[SomeEnum]) =>
+            |              c.getOrElse[String]("constrained")("AA").flatMap {
+            |                (_constrained: String) => DefaultProperty.from(_message, _limit, _requiredEnum, _optionalEnum, _constrained).swap.map(e => DecodingFailure(e.getMessage, Nil)).swap
+            |              }
+            |            }
+            |          }
+            |        }
+            |      }
+            |    }
+            |  }
+            |  implicit lazy val encoder: Encoder[DefaultProperty] = deriveEncoder[DefaultProperty]
+            |  import eu.timepit.refined.api.Refined
+            |  import eu.timepit.refined.boolean.And
+            |  import eu.timepit.refined.collection._
+            |  import eu.timepit.refined.numeric._
+            |  import eu.timepit.refined.string._
+            |  import shapeless.Witness
+            |  type MessageType = Refined[String, And[MinSize[Witness.`4`.T], And[MaxSize[Witness.`64`.T], MatchesRegex[Witness.`"^[A-z0-9 ]*$"`.T]]]]
+            |  object MessageType {
+            |    import eu.timepit.refined.api._
+            |    type ResultType = Refined[String, And[MinSize[Witness.`4`.T], And[MaxSize[Witness.`64`.T], MatchesRegex[Witness.`"^[A-z0-9 ]*$"`.T]]]]
+            |    private val rt = RefinedType.apply[ResultType]
+            |    lazy val default: ResultType = unsafeFrom("this is a default message")
+            |    def apply(candidate: String): Either[IllegalArgumentException, ResultType] = from(candidate)
+            |    def from(candidate: String): Either[IllegalArgumentException, ResultType] = rt.refine(candidate).left.map(msg => new IllegalArgumentException(msg))
+            |    def unapply(candidate: String): Option[ResultType] = from(candidate).toOption
+            |    def unsafeFrom(candidate: String): ResultType = rt.unsafeRefine(candidate)
+            |  }
+            |  type LimitType = Option[Refined[Int, Interval.Closed[Witness.`0`.T, Witness.`20`.T]]]
+            |  object LimitType {
+            |    import eu.timepit.refined.api._
+            |    type ResultType = Refined[Int, Interval.Closed[Witness.`0`.T, Witness.`20`.T]]
+            |    private val rt = RefinedType.apply[ResultType]
+            |    lazy val default: Option[ResultType] = unsafeFrom(Some(2))
+            |    def apply(candidate: Int): Either[IllegalArgumentException, Option[ResultType]] = from(Option(candidate))
+            |    def apply(candidate: Option[Int]): Either[IllegalArgumentException, Option[ResultType]] = from(candidate)
+            |    def from(candidate: Option[Int]): Either[IllegalArgumentException, Option[ResultType]] = candidate match {
+            |      case Some(value) =>
+            |        rt.refine(value).map(Some(_)).left.map(msg => new IllegalArgumentException(msg))
+            |      case None =>
+            |        Right(None)
+            |    }
+            |    def unapply(candidate: Option[Int]): Option[ResultType] = from(candidate).fold(_ => None, a => a)
+            |    def unsafeFrom(candidate: Option[Int]): Option[ResultType] = candidate.map(rt.unsafeRefine)
+            |  }
+            |  def from(message: String = "this is a default message", limit: Option[Int] = Some(2), requiredEnum: SomeEnum = SomeEnum.B, optionalEnum: Option[SomeEnum] = Some(SomeEnum.A), constrained: String = "AA"): Either[IllegalArgumentException, DefaultProperty] = {
+            |    val _message = MessageType.from(message)
+            |    val _limit = LimitType.from(limit)
+            |    val _requiredEnum = Right(requiredEnum)
+            |    val _optionalEnum = Right(optionalEnum)
+            |    val _constrained = Right(constrained)
+            |    _message.flatMap { (__message: MessageType) =>
+            |      _limit.flatMap { (__limit: LimitType) =>
+            |        _requiredEnum.flatMap { (__requiredEnum: SomeEnum) =>
+            |          _optionalEnum.flatMap { (__optionalEnum: Option[SomeEnum]) =>
+            |            _constrained.map {
+            |              (__constrained: String) => DefaultProperty(__message, __limit, __requiredEnum, __optionalEnum, __constrained)
+            |            }
             |          }
             |        }
             |      }

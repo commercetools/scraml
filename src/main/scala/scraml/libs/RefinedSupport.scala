@@ -4,15 +4,7 @@ import scala.meta._
 
 import _root_.io.vrap.rmf.raml.model.types._
 import _root_.io.vrap.rmf.raml.model.values.RegExp
-import scraml.{
-  AdditionalProperties,
-  DefnWithCompanion,
-  FieldMatchPolicy,
-  LibrarySupport,
-  MetaUtil,
-  ModelGenContext,
-  RMFUtil
-}
+import scraml._
 
 object RefinedSupport extends LibrarySupport {
   import LibrarySupport.appendObjectStats
@@ -135,6 +127,13 @@ object RefinedSupport extends LibrarySupport {
         optional: Boolean
     )(implicit context: ModelGenContext): Option[A] = None
 
+    protected def integer(
+        definingType: ObjectType,
+        name: Name,
+        descriptor: IntegerType,
+        optional: Boolean
+    )(implicit context: ModelGenContext): Option[A] = None
+
     protected def number(
         definingType: ObjectType,
         name: Name,
@@ -219,10 +218,16 @@ object RefinedSupport extends LibrarySupport {
       definition match {
         case Some((obj, at: ArrayType, required)) =>
           array(obj, name, at, !required)
+
+        case Some((obj, it: IntegerType, required)) =>
+          integer(obj, name, it, !required)
+
         case Some((obj, nt: NumberType, required)) =>
           number(obj, name, nt, !required)
-        case Some((obj, st: StringType, required)) =>
+
+        case Some((obj, st: StringType, required)) if !RMFUtil.isEnumType(st) =>
           string(obj, name, st, !required)
+
         case _ =>
           None
       }
@@ -241,6 +246,14 @@ object RefinedSupport extends LibrarySupport {
         definingType: ObjectType,
         name: Name,
         descriptor: ArrayType,
+        optional: Boolean
+    )(implicit context: ModelGenContext): Option[Term] =
+      constructorArg(name, optional, sourceIsFaceted(name))
+
+    override protected def integer(
+        definingType: ObjectType,
+        name: Name,
+        descriptor: IntegerType,
         optional: Boolean
     )(implicit context: ModelGenContext): Option[Term] =
       constructorArg(name, optional, sourceIsFaceted(name))
@@ -315,11 +328,25 @@ object RefinedSupport extends LibrarySupport {
         optional: Boolean
     )(implicit context: ModelGenContext): Option[(Type, Option[Term])] = {
       Some(
-        mkDeclType(context.objectType, name.value) -> defaultValue(optional) {
-          q"None"
+        mkDeclType(context.objectType, name.value) -> defaultValue(descriptor, optional) {
+          None
         }
       )
     }
+
+    override protected def integer(
+        definingType: ObjectType,
+        name: Name,
+        descriptor: IntegerType,
+        optional: Boolean
+    )(implicit context: ModelGenContext): Option[(Type, Option[Term])] =
+      Some(
+        mkDeclType(context.objectType, name.value) -> defaultValue(descriptor, optional) {
+          Some(
+            q"${Term.Name(context.objectType.getName)}.${Term.Name(mkTypeName(name.value).value)}.default"
+          )
+        }
+      )
 
     override protected def number(
         definingType: ObjectType,
@@ -328,8 +355,10 @@ object RefinedSupport extends LibrarySupport {
         optional: Boolean
     )(implicit context: ModelGenContext): Option[(Type, Option[Term])] =
       Some(
-        mkDeclType(context.objectType, name.value) -> defaultValue(optional) {
-          q"None"
+        mkDeclType(context.objectType, name.value) -> defaultValue(descriptor, optional) {
+          Some(
+            q"${Term.Name(context.objectType.getName)}.${Term.Name(mkTypeName(name.value).value)}.default"
+          )
         }
       )
 
@@ -340,18 +369,19 @@ object RefinedSupport extends LibrarySupport {
         optional: Boolean
     )(implicit context: ModelGenContext): Option[(Type, Option[Term])] =
       Some(
-        mkDeclType(context.objectType, name.value) -> defaultValue(optional) {
-          q"None"
+        mkDeclType(context.objectType, name.value) -> defaultValue(descriptor, optional) {
+          Some(
+            q"${Term.Name(context.objectType.getName)}.${Term.Name(mkTypeName(name.value).value)}.default"
+          )
         }
       )
 
-    private def defaultValue(optional: Boolean)(
-        value: => Term
+    private def defaultValue(descriptor: AnyType, optional: Boolean)(
+        value: => Option[Term]
     ): Option[Term] =
-      if (optional)
-        Some(value)
-      else
-        None
+      Option(descriptor.getDefault)
+        .flatMap(_ => value)
+        .orElse(Some(q"None").filter(_ => optional))
   }
 
   object RefinedPropertyItemPredicates extends RefinedPropertyMatching[List[Type.Apply]] {
@@ -440,6 +470,18 @@ object RefinedSupport extends LibrarySupport {
       }
     }
 
+    override protected def integer(
+        definingType: ObjectType,
+        name: Name,
+        descriptor: IntegerType,
+        optional: Boolean
+    )(implicit context: ModelGenContext): Option[List[Type.Apply]] = {
+      val min = Option(descriptor.getMinimum)
+      val max = Option(descriptor.getMaximum)
+
+      Some(numberBounds(min.map(BigDecimal(_)), max.map(BigDecimal(_))))
+    }
+
     override protected def number(
         definingType: ObjectType,
         name: Name,
@@ -500,6 +542,14 @@ object RefinedSupport extends LibrarySupport {
           Some((mkTypeName(name.value), None, optional))
       }
     }
+
+    override protected def integer(
+        definingType: ObjectType,
+        name: Name,
+        descriptor: IntegerType,
+        optional: Boolean
+    )(implicit context: ModelGenContext): Option[(Type.Name, Option[Type.Name], Boolean)] =
+      Some((mkTypeName(name.value), None, optional))
 
     override protected def number(
         definingType: ObjectType,
@@ -603,7 +653,13 @@ object RefinedSupport extends LibrarySupport {
               q"""
                 type $typeName = Option[Refined[$originalType,${predicates(prop)}]]
                 """,
-              refinedTypeObject(typeName, originalType, predicates(prop), true)
+              refinedTypeObject(
+                typeName,
+                originalType,
+                prop,
+                optional = true,
+                collection = true
+              )
             )
 
           case RefinedPropertyType(typeName, Some(itemName), _) =>
@@ -620,7 +676,13 @@ object RefinedSupport extends LibrarySupport {
 
             itemPredicates ++ List[Stat](
               q"type $typeName = Refined[$originalType,${predicates(prop)}]",
-              refinedTypeObject(typeName, originalType, predicates(prop), false)
+              refinedTypeObject(
+                typeName,
+                originalType,
+                prop,
+                optional = false,
+                collection = true
+              )
             )
 
           case RefinedPropertyType(typeName, None, optional) if optional =>
@@ -628,13 +690,25 @@ object RefinedSupport extends LibrarySupport {
               q"""
                 type $typeName = Option[Refined[$originalType,${predicates(prop)}]]
                 """,
-              refinedTypeObject(typeName, originalType, predicates(prop), true)
+              refinedTypeObject(
+                typeName,
+                originalType,
+                prop,
+                optional = true,
+                collection = false
+              )
             )
 
           case RefinedPropertyType(typeName, None, _) =>
             List[Stat](
               q"type $typeName = Refined[$originalType,${predicates(prop)}]",
-              refinedTypeObject(typeName, originalType, predicates(prop), false)
+              refinedTypeObject(
+                typeName,
+                originalType,
+                prop,
+                optional = false,
+                collection = false
+              )
             )
 
           case _ =>
@@ -894,47 +968,110 @@ object RefinedSupport extends LibrarySupport {
   private def refinedTypeObject(
       typeName: Type.Name,
       originalType: Type,
-      predicates: Type,
-      optional: Boolean
-  ): Defn.Object = {
+      param: Term.Param,
+      optional: Boolean,
+      collection: Boolean
+  )(implicit context: ModelGenContext): Defn.Object = {
     /// These "companion-like" object definitions are inspired by the refined
     /// `RefTypeOps` class.
-    if (optional)
-      q"""
+    param.default match {
+      case Some(term) if !collection && !optional =>
+        q"""
+        object ${Term.Name(typeName.value)} {
+          import eu.timepit.refined.api._
+
+          type ResultType = Refined[$originalType,${predicates(param)}]
+
+          private val rt = RefinedType.apply[ResultType]
+
+          lazy val default: ResultType = unsafeFrom($term)
+
+          def apply(candidate: $originalType): Either[IllegalArgumentException, ResultType] =
+            from(candidate)
+
+          def from(candidate: $originalType): Either[IllegalArgumentException, ResultType] =
+            rt.refine(candidate).left.map(msg => new IllegalArgumentException(msg))
+
+          def unapply(candidate: $originalType): Option[ResultType] =
+            from(candidate).toOption
+
+          def unsafeFrom(candidate: $originalType): ResultType =
+            rt.unsafeRefine(candidate)
+        }
+       """
+
+      case Some(term) if !collection && optional =>
+        q"""
+        object ${Term.Name(typeName.value)} {
+          import eu.timepit.refined.api._
+
+          type ResultType = Refined[$originalType,${predicates(param)}]
+
+          private val rt = RefinedType.apply[ResultType]
+
+          lazy val default: Option[ResultType] = unsafeFrom($term)
+
+          def apply(candidate: $originalType): Either[IllegalArgumentException, Option[ResultType]] =
+            from(Option(candidate))
+
+          def apply(candidate: Option[$originalType]): Either[IllegalArgumentException, Option[ResultType]] =
+            from(candidate)
+
+          def from(candidate: Option[$originalType]): Either[IllegalArgumentException, Option[ResultType]] =
+            candidate match {
+              case Some(value) =>
+                rt.refine(value).map(Some(_)).left.map(msg => new IllegalArgumentException(msg))
+              case None =>
+                Right(None)
+            }
+
+          def unapply(candidate: Option[$originalType]): Option[ResultType] =
+            from(candidate).fold(_ => None, a => a)
+
+          def unsafeFrom(candidate: Option[$originalType]): Option[ResultType] =
+            candidate.map(rt.unsafeRefine)
+        }
+       """
+
+      case _ if optional =>
+        q"""
+        object ${Term.Name(typeName.value)} {
+          import eu.timepit.refined.api._
+
+          type ResultType = Refined[$originalType,${predicates(param)}]
+
+          private val rt = RefinedType.apply[ResultType]
+
+          lazy val default: Option[ResultType] = None
+
+          def apply(candidate: $originalType): Either[IllegalArgumentException, Option[ResultType]] =
+            from(Option(candidate))
+
+          def apply(candidate: Option[$originalType]): Either[IllegalArgumentException, Option[ResultType]] =
+            from(candidate)
+
+          def from(candidate: Option[$originalType]): Either[IllegalArgumentException, Option[ResultType]] =
+            candidate match {
+              case Some(value) =>
+                rt.refine(value).map(Some(_)).left.map(msg => new IllegalArgumentException(msg))
+              case None =>
+                Right(None)
+            }
+
+          def unapply(candidate: Option[$originalType]): Option[ResultType] =
+            from(candidate).fold(_ => None, a => a)
+
+          def unsafeFrom(candidate: Option[$originalType]): Option[ResultType] =
+            candidate.map(rt.unsafeRefine)
+        }
+       """
+
+      case _ =>
+        q"""
       object ${Term.Name(typeName.value)} {
         import eu.timepit.refined.api._
 
-        type ResultType = Refined[$originalType,$predicates]
-
-        private val rt = RefinedType.apply[ResultType]
-
-        def apply(candidate: $originalType): Either[IllegalArgumentException, Option[ResultType]] =
-          from(Option(candidate))
-
-        def apply(candidate: Option[$originalType]): Either[IllegalArgumentException, Option[ResultType]] =
-          from(candidate)
-
-        def from(candidate: Option[$originalType]): Either[IllegalArgumentException, Option[ResultType]] =
-          candidate match {
-            case Some(value) =>
-              rt.refine(value).map(Some(_)).left.map(msg => new IllegalArgumentException(msg))
-            case None =>
-              Right(None)
-          }
-
-        def unapply(candidate: Option[$originalType]): Option[ResultType] =
-          from(candidate).fold(_ => None, a => a)
-
-        def unsafeFrom(candidate: Option[$originalType]): Option[ResultType] =
-          candidate.map(rt.unsafeRefine)
-      }
-     """
-    else
-      q"""
-      object ${Term.Name(typeName.value)} {
-        import eu.timepit.refined.api._
-
-        type ResultType = Refined[$originalType,$predicates]
+        type ResultType = Refined[$originalType,${predicates(param)}]
 
         private val rt = RefinedType.apply[ResultType]
 
@@ -951,6 +1088,7 @@ object RefinedSupport extends LibrarySupport {
           rt.unsafeRefine(candidate)
       }
      """
+    }
   }
 
   private def warnWhenMultipleFacets(declaration: Member)(implicit

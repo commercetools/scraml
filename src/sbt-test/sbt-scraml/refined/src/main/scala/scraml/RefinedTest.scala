@@ -7,6 +7,7 @@ import io.circe.syntax._
 object RefinedTest extends App {
   checkNoAdditional()
   checkAdditional()
+  checkDefault()
 
 
   def checkNoAdditional(): Unit = {
@@ -89,6 +90,18 @@ object RefinedTest extends App {
       dataTypeWith.flatMap(np => parse(np.asJson.toString)) == dataTypeWith.map(_.asJson),
       s"JSON did not round trip:\nparse: ${dataTypeWith.flatMap(np => parse(np.asJson.toString))}"
     )
+  }
+
+  def checkDefault(): Unit = {
+    val default = DefaultProperty()
+
+    assert(default.message == DefaultProperty.MessageType.default)
+    assert(default.limit == DefaultProperty.LimitType.default)
+    assert(default.limit.isDefined)
+    assert(default.asJson == DefaultProperty.encoder(default))
+    assert(default.asJson.toString.contains("message"))
+    assert(default.asJson.toString.contains(default.message.value))
+    assert(default.asJson.toString.contains(default.limit.fold("<<missing>>")(_.value.toString)))
   }
 }
 

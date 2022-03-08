@@ -1,0 +1,26 @@
+#%RAML 1.0 DataType
+(package): DataTypes
+(docs-uri): "https://example.org/default-property"
+displayName: DefaultProperty
+type: object
+(scala-derive-json): true
+properties:
+  message:
+    type: string
+    default: "this is a default message"
+    minLength: 4
+    maxLength: 64
+    pattern: "^[A-z0-9 ]*$"
+  limit?:
+    type: integer
+    default: 2
+  requiredEnum:
+    type: SomeEnum
+    default: B
+  optionalEnum:
+    type: SomeEnum
+    default: A
+    required: false
+  constrained:
+    type: ConstrainedString
+    default: AA
