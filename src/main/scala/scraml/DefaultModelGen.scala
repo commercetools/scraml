@@ -201,7 +201,7 @@ object DefaultModelGen extends ModelGen {
       packageName <- IO.fromOption(
         getPackageName(objectType).orElse(params.defaultPackageAnnotation)
       )(
-        new IllegalStateException("object type should have package name")
+        new IllegalStateException("object type should have package name: " + objectType.getName)
       )
       apiBaseType = Option[AnyType](objectType.getType)
       extendType = getAnnotation(objectType)("scala-extends")

@@ -442,8 +442,7 @@ object ModelGen {
       // we would need to generate types for property types otherwise
       case string: StringType
           if (string.getName eq null) ||
-            (apiType.eContainer().eClass().getName == "Property" && string.getName == "string") ||
-            Option(string.getType).flatMap(t => Option(t.getEnum)).exists(_.isEmpty) =>
+            (apiType.eContainer().eClass().getName == "Property" && string.getName == "string") =>
         TypeRefDetails(typeFromName(context.params.defaultTypes.string)).addDefaultValue(string)
 
       case stringEnum: StringType if isEnumType(stringEnum) =>
