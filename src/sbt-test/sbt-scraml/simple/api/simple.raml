@@ -8,6 +8,8 @@ types: !include types.raml
 /greeting: # optional resource
   get: # HTTP method declaration
     queryParameters:
+      enum_type:
+        type: SomeEnum
       name?:
         type: string
     responses: # declare a response

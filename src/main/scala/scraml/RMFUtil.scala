@@ -27,8 +27,10 @@ object RMFUtil {
     */
   def isEnumType(string: StringType): Boolean =
     (string.getName ne null) &&
-      (string.getName != "string") &&
-      Option(string.getType).flatMap(t => Option(t.getEnum)).exists(!_.isEmpty)
+      (string.getName != "string") && (
+        Option(string.getEnum).exists(!_.isEmpty) ||
+          Option(string.getType).flatMap(t => Option(t.getEnum)).exists(!_.isEmpty)
+      )
 
   /** get all sub-types of '''aType''', excluding '''aType'''.
     */
