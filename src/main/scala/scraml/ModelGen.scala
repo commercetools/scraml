@@ -9,6 +9,7 @@ import java.io.File
 import scala.collection.immutable.TreeSet
 import scala.meta._
 import scala.reflect.ClassTag
+import scala.util.Try
 
 import sbt.internal.util.ManagedLogger
 
@@ -408,6 +409,19 @@ object ModelGen {
             val raw = instance.getValue.toString
 
             copy(defaultValue = Option(Lit.String(raw)))
+
+          case int: NumberType
+              if (int.getFormat ne null) &&
+                (int.getFormat == NumberFormat.INT64 || int.getFormat == NumberFormat.LONG) =>
+            val parsed = Try(instance.getValue.toString.toLong).map(Lit.Long(_)).toOption
+
+            copy(defaultValue = parsed)
+
+          case double: NumberType
+              if (double.getFormat ne null) && (double.getFormat == NumberFormat.DOUBLE) =>
+            val parsed = Try(instance.getValue.toString.toDouble).map(Lit.Double(_)).toOption
+
+            copy(defaultValue = parsed)
 
           case _ =>
             copy(defaultValue = instance.getValue.toString.parse[Term].toOption)
