@@ -45,7 +45,7 @@ class DefaultModelGenSpec extends AnyFlatSpec with Matchers {
         defaultProperty.source.name should be("DefaultProperty")
         defaultProperty.file.getPath should be("target/scraml-test/scraml/datatypes.scala")
         defaultProperty.source.source.toString() should be(
-          """final case class DefaultProperty(message: String = "this is a default message")"""
+          """final case class DefaultProperty(message: String = "this is a default message", longDefault: Long = -9223372036854775808L)"""
         )
         defaultProperty.source.companion.map(_.toString()) should be(
           Some("""object DefaultProperty""")
