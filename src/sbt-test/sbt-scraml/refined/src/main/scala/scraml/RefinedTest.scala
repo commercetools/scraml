@@ -98,6 +98,8 @@ object RefinedTest extends App {
     assert(default.message == DefaultProperty.MessageType.default)
     assert(default.limit == DefaultProperty.LimitType.default)
     assert(default.limit.isDefined)
+    assert(default.longInteger.value == Long.MinValue)
+    assert(default.longNumber.exists(_.value == Long.MinValue))
     assert(default.asJson == DefaultProperty.encoder(default))
     assert(default.asJson.toString.contains("message"))
     assert(default.asJson.toString.contains(default.message.value))

@@ -9,6 +9,7 @@ lazy val root = (project in file("."))
     name := "scraml-refined-test",
     version := "0.1",
     ramlFile := Some(file("api/refined.raml")),
+    defaultTypes := scraml.DefaultTypes(long = "scala.math.BigInt"),
     // Override the default field match policy.
     ramlFieldMatchPolicy := MatchInOrder(
       // Generate exact field matching code except for these types.

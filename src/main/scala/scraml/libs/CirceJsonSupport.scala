@@ -1,11 +1,13 @@
 package scraml.libs
 
+import scala.util.Try
+
 import io.vrap.rmf.raml.model.modules.Api
 import scraml.LibrarySupport._
 import scraml.MetaUtil._
 import scraml.RMFUtil.{getAnnotation, isEnumType}
 import scraml._
-import io.vrap.rmf.raml.model.types.{AnyType, ObjectType, StringType}
+import io.vrap.rmf.raml.model.types._
 
 object CirceJsonSupport {
   def apply(formats: Map[String, String] = Map.empty) = new CirceJsonSupport(formats)
@@ -428,6 +430,37 @@ class CirceJsonSupport(formats: Map[String, String]) extends LibrarySupport with
               val raw = instance.getValue.toString
 
               Option(q"""Some(${Lit.String(raw)})""")
+
+            case Some(int: IntegerType)
+                if isRequired &&
+                  (NumberFormat.INT64 == int.getFormat || NumberFormat.LONG == int.getFormat) =>
+              Try(instance.getValue.toString.toLong).map(Lit.Long(_)).toOption
+
+            case Some(int: IntegerType)
+                if NumberFormat.INT64 == int.getFormat || NumberFormat.LONG == int.getFormat =>
+              Try(instance.getValue.toString.toLong).toOption.map { value =>
+                q"""Some(${Lit.Long(value)})"""
+              }
+
+            case Some(number: NumberType)
+                if isRequired &&
+                  (NumberFormat.INT64 == number.getFormat || NumberFormat.LONG == number.getFormat) =>
+              Try(instance.getValue.toString.toLong).map(Lit.Long(_)).toOption
+
+            case Some(number: NumberType)
+                if NumberFormat.INT64 == number.getFormat || NumberFormat.LONG == number.getFormat =>
+              Try(instance.getValue.toString.toLong).toOption.map { value =>
+                q"""Some(${Lit.Long(value)})"""
+              }
+
+            case Some(double: NumberType)
+                if isRequired && NumberFormat.DOUBLE == double.getFormat =>
+              Try(instance.getValue.toString.toLong).map(Lit.Double(_)).toOption
+
+            case Some(double: NumberType) if NumberFormat.DOUBLE == double.getFormat =>
+              Try(instance.getValue.toString.toLong).toOption.map { value =>
+                q"""Some(${Lit.Double(value)})"""
+              }
 
             case Some(_) if isRequired =>
               instance.getValue.toString.parse[Term].toOption
