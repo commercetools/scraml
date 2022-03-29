@@ -378,9 +378,9 @@ trait ModelGen {
 object ModelGen {
   import scala.jdk.CollectionConverters._
 
-  private def numberTypeString(numberType: NumberType)(implicit
+  private def numberTypeString(numberFormat: NumberFormat)(implicit
       context: ModelGenContext
-  ): String = numberType.getFormat match {
+  ): String = numberFormat match {
     case NumberFormat.INT64 | NumberFormat.LONG => context.params.defaultTypes.long
     case NumberFormat.FLOAT                     => context.params.defaultTypes.float
     case NumberFormat.DOUBLE                    => context.params.defaultTypes.double
@@ -402,7 +402,7 @@ object ModelGen {
       }
     }
 
-    def addDefaultValue[A <: AnyType](property: A): TypeRefDetails =
+    def addDefaultValue(property: AnyType): TypeRefDetails =
       Option(property.getDefault).fold(this) { instance =>
         property match {
           case _: StringType =>
@@ -410,15 +410,19 @@ object ModelGen {
 
             copy(defaultValue = Option(Lit.String(raw)))
 
-          case int: NumberType
-              if (int.getFormat ne null) &&
-                (int.getFormat == NumberFormat.INT64 || int.getFormat == NumberFormat.LONG) =>
+          case int: IntegerType
+              if NumberFormat.INT64 == int.getFormat || NumberFormat.LONG == int.getFormat =>
             val parsed = Try(instance.getValue.toString.toLong).map(Lit.Long(_)).toOption
 
             copy(defaultValue = parsed)
 
-          case double: NumberType
-              if (double.getFormat ne null) && (double.getFormat == NumberFormat.DOUBLE) =>
+          case number: NumberType
+              if NumberFormat.INT64 == number.getFormat || NumberFormat.LONG == number.getFormat =>
+            val parsed = Try(instance.getValue.toString.toLong).map(Lit.Long(_)).toOption
+
+            copy(defaultValue = parsed)
+
+          case double: NumberType if NumberFormat.DOUBLE == double.getFormat =>
             val parsed = Try(instance.getValue.toString.toDouble).map(Lit.Double(_)).toOption
 
             copy(defaultValue = parsed)
@@ -447,10 +451,10 @@ object ModelGen {
         overrideTypeOr(boolean, context.params.defaultTypes.boolean).addDefaultValue(boolean)
 
       case integer: IntegerType =>
-        overrideTypeOr(integer, context.params.defaultTypes.integer).addDefaultValue(integer)
+        overrideTypeOr(integer, numberTypeString(integer.getFormat)).addDefaultValue(integer)
 
       case number: NumberType =>
-        overrideTypeOr(number, numberTypeString(number)).addDefaultValue(number)
+        overrideTypeOr(number, numberTypeString(number.getFormat)).addDefaultValue(number)
 
       // only use enum type names on top-level defined enums
       // we would need to generate types for property types otherwise

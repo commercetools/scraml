@@ -26,3 +26,17 @@ properties:
   constrained:
     type: ConstrainedString
     default: AA
+  longInteger:
+    type: integer
+    format: int64
+    # Int.MaxValue
+    maximum: 2147483647
+    # Long.MinValue
+    default: -9223372036854775808
+  longNumber?:
+    type: number
+    format: int64
+    # Int.MaxValue
+    maximum: 2147483647
+    # Long.MinValue
+    default: -9223372036854775808
