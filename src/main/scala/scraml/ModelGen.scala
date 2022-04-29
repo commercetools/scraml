@@ -571,6 +571,7 @@ object ModelGen {
   private def mapTypeToScala(anyTypeName: String): String => Type.Ref = {
     case "string" => Type.Name("String")
     case "any"    => typeFromName(anyTypeName)
+    case other    => typeFromName(other)
   }
 
   def isSingleton(objectType: ObjectType, anyTypeName: String)(implicit
