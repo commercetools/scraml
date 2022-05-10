@@ -1,0 +1,11 @@
+#%RAML 1.0 DataType
+(package): DataTypes
+(docs-uri): "https://example.org/parent-with-option-id"
+displayName: ParentWithOption
+type: object
+(scala-derive-json): true
+properties:
+  _id?:
+    type: string
+    pattern: "^[A-z0-9]+$"
+    maxLength: 128

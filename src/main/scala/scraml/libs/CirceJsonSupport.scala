@@ -14,7 +14,7 @@ object CirceJsonSupport {
 }
 
 class CirceJsonSupport(formats: Map[String, String]) extends LibrarySupport with JsonSupport {
-  import FieldMatchPolicy.{Exact, IgnoreExtra, KeepExtra}
+  import FieldMatchPolicy.{Exact, IgnoreExtra}
   import scala.meta._
   import scala.collection.JavaConverters._
 
@@ -26,11 +26,21 @@ class CirceJsonSupport(formats: Map[String, String]) extends LibrarySupport with
         .exists(_.getType.getDefault ne null)
   }
 
+  object HasAnyOverrides {
+    def unapply(context: ModelGenContext): Option[ModelGenContext] =
+      Option(context).filter {
+        _.typeProperties
+          .exists { property =>
+            PropertyOptionality(context.objectType, Name(property.getName)).overridden
+          }
+      }
+  }
+
   object HasRefinements extends HasFacets {
     def apply(context: ModelGenContext, classDef: Defn.Class): Boolean =
       context.isLibraryEnabled[RefinedSupport.type]() &&
         classDef.ctor.paramss.flatten
-          .map(_.name.value)
+          .map(p => propertyNameFrom(p.name.value))
           .flatMap(name => RMFUtil.findAllDeclarations(context.objectType, name).map(_._2))
           .exists { prop =>
             Option(prop.getType()).exists(hasAnyFacets)
@@ -315,7 +325,9 @@ class CirceJsonSupport(formats: Map[String, String]) extends LibrarySupport with
         .getOrElse(List.empty) // no subtypes
     } else List.empty          // should not derive
 
-  private def deriveJson(context: ModelGenContext, classDef: Defn.Class): List[Stat] = {
+  private def deriveJson(classDef: Defn.Class)(
+      implicit context: ModelGenContext
+  ): List[Stat] = {
     import context.objectType
 
     if (shouldDeriveJson(objectType)) {
@@ -323,18 +335,21 @@ class CirceJsonSupport(formats: Map[String, String]) extends LibrarySupport with
         q"""${Lit.String(name)} -> Json.fromString(${Lit.String(value)})"""
       }
 
-      lazy val pairs = context.params.fieldMatchPolicy.namedProperties(objectType).map { property =>
-        q"""
-          ${Lit.String(property.getName)} ->
-            instance.${Term.Name(property.getName)}.asJson
-        """
+      lazy val pairs = generatePropertiesCode[Term](classDef) {
+        case NamedProperty(param, _, declaredName) =>
+          List(
+            q"""
+          ${Lit.String(declaredName)} ->
+            instance.${Term.Name(param.name.value)}.asJson
+          """
+          )
       }
 
       val encoderDef: Defn.Val = context match {
         case FieldMatchPolicy(policy)
-            if policy.areAdditionalPropertiesEnabled(objectType)(context) =>
+            if policy.areAdditionalPropertiesEnabled(objectType) =>
           val additionalPropName = policy
-            .additionalProperties(objectType)(context)
+            .additionalProperties(objectType)
             .map(ap => Term.Name(ap.propertyName))
 
           q"""
@@ -350,7 +365,29 @@ class CirceJsonSupport(formats: Map[String, String]) extends LibrarySupport with
               }
            """
 
-        case FieldMatchPolicy(Exact(_)) =>
+        case FieldMatchPolicy(IgnoreExtra(_)) | HasAnyOverrides(_) =>
+          discriminatorTuple match {
+            case Some(tuple) =>
+              q"""
+            implicit lazy val encoder: Encoder[${Type.Name(objectType.getName)}] =
+              new Encoder[${Type.Name(objectType.getName)}] {
+                final def apply(instance: ${Type.Name(objectType.getName)}): Json =
+                    Json.obj($tuple, ..$pairs)
+              }
+          """
+
+            case None =>
+              q"""
+            implicit lazy val encoder: Encoder[${Type.Name(objectType.getName)}] =
+              new Encoder[${Type.Name(objectType.getName)}] {
+                final def apply(instance: ${Type.Name(objectType.getName)}): Json =
+                    Json.obj(..$pairs)
+              }
+          """
+          }
+
+
+        case _ =>
           discriminatorTuple match {
             case Some(tuple) =>
               q"""
@@ -366,21 +403,6 @@ class CirceJsonSupport(formats: Map[String, String]) extends LibrarySupport with
                  deriveEncoder[${Type.Name(objectType.getName)}]
               """
           }
-
-        case FieldMatchPolicy(IgnoreExtra(_)) =>
-          q"""
-            implicit lazy val encoder: Encoder[${Type.Name(objectType.getName)}] =
-              new Encoder[${Type.Name(objectType.getName)}] {
-                final def apply(instance: ${Type.Name(objectType.getName)}): Json =
-                    Json.obj(..$pairs)
-              }
-          """
-
-        case _ =>
-          q"""
-            implicit lazy val encoder: Encoder[${Type.Name(objectType.getName)}] =
-              deriveEncoder[${Type.Name(objectType.getName)}]
-         """
       }
 
       lazy val packageObjectRef = packageTerm(context.params.basePackage)
@@ -481,7 +503,7 @@ class CirceJsonSupport(formats: Map[String, String]) extends LibrarySupport with
     ): Term.Apply =
       args match {
         case last :: Nil =>
-          val fieldName     = Lit.String(last.name.value)
+          val fieldName     = Lit.String(propertyNameFrom(last.name))
           val paramName     = Term.Name("_" + last.name.value)
           val companionName = Term.Name(classDef.name.value)
 
@@ -494,7 +516,7 @@ class CirceJsonSupport(formats: Map[String, String]) extends LibrarySupport with
           )
 
         case head :: tail =>
-          val fieldName = Lit.String(head.name.value)
+          val fieldName = Lit.String(propertyNameFrom(head.name))
           val paramName = Term.Name("_" + head.name.value)
 
           defaultValueFor(head).fold(
@@ -604,7 +626,7 @@ class CirceJsonSupport(formats: Map[String, String]) extends LibrarySupport with
        """
         )
 
-      case (FieldMatchPolicy(IgnoreExtra(_)) | HasAnyDefaults(), None) =>
+      case (FieldMatchPolicy(IgnoreExtra(_)) | HasAnyDefaults() | HasAnyOverrides(_), None) =>
         List(
           q"""
         implicit lazy val decoder: Decoder[$objectTypeName] =
@@ -742,7 +764,7 @@ class CirceJsonSupport(formats: Map[String, String]) extends LibrarySupport with
       companion = companion.map(
         appendObjectStats(
           _,
-          context.isMapType.fold(deriveJson(context, classDef))(_ => mapTypeCodec(context))
+          context.isMapType.fold(deriveJson(classDef))(_ => mapTypeCodec(context))
         )
       )
     )

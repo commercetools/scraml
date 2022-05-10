@@ -34,14 +34,18 @@ object CatsShowSupport extends LibrarySupport {
           buffer.append(':')
           buffer.append('\n')
 
-          ..${generatePropertiesCode(classDef) { p =>
+          ..${generatePropertiesCode(classDef) {
+      case NamedProperty(param, _, declaredName) =>
       List(
         q"""buffer.append('\t')""",
-        q"""buffer.append(${p.name.value})""",
+        q"""buffer.append(${Lit.String(declaredName)})""",
         q"""buffer.append(": ")""",
-        q"""buffer.append(instance.${Term.Name(p.name.value)})""",
+        q"""buffer.append(instance.${Term.Name(param.name.value)})""",
         q"""buffer.append('\n')"""
       )
+
+      case _ =>
+            List.empty
     }}
 
           ..${context.params.fieldMatchPolicy

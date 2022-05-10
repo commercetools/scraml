@@ -11,7 +11,7 @@ final class CatsShowSupportSpec extends AnyWordSpec with Matchers with SourceCod
   "CatsShowSupport" must {
     "generate an implicit in the companion object when enabled (exact property matching)" in {
       val params = ModelGenParams(
-        new File("src/sbt-test/sbt-scraml/simple/api/simple.raml"),
+        new File("src/sbt-test/sbt-scraml/cats/api/simple.raml"),
         new File("target/scraml-cats-show-test"),
         "scraml",
         FieldMatchPolicy.Exact(),
@@ -67,7 +67,7 @@ final class CatsShowSupportSpec extends AnyWordSpec with Matchers with SourceCod
 
     "generate an implicit in the companion object when enabled (default property matching)" in {
       val params = ModelGenParams(
-        new File("src/sbt-test/sbt-scraml/simple/api/simple.raml"),
+        new File("src/sbt-test/sbt-scraml/cats/api/simple.raml"),
         new File("target/scraml-cats-show-test"),
         "scraml",
         FieldMatchPolicy.Default(),
@@ -148,7 +148,7 @@ final class CatsShowSupportSpec extends AnyWordSpec with Matchers with SourceCod
 
     "not produce an instance for an object" in {
       val params = ModelGenParams(
-        new File("src/sbt-test/sbt-scraml/simple/api/simple.raml"),
+        new File("src/sbt-test/sbt-scraml/cats/api/simple.raml"),
         new File("target/scraml-cats-show-test"),
         "scraml",
         FieldMatchPolicy.Exact(),
@@ -166,6 +166,77 @@ final class CatsShowSupportSpec extends AnyWordSpec with Matchers with SourceCod
         .flatMap(_.source.companion)
 
       theCompanion.isEmpty should equal(true)
+    }
+
+    "show the original property name if overridden" in {
+      val params = ModelGenParams(
+        new File("src/sbt-test/sbt-scraml/cats/api/simple.raml"),
+        new File("target/scraml-cats-eq-test"),
+        "scraml",
+        FieldMatchPolicy.KeepExtra(),
+        DefaultTypes(),
+        librarySupport = Set(CatsShowSupport),
+        formatConfig = None,
+        generateDateCreated = true
+      )
+
+      val generated = ModelGenRunner.run(DefaultModelGen)(params).unsafeRunSync()
+
+      assert(generated.files.nonEmpty)
+
+      val theCompanion = generated.files
+        .find(_.source.name == "DerivedWithRequired")
+        .flatMap(_.source.companion)
+        .map(_.toString().stripTrailingSpaces)
+
+      assert(
+        theCompanion === Some(
+          """object DerivedWithRequired {
+            |  import scala.language.dynamics
+            |  final case class AdditionalProperties(private val underlying: scala.collection.immutable.Map[String, Any]) extends scala.Dynamic {
+            |    override def toString(): String = underlying.mkString(", ")
+            |    def selectDynamic(field: String): Option[Any] = underlying.get(field)
+            |    def getOrElse[V >: Any](key: String, default: => V): V = underlying.getOrElse(key, default)
+            |    def isDefinedAt(key: String): Boolean = underlying.isDefinedAt(key)
+            |    def isEmpty: Boolean = underlying.isEmpty
+            |    def keySet: Set[String] = underlying.keySet
+            |    def keys: Iterable[String] = underlying.keys
+            |    def keysIterator: Iterator[String] = underlying.keysIterator
+            |    def nonEmpty: Boolean = !underlying.isEmpty
+            |    def size: Int = underlying.size
+            |    def values: Iterable[Any] = underlying.values
+            |    def valuesIterator: Iterator[Any] = underlying.valuesIterator
+            |  }
+            |  object AdditionalProperties {
+            |    import scala.util.matching.Regex
+            |    val propertyNames: Seq[String] = Seq("id", "version")
+            |    val allowedNames: Seq[Regex] = Seq()
+            |  }
+            |  import cats.Show
+            |  implicit val DerivedWithRequiredShow: Show[DerivedWithRequired] = Show.show { instance =>
+            |    val buffer = new StringBuilder("DerivedWithRequired")
+            |    buffer.append(':')
+            |    buffer.append('\n')
+            |    buffer.append('\t')
+            |    buffer.append("id")
+            |    buffer.append(": ")
+            |    buffer.append(instance.id$scraml)
+            |    buffer.append('\n')
+            |    buffer.append('\t')
+            |    buffer.append("version")
+            |    buffer.append(": ")
+            |    buffer.append(instance.version)
+            |    buffer.append('\n')
+            |    buffer.append('\t')
+            |    buffer.append("additionalProperties")
+            |    buffer.append(": ")
+            |    buffer.append(instance.additionalProperties)
+            |    buffer.append('\n')
+            |    buffer.toString()
+            |  }
+            |}""".stripMargin.stripTrailingSpaces
+        )
+      )
     }
   }
 }

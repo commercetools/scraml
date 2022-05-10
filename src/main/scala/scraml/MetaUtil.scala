@@ -1,8 +1,28 @@
 package scraml
 
-import scala.meta.{Term, Type}
+import scala.meta.{Name, Term, Type}
 
 object MetaUtil {
+  private val overrideSuffix = "$scraml"
+
+  def addOverrideSuffix(name: Name): Name =
+    Name(addOverrideSuffix(name.value))
+
+  def addOverrideSuffix(name: String): String =
+    removeOverrideSuffix(name) + overrideSuffix
+
+  def hasOverrideSuffix(name: Name): Boolean =
+    hasOverrideSuffix(name.value)
+
+  def hasOverrideSuffix(name: String): Boolean =
+    name.endsWith(overrideSuffix)
+
+  def removeOverrideSuffix(name: Name): Name =
+    Name(name.value.stripSuffix(overrideSuffix))
+
+  def removeOverrideSuffix(name: String): String =
+    name.stripSuffix(overrideSuffix)
+
   def termSelect(parts: List[String], default: String): Term.Ref = parts match {
     case Nil                    => Term.Name(default)
     case first :: Nil           => Term.Name(first)

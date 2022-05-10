@@ -62,6 +62,30 @@ final case class GeneratedModel(sourceFiles: Seq[GeneratedFile], packageObject: 
   }
 }
 
+final case class PropertyOptionality(originally: Boolean, overridden: Boolean) {
+  val isOptional = (originally && !overridden) || (!originally && overridden)
+  val isRequired = !(originally || overridden)
+}
+
+object PropertyOptionality {
+  def apply(aType: ObjectType, name: Name): PropertyOptionality = {
+    val declarations = allDeclarations(aType, name.value).filterNot {
+      case (_, property) =>
+        property.getName == "//"
+    }
+
+    val optional = declarations.headOption.exists(_._2.getRequired == false)
+    val wasOverridden = declarations.drop(1).exists(_._2.getRequired ^ !optional)
+
+    PropertyOptionality(originally = optional, overridden = wasOverridden)
+  }
+
+  private def allDeclarations(aType: ObjectType, name: String) = {
+    RMFUtil.findAllDeclarations(aType, name) :::
+    RMFUtil.findAllDeclarations(aType, MetaUtil.removeOverrideSuffix(name))
+  }
+}
+
 final case class ApiContext(private val api: Api) {
   import scala.jdk.CollectionConverters._
 
@@ -126,6 +150,11 @@ final case class ModelGenContext(
   lazy val isSingleton: Boolean =
     isMapType.isEmpty && params.fieldMatchPolicy.isSingleton(objectType)(this)
 
+  def findNamedProperty(name: String): Option[Property] =
+    params.fieldMatchPolicy
+      .namedProperties(objectType)
+      .find(prop => name == prop.getName)
+
   def isLibraryEnabled[A <: LibrarySupport: ClassTag](): Boolean =
     params.allLibraries.exists(ls =>
       implicitly[ClassTag[A]].runtimeClass.isAssignableFrom(ls.getClass)
@@ -164,7 +193,7 @@ final case class ModelGenContext(
     )
   }
 
-  def typeParams: List[Term.Param] = isMapType match {
+  def typeParams(properties: Seq[Property]): List[Term.Param] = isMapType match {
     case Some(mapTypeSpec) =>
       val mapApply = Type.Apply(
         mapTypeSpec.mapType,
@@ -189,7 +218,7 @@ final case class ModelGenContext(
         )
       )
     case None =>
-      typeProperties.flatMap(ModelGen.scalaProperty(_)(this.anyTypeName)(this)).toList
+      properties.flatMap(ModelGen.scalaProperty(_)(this.anyTypeName)(this)).toList
   }
 
   def warn(message: => String): Unit =
@@ -259,8 +288,40 @@ trait LibrarySupport {
   }
 
   abstract class HasProperties(names: Seq[String]) {
-    final def unapply(defn: Defn.Class): Boolean =
-      names.forall(n => defn.ctor.paramss.head.exists(_.name.value == n))
+    final def unapply(defn: Defn.Class)(
+        implicit context: ModelGenContext
+    ): Boolean =
+      names.forall { aName =>
+        // the name has to be checked explicitly so that regular expression
+        // properties do not accidentally match
+        RMFUtil.findAllDeclarations(context.objectType, aName)
+          .map(_._2.getName)
+          .contains(aName)
+      }
+  }
+
+  object NamedProperty {
+    def unapply(param: Term.Param)(
+      implicit context: ModelGenContext
+    )
+    : Option[(Term.Param, Property, String)] =
+      tryToFind(param, param.name)
+
+    def unapply(declaration: Decl.Def)(
+      implicit context: ModelGenContext
+    )
+    : Option[(Decl.Def, Property, String)] =
+      tryToFind(declaration, declaration.name)
+
+    private def tryToFind[A](a: A, name: Name)(
+      implicit context: ModelGenContext
+    ) = {
+      val unadornedName = propertyNameFrom(name.value)
+
+      context.findNamedProperty(unadornedName).map { prop =>
+        (a, prop, unadornedName)
+      }
+    }
   }
 
   def modifyAdditionalProperties(classDef: Defn.Class, companion: Option[Defn.Object])(implicit
@@ -292,21 +353,27 @@ trait LibrarySupport {
   )(enumTrait: Defn.Trait, companion: Option[Defn.Object]): DefnWithCompanion[Defn.Trait] =
     DefnWithCompanion(enumTrait, companion)
 
-  final protected def generatePropertiesCode(defn: Defn.Class)(
-      f: Term.Param => List[Stat]
-  ): List[Stat] =
-    defn.ctor.paramss.headOption.fold(List.empty[Stat]) {
+  final protected def generatePropertiesCode[A](defn: Defn.Class)(
+      f: Term.Param => List[A]
+  ): List[A] =
+    defn.ctor.paramss.headOption.fold(List.empty[A]) {
       _.flatMap(f)
     }
 
-  final protected def generatePropertiesCode(defn: Defn.Trait)(
-      f: Decl.Def => List[Stat]
-  ): List[Stat] =
+  final protected def generatePropertiesCode[A](defn: Defn.Trait)(
+      f: Decl.Def => List[A]
+  ): List[A] =
     defn.templ.stats
       .collect {
         case prop: Decl.Def if prop.paramss.isEmpty => prop
       }
       .flatMap(f)
+
+  protected def propertyNameFrom(name: Name): String =
+    propertyNameFrom(name.value)
+
+  protected def propertyNameFrom(name: String): String =
+    MetaUtil.removeOverrideSuffix(name)
 }
 
 object LibrarySupport {
@@ -568,10 +635,23 @@ object ModelGen {
   }
 
   /** map type refs from the 'asMap' annotation to real scala types */
-  private def mapTypeToScala(anyTypeName: String): String => Type.Ref = {
+  private def mapTypeToScala(anyTypeName: String, context: ModelGenContext)
+  : String => Type.Ref = {
     case "string" => Type.Name("String")
     case "any"    => typeFromName(anyTypeName)
-    case other    => typeFromName(other)
+    case other    =>
+      context.api
+        .typesByName
+        .get(other)
+        .flatMap(ModelGen.scalaTypeRef(_, false, None, anyTypeName)(context))
+        .map(_.scalaType)
+        .flatMap {
+          case ref: Type.Ref =>
+            Some(ref)
+          case _ =>
+            None
+        }
+        .getOrElse(typeFromName(other))
   }
 
   def isSingleton(objectType: ObjectType, anyTypeName: String)(implicit
@@ -591,8 +671,8 @@ object ModelGen {
           valueType <- properties.find(_.getName == "value").map(_.getValue.getValue.toString)
         } yield MapTypeSpec(
           typeFromName(context.params.defaultTypes.map),
-          mapTypeToScala(anyTypeName)(keyType),
-          mapTypeToScala(anyTypeName)(valueType)
+          mapTypeToScala(anyTypeName, context)(keyType),
+          mapTypeToScala(anyTypeName, context)(valueType)
         )
 
       case _ => None

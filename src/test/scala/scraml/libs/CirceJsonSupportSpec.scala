@@ -41,6 +41,8 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers with SourceCodeForm
           noSealedBase ::
           someEnum ::
           defaultProperty ::
+          parentWithOption ::
+          derivedWitRequired ::
           otherSub ::
           mapLike ::
           packageObject ::
@@ -334,6 +336,47 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers with SourceCodeForm
                |}""".stripMargin.stripTrailingSpaces
           )
         )
+
+        parentWithOption.source.source.toString().stripTrailingSpaces should be(
+          """sealed trait ParentWithOption { def id: Option[String] }"""
+        )
+        parentWithOption.source.companion.map(_.toString().stripTrailingSpaces) should be(
+          Some(
+            """object ParentWithOption {
+              |  import io.circe.Decoder.Result
+              |  import io.circe._
+              |  implicit lazy val decoder: Decoder[ParentWithOption] = new Decoder[ParentWithOption] { override def apply(c: HCursor): Result[ParentWithOption] = DerivedWithRequired.decoder.tryDecode(c) }
+              |  implicit lazy val encoder: Encoder[ParentWithOption] = new Encoder[ParentWithOption] {
+              |    override def apply(parentwithoption: ParentWithOption): Json = parentwithoption match {
+              |      case derivedwithrequired: DerivedWithRequired =>
+              |        DerivedWithRequired.encoder(derivedwithrequired)
+              |    }
+              |  }
+              |}""".stripMargin.stripTrailingSpaces
+          )
+        )
+
+        derivedWitRequired.source.source.toString().stripTrailingSpaces should be(
+          """final case class DerivedWithRequired(id$scraml: String) extends ParentWithOption { override val id: Some[String] = Some(id$scraml) }"""
+        )
+        derivedWitRequired.source.companion.map(_.toString().stripTrailingSpaces) should be(
+          Some(
+            """object DerivedWithRequired {
+              |  import io.circe._
+              |  import io.circe.generic.semiauto._
+              |  import io.circe.syntax._
+              |  import scraml.Formats._
+              |  implicit lazy val decoder: Decoder[DerivedWithRequired] = new Decoder[DerivedWithRequired] {
+              |    def apply(c: HCursor): Decoder.Result[DerivedWithRequired] = {
+              |      c.downField("id").as[String].map {
+              |        (_id$scraml: String) => DerivedWithRequired(_id$scraml)
+              |      }
+              |    }
+              |  }
+              |  implicit lazy val encoder: Encoder[DerivedWithRequired] = new Encoder[DerivedWithRequired] { final def apply(instance: DerivedWithRequired): Json = Json.obj("id" -> instance.id$scraml.asJson) }
+              |}""".stripMargin.stripTrailingSpaces
+          )
+        )
     }
   }
 
@@ -370,6 +413,8 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers with SourceCodeForm
           noSealedBase ::
           someEnum ::
           defaultProperty ::
+          parentWithOption ::
+          derivedWitRequired ::
           otherSub ::
           mapLike ::
           packageObject ::

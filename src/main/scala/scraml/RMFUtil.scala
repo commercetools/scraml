@@ -11,6 +11,11 @@ import scala.collection.immutable.TreeSet
 object RMFUtil {
   import scala.jdk.CollectionConverters._
 
+  implicit val anyTypeOrdering: Ordering[AnyType] = new Ordering[AnyType] {
+    override def compare(x: AnyType, y: AnyType): Int =
+      x.getName.compareTo(y.getName)
+  }
+
   def getPackageName(anyType: AnyType): Option[String] =
     getAnnotation(anyType)("package").map(_.getValue.getValue.toString.toLowerCase)
 
@@ -18,10 +23,8 @@ object RMFUtil {
     from.getAnnotation(name)
   )
 
-  implicit val anyTypeOrdering: Ordering[AnyType] = new Ordering[AnyType] {
-    override def compare(x: AnyType, y: AnyType): Int =
-      x.getName.compareTo(y.getName)
-  }
+  def hasOverrideSuffix(property: Property): Boolean =
+    MetaUtil.hasOverrideSuffix(property.getName)
 
   /** determines if '''string''' is an `enum` and not an aliased string.
     */
@@ -79,7 +82,11 @@ object RMFUtil {
     */
   def findAllDeclarations(aType: ObjectType, name: String): List[(ObjectType, Property)] =
     (aType :: superTypes(aType)).reverse.flatMap { objectType =>
-      Option(objectType.getProperty(name)).map(objectType -> _).toList
+      Option(objectType.getProperty(name)).filter { candidate =>
+        // ensure that the candidate property was defined in objectType
+        candidate.eContainer() == objectType
+      }
+        .map(objectType -> _).toList
     }
 
   /** get all (including inherited) properties of a type note: will not include properties from

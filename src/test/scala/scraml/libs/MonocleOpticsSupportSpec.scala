@@ -166,5 +166,41 @@ final class MonocleOpticsSupportSpec extends AnyWordSpec with Matchers with Sour
         )
       )
     }
+
+    "properly name 'Optics' for overridden properties" in {
+      val params = ModelGenParams(
+        new File("src/sbt-test/sbt-scraml/simple/api/simple.raml"),
+        new File("target/scraml-monocle-test"),
+        "scraml",
+        FieldMatchPolicy.Exact(),
+        DefaultTypes(),
+        librarySupport = Set(MonocleOpticsSupport),
+        formatConfig = None,
+        generateDateCreated = true
+      )
+
+      val generated = ModelGenRunner.run(DefaultModelGen)(params).unsafeRunSync()
+
+      generated.files.nonEmpty should be(true)
+
+      val theCompanion = generated.files
+        .find(_.source.name == "DerivedWithRequired")
+        .flatMap(_.source.companion)
+        .map(_.toString().stripTrailingSpaces)
+
+      theCompanion should be(
+        Some(
+          """object DerivedWithRequired {
+            |  trait Optics {
+            |    import monocle.Lens
+            |    val id: Lens[DerivedWithRequired, String] = Lens[DerivedWithRequired, String](_.id$scraml) {
+            |      a => s => s.copy(id$scraml = a)
+            |    }
+            |  }
+            |  object Optics extends Optics
+            |}""".stripMargin.stripTrailingSpaces
+        )
+      )
+    }
   }
 }

@@ -57,6 +57,71 @@ object DefaultModelGen extends ModelGen {
   private def caseClassSource(additionalProperties: Option[AdditionalProperties])(implicit
       context: ModelGenContext
   ): Defn.Class = {
+    val (overridden, unchanged) = context.typeProperties
+      .zipWithIndex
+      .map { case (prop, position) =>
+        (prop, position, PropertyOptionality(context.objectType, Name(prop.getName)))
+      }
+      .partition {
+        case (property, _, PropertyOptionality(false, true)) =>
+              throw new RuntimeException(
+                s"""error: a parent 'required' property cannot be made 'optional'
+                   |   definition  : ${context.objectType.getName}
+                   |   property    : ${property.getName}
+                   |   required    : ${property.getRequired}
+                   |""".stripMargin
+              )
+
+        case (_, _, PropertyOptionality(true, true)) =>
+          true
+
+        case _ =>
+          false
+      }
+
+    val propertyOverrides = overridden.map {
+      case (property, _, _) =>
+        val originalName = Term.Name(property.getName)
+        val derivedName = Term.Name(MetaUtil.addOverrideSuffix(property.getName))
+        val typeRef = context.scalaTypeRefFromProperty(property, optional = false)
+
+        Defn.Val(
+          mods = List(Mod.Override()),
+          pats = List(Pat.Var(originalName)),
+          decltpe = Some(
+            Type.Apply(
+              Type.Name("Some"),
+              typeRef.map(_.scalaType).toList
+            )
+          ),
+          rhs = q"Some($derivedName)"
+        )
+    }
+      .toList
+
+    val overriddenParams = overridden.map {
+      case (property, position, _) =>
+          context.typeParams(List(property))
+            .map { param =>
+              param.copy(name = MetaUtil.addOverrideSuffix(param.name))
+            }
+            .map(_ -> position)
+        }
+
+    val unchangedParams = unchanged.map {
+      case (property, position, _) =>
+        context.typeParams(List(property))
+          .map(_ -> position)
+    }
+
+    val typeParamsToUse =
+      if (context.typeProperties.isEmpty)
+        context.typeParams(Seq.empty)
+      else
+        (overriddenParams.flatten ++ unchangedParams.flatten).sortBy(_._2)
+          .map(_._1)
+          .toList
+
     Defn.Class(
       mods = List(Mod.Final(), Mod.Case()),
       name = Type.Name(context.objectType.getName),
@@ -66,7 +131,7 @@ object DefaultModelGen extends ModelGen {
         name = Name.Anonymous(),
         paramss = additionalProperties
           .map(_.declareOwnerProperty())
-          .fold(List(context.typeParams))(extra => List(context.typeParams) ::: List(List(extra)))
+          .fold(List(typeParamsToUse))(extra => List(typeParamsToUse) ::: List(List(extra)))
       ),
       templ = Template(
         early = Nil,
@@ -77,7 +142,7 @@ object DefaultModelGen extends ModelGen {
           name = Name.Anonymous(),
           decltpe = None
         ),
-        stats = Nil
+        stats = propertyOverrides
       )
     )
   }
