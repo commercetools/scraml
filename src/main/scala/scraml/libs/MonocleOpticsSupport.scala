@@ -57,8 +57,8 @@ object MonocleOpticsSupport extends LibrarySupport {
 
         ..${generatePropertiesCode(classDef) {
         case NamedProperty(param, _, declaredName) =>
-          val propType = param.decltpe.get
-          val propName = Term.Name(declaredName)
+          val propType  = param.decltpe.get
+          val propName  = Term.Name(declaredName)
           val paramName = Term.Name(param.name.value)
 
           context.params.fieldMatchPolicy.additionalProperties(context.objectType) match {

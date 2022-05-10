@@ -40,7 +40,8 @@ object RefinedSupport extends LibrarySupport {
     private def detect(objectType: ObjectType, name: String)(implicit
         context: ModelGenContext
     ): Option[String] = {
-      val declarations = RMFUtil.findAllDeclarations(objectType, propertyNameFrom(name))
+      val declarations = RMFUtil
+        .findAllDeclarations(objectType, propertyNameFrom(name))
         .filter { case (_, prop) =>
           hasAnyFacets(prop.getType())
         }
@@ -218,20 +219,19 @@ object RefinedSupport extends LibrarySupport {
         aType: ObjectType,
         name: Name
     ): Option[(ObjectType, Property, Name)] =
-      RMFUtil.findAllDeclarations(aType, propertyNameFrom(name))
+      RMFUtil
+        .findAllDeclarations(aType, propertyNameFrom(name))
         .headOption
-        .map {
-          case (declaringType, property) =>
-            (declaringType, property, name)
+        .map { case (declaringType, property) =>
+          (declaringType, property, name)
         }
 
     private def dispatch(name: Name)(implicit
         context: ModelGenContext
     ): Option[A] = {
       val definition = propertyDefinition(context.objectType, name)
-        .map {
-          case (ot, prop, maybeRenamed) =>
-            (ot, prop.getType(), PropertyOptionality(context.objectType, maybeRenamed))
+        .map { case (ot, prop, maybeRenamed) =>
+          (ot, prop.getType(), PropertyOptionality(context.objectType, maybeRenamed))
         }
 
       definition match {
@@ -414,7 +414,8 @@ object RefinedSupport extends LibrarySupport {
         aType: ObjectType,
         name: Name
     ): Option[(ObjectType, Property, Name)] =
-      RMFUtil.findAllDeclarations(aType, propertyNameFrom(name))
+      RMFUtil
+        .findAllDeclarations(aType, propertyNameFrom(name))
         .find { case (_, prop) =>
           hasAnyFacets(prop.getType())
         }
@@ -462,7 +463,8 @@ object RefinedSupport extends LibrarySupport {
         aType: ObjectType,
         name: Name
     ): Option[(ObjectType, Property, Name)] =
-      RMFUtil.findAllDeclarations(aType, propertyNameFrom(name))
+      RMFUtil
+        .findAllDeclarations(aType, propertyNameFrom(name))
         .find { case (_, prop) =>
           hasAnyFacets(prop.getType())
         }
@@ -547,9 +549,11 @@ object RefinedSupport extends LibrarySupport {
         aType: ObjectType,
         name: Name
     ): Option[(ObjectType, Property, Name)] =
-      RMFUtil.findAllDeclarations(aType, propertyNameFrom(name)).find { case (_, prop) =>
-        hasAnyFacets(prop.getType())
-      }
+      RMFUtil
+        .findAllDeclarations(aType, propertyNameFrom(name))
+        .find { case (_, prop) =>
+          hasAnyFacets(prop.getType())
+        }
         .map { case (dt, p) => (dt, p, name) }
 
     override protected def array(
@@ -638,10 +642,11 @@ object RefinedSupport extends LibrarySupport {
 
     val vals = classDef.templ.stats.map {
       case candidate @ Defn.Val(
-      _,
-      List(RefinedPropertyType(typeName, _, _)),
-      Some(Type.Apply(tpe, _)),
-      _) =>
+            _,
+            List(RefinedPropertyType(typeName, _, _)),
+            Some(Type.Apply(tpe, _)),
+            _
+          ) =>
         val fullyQualifiedName = Type.Select(
           Term.Name(context.objectType.getName),
           typeName
@@ -769,23 +774,18 @@ object RefinedSupport extends LibrarySupport {
     val from =
       List[Stat](
         q"""
-          def from( ..${
-          classDef.ctor.paramss.flatten.map {
-            param =>
-              param.copy(
-                mods = Nil,
-                name = Name(propertyNameFrom(param.name))
-              )
-          }
-        })
+          def from( ..${classDef.ctor.paramss.flatten.map { param =>
+          param.copy(
+            mods = Nil,
+            name = Name(propertyNameFrom(param.name))
+          )
+        }})
           : Either[IllegalArgumentException, ${classDef.name}] = {
             ..${generatePropertiesCode(classDef) {
           case NamedProperty(param, _, declaredName) =>
             val invocation = param match {
               case RefinedPropertyType(typeName, _, _) =>
-                q"${Term.Name(typeName.value)}.from(${
-                  Term.Name(propertyNameFrom(param.name))
-                })"
+                q"${Term.Name(typeName.value)}.from(${Term.Name(propertyNameFrom(param.name))})"
 
               case unrefined =>
                 q"Right(${Term.Name(propertyNameFrom(unrefined.name))})"

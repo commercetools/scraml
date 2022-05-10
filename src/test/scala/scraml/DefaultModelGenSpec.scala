@@ -23,16 +23,16 @@ class DefaultModelGenSpec extends AnyFlatSpec with Matchers {
 
     generated.files match {
       case baseType ::
-        dataType ::
-        defaultProperty ::
-        derivedWithRequired ::
-        emptyBase ::
-        noProps ::
-        objectAsMap ::
-        parentWithOption ::
-        enumType ::
-        packageObject ::
-        Nil =>
+          dataType ::
+          defaultProperty ::
+          derivedWithRequired ::
+          emptyBase ::
+          noProps ::
+          objectAsMap ::
+          parentWithOption ::
+          enumType ::
+          packageObject ::
+          Nil =>
         baseType.source.packageName should be("datatypes")
         baseType.source.source.toString() should be(
           "sealed trait BaseType extends Any { def id: String }"

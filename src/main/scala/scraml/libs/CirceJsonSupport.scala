@@ -325,8 +325,8 @@ class CirceJsonSupport(formats: Map[String, String]) extends LibrarySupport with
         .getOrElse(List.empty) // no subtypes
     } else List.empty          // should not derive
 
-  private def deriveJson(classDef: Defn.Class)(
-      implicit context: ModelGenContext
+  private def deriveJson(classDef: Defn.Class)(implicit
+      context: ModelGenContext
   ): List[Stat] = {
     import context.objectType
 
@@ -346,8 +346,7 @@ class CirceJsonSupport(formats: Map[String, String]) extends LibrarySupport with
       }
 
       val encoderDef: Defn.Val = context match {
-        case FieldMatchPolicy(policy)
-            if policy.areAdditionalPropertiesEnabled(objectType) =>
+        case FieldMatchPolicy(policy) if policy.areAdditionalPropertiesEnabled(objectType) =>
           val additionalPropName = policy
             .additionalProperties(objectType)
             .map(ap => Term.Name(ap.propertyName))
@@ -385,7 +384,6 @@ class CirceJsonSupport(formats: Map[String, String]) extends LibrarySupport with
               }
           """
           }
-
 
         case _ =>
           discriminatorTuple match {

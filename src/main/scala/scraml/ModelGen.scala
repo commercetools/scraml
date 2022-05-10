@@ -69,12 +69,11 @@ final case class PropertyOptionality(originally: Boolean, overridden: Boolean) {
 
 object PropertyOptionality {
   def apply(aType: ObjectType, name: Name): PropertyOptionality = {
-    val declarations = allDeclarations(aType, name.value).filterNot {
-      case (_, property) =>
-        property.getName == "//"
+    val declarations = allDeclarations(aType, name.value).filterNot { case (_, property) =>
+      property.getName == "//"
     }
 
-    val optional = declarations.headOption.exists(_._2.getRequired == false)
+    val optional      = declarations.headOption.exists(_._2.getRequired == false)
     val wasOverridden = declarations.drop(1).exists(_._2.getRequired ^ !optional)
 
     PropertyOptionality(originally = optional, overridden = wasOverridden)
@@ -82,7 +81,7 @@ object PropertyOptionality {
 
   private def allDeclarations(aType: ObjectType, name: String) = {
     RMFUtil.findAllDeclarations(aType, name) :::
-    RMFUtil.findAllDeclarations(aType, MetaUtil.removeOverrideSuffix(name))
+      RMFUtil.findAllDeclarations(aType, MetaUtil.removeOverrideSuffix(name))
   }
 }
 
@@ -288,33 +287,32 @@ trait LibrarySupport {
   }
 
   abstract class HasProperties(names: Seq[String]) {
-    final def unapply(defn: Defn.Class)(
-        implicit context: ModelGenContext
+    final def unapply(defn: Defn.Class)(implicit
+        context: ModelGenContext
     ): Boolean =
       names.forall { aName =>
         // the name has to be checked explicitly so that regular expression
         // properties do not accidentally match
-        RMFUtil.findAllDeclarations(context.objectType, aName)
+        RMFUtil
+          .findAllDeclarations(context.objectType, aName)
           .map(_._2.getName)
           .contains(aName)
       }
   }
 
   object NamedProperty {
-    def unapply(param: Term.Param)(
-      implicit context: ModelGenContext
-    )
-    : Option[(Term.Param, Property, String)] =
+    def unapply(param: Term.Param)(implicit
+        context: ModelGenContext
+    ): Option[(Term.Param, Property, String)] =
       tryToFind(param, param.name)
 
-    def unapply(declaration: Decl.Def)(
-      implicit context: ModelGenContext
-    )
-    : Option[(Decl.Def, Property, String)] =
+    def unapply(declaration: Decl.Def)(implicit
+        context: ModelGenContext
+    ): Option[(Decl.Def, Property, String)] =
       tryToFind(declaration, declaration.name)
 
-    private def tryToFind[A](a: A, name: Name)(
-      implicit context: ModelGenContext
+    private def tryToFind[A](a: A, name: Name)(implicit
+        context: ModelGenContext
     ) = {
       val unadornedName = propertyNameFrom(name.value)
 
@@ -635,13 +633,11 @@ object ModelGen {
   }
 
   /** map type refs from the 'asMap' annotation to real scala types */
-  private def mapTypeToScala(anyTypeName: String, context: ModelGenContext)
-  : String => Type.Ref = {
+  private def mapTypeToScala(anyTypeName: String, context: ModelGenContext): String => Type.Ref = {
     case "string" => Type.Name("String")
     case "any"    => typeFromName(anyTypeName)
-    case other    =>
-      context.api
-        .typesByName
+    case other =>
+      context.api.typesByName
         .get(other)
         .flatMap(ModelGen.scalaTypeRef(_, false, None, anyTypeName)(context))
         .map(_.scalaType)

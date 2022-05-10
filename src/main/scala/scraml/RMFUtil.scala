@@ -82,11 +82,13 @@ object RMFUtil {
     */
   def findAllDeclarations(aType: ObjectType, name: String): List[(ObjectType, Property)] =
     (aType :: superTypes(aType)).reverse.flatMap { objectType =>
-      Option(objectType.getProperty(name)).filter { candidate =>
-        // ensure that the candidate property was defined in objectType
-        candidate.eContainer() == objectType
-      }
-        .map(objectType -> _).toList
+      Option(objectType.getProperty(name))
+        .filter { candidate =>
+          // ensure that the candidate property was defined in objectType
+          candidate.eContainer() == objectType
+        }
+        .map(objectType -> _)
+        .toList
     }
 
   /** get all (including inherited) properties of a type note: will not include properties from

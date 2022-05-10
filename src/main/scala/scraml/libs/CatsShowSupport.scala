@@ -36,16 +36,16 @@ object CatsShowSupport extends LibrarySupport {
 
           ..${generatePropertiesCode(classDef) {
       case NamedProperty(param, _, declaredName) =>
-      List(
-        q"""buffer.append('\t')""",
-        q"""buffer.append(${Lit.String(declaredName)})""",
-        q"""buffer.append(": ")""",
-        q"""buffer.append(instance.${Term.Name(param.name.value)})""",
-        q"""buffer.append('\n')"""
-      )
+        List(
+          q"""buffer.append('\t')""",
+          q"""buffer.append(${Lit.String(declaredName)})""",
+          q"""buffer.append(": ")""",
+          q"""buffer.append(instance.${Term.Name(param.name.value)})""",
+          q"""buffer.append('\n')"""
+        )
 
       case _ =>
-            List.empty
+        List.empty
     }}
 
           ..${context.params.fieldMatchPolicy
