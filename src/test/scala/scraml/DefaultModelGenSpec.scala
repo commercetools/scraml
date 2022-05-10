@@ -22,7 +22,17 @@ class DefaultModelGenSpec extends AnyFlatSpec with Matchers {
     val generated = ModelGenRunner.run(DefaultModelGen)(params).unsafeRunSync()
 
     generated.files match {
-      case baseType :: dataType :: defaultProperty :: emptyBase :: noProps :: enumType :: packageObject :: Nil =>
+      case baseType ::
+          dataType ::
+          defaultProperty ::
+          derivedWithRequired ::
+          emptyBase ::
+          noProps ::
+          objectAsMap ::
+          parentWithOption ::
+          enumType ::
+          packageObject ::
+          Nil =>
         baseType.source.packageName should be("datatypes")
         baseType.source.source.toString() should be(
           "sealed trait BaseType extends Any { def id: String }"
@@ -64,7 +74,25 @@ class DefaultModelGenSpec extends AnyFlatSpec with Matchers {
 
         packageObject.source.source.toString should be("package object scraml")
 
-      case _ => fail("unexpected number of generated source files")
+        derivedWithRequired.source.source.toString() should be(
+          """final case class DerivedWithRequired(id$scraml: String) extends ParentWithOption { override val id: Some[String] = Some(id$scraml) }"""
+        )
+        derivedWithRequired.source.companion.map(_.toString()) should be(
+          Some(
+            """object DerivedWithRequired"""
+          )
+        )
+
+        objectAsMap.source.source.toString() should be(
+          """final case class ObjectAsMap(values: scala.collection.immutable.Map[String, SomeEnum])"""
+        )
+        objectAsMap.source.companion.map(_.toString()) should be(
+          Some(
+            """object ObjectAsMap"""
+          )
+        )
+
+      case _ => fail("unexpected number of generated source files, had: " + generated.files.length)
     }
   }
 

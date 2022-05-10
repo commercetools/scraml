@@ -55,34 +55,39 @@ object MonocleOpticsSupport extends LibrarySupport {
       trait Optics {
         import monocle.Lens
 
-        ..${generatePropertiesCode(classDef) { prop =>
-        val propType = prop.decltpe.get
-        val propName = Term.Name(prop.name.value)
+        ..${generatePropertiesCode(classDef) {
+        case NamedProperty(param, _, declaredName) =>
+          val propType  = param.decltpe.get
+          val propName  = Term.Name(declaredName)
+          val paramName = Term.Name(param.name.value)
 
-        context.params.fieldMatchPolicy.additionalProperties(context.objectType) match {
-          case Some(descriptor) =>
-            List(
-              q"""
+          context.params.fieldMatchPolicy.additionalProperties(context.objectType) match {
+            case Some(descriptor) =>
+              List(
+                q"""
                      val ${Pat.Var(propName)}: Lens[$classType, $propType] =
-                       Lens[$classType, $propType](_.$propName) {
-                         a => s => s.copy($propName = a)(
+                       Lens[$classType, $propType](_.$paramName) {
+                         a => s => s.copy($paramName = a)(
                            s.${Term.Name(descriptor.propertyName)}
                          )
                        }
 
                    """
-            )
+              )
 
-          case None =>
-            List(
-              q"""
+            case None =>
+              List(
+                q"""
                      val ${Pat.Var(propName)}: Lens[$classType, $propType] =
-                       Lens[$classType, $propType](_.$propName) {
-                         a => s => s.copy($propName = a)
+                       Lens[$classType, $propType](_.$paramName) {
+                         a => s => s.copy($paramName = a)
                        }
                   """
-            )
-        }
+              )
+          }
+
+        case _ =>
+          List.empty
       }}
 
       ..${context.params.fieldMatchPolicy

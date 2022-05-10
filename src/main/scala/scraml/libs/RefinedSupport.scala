@@ -21,10 +21,13 @@ object RefinedSupport extends LibrarySupport {
       )
 
     protected def mkItemTypeName(propertyName: String): Type.Name =
-      Type.Name(propertyName.capitalize + "ItemPredicate")
+      Type.Name(clean(propertyName) + "ItemPredicate")
 
     protected def mkTypeName(propertyName: String): Type.Name =
-      Type.Name(propertyName.capitalize + "Type")
+      Type.Name(clean(propertyName) + "Type")
+
+    private def clean(propertyName: String): String =
+      propertyNameFrom(propertyName.stripPrefix("_").capitalize)
   }
 
   object DetectMultipleFacetDefinitions extends HasFacets {
@@ -38,8 +41,8 @@ object RefinedSupport extends LibrarySupport {
         context: ModelGenContext
     ): Option[String] = {
       val declarations = RMFUtil
-        .findAllDeclarations(objectType, name)
-        .filter { case (definingType, prop) =>
+        .findAllDeclarations(objectType, propertyNameFrom(name))
+        .filter { case (_, prop) =>
           hasAnyFacets(prop.getType())
         }
 
@@ -120,32 +123,42 @@ object RefinedSupport extends LibrarySupport {
       dispatch(param.name)
     }
 
+    final def unapply(pat: Pat)(implicit
+        context: ModelGenContext
+    ): Option[A] = pat match {
+      case Pat.Var(name) =>
+        dispatch(name)
+
+      case _ =>
+        None
+    }
+
     protected def array(
         definingType: ObjectType,
         name: Name,
         descriptor: ArrayType,
-        optional: Boolean
+        optionality: PropertyOptionality
     )(implicit context: ModelGenContext): Option[A] = None
 
     protected def integer(
         definingType: ObjectType,
         name: Name,
         descriptor: IntegerType,
-        optional: Boolean
+        optionality: PropertyOptionality
     )(implicit context: ModelGenContext): Option[A] = None
 
     protected def number(
         definingType: ObjectType,
         name: Name,
         descriptor: NumberType,
-        optional: Boolean
+        optionality: PropertyOptionality
     )(implicit context: ModelGenContext): Option[A] = None
 
     protected def string(
         definingType: ObjectType,
         name: Name,
         descriptor: StringType,
-        optional: Boolean
+        optionality: PropertyOptionality
     )(implicit context: ModelGenContext): Option[A] = None
 
     protected def numberBounds(
@@ -205,28 +218,34 @@ object RefinedSupport extends LibrarySupport {
     protected def propertyDefinition(
         aType: ObjectType,
         name: Name
-    ): Option[(ObjectType, Property)] =
-      RMFUtil.findAllDeclarations(aType, name.value).headOption
+    ): Option[(ObjectType, Property, Name)] =
+      RMFUtil
+        .findAllDeclarations(aType, propertyNameFrom(name))
+        .headOption
+        .map { case (declaringType, property) =>
+          (declaringType, property, name)
+        }
 
     private def dispatch(name: Name)(implicit
         context: ModelGenContext
     ): Option[A] = {
-      val definition = propertyDefinition(context.objectType, name).map { case (ot, prop) =>
-        (ot, prop.getType(), prop.getRequired)
-      }
+      val definition = propertyDefinition(context.objectType, name)
+        .map { case (ot, prop, maybeRenamed) =>
+          (ot, prop.getType(), PropertyOptionality(context.objectType, maybeRenamed))
+        }
 
       definition match {
-        case Some((obj, at: ArrayType, required)) =>
-          array(obj, name, at, !required)
+        case Some((obj, at: ArrayType, optionality)) =>
+          array(obj, name, at, optionality)
 
-        case Some((obj, it: IntegerType, required)) =>
-          integer(obj, name, it, !required)
+        case Some((obj, it: IntegerType, optionality)) =>
+          integer(obj, name, it, optionality)
 
-        case Some((obj, nt: NumberType, required)) =>
-          number(obj, name, nt, !required)
+        case Some((obj, nt: NumberType, optionality)) =>
+          number(obj, name, nt, optionality)
 
-        case Some((obj, st: StringType, required)) if !RMFUtil.isEnumType(st) =>
-          string(obj, name, st, !required)
+        case Some((obj, st: StringType, optionality)) if !RMFUtil.isEnumType(st) =>
+          string(obj, name, st, optionality)
 
         case _ =>
           None
@@ -238,55 +257,63 @@ object RefinedSupport extends LibrarySupport {
     override protected def propertyDefinition(
         objectType: ObjectType,
         name: Name
-    ): Option[(ObjectType, Property)] = {
-      super.propertyDefinition(objectType, Name(propertyName(name)))
+    ): Option[(ObjectType, Property, Name)] = {
+      val unadorned = propertyNameFrom(name.value)
+        .stripPrefix("__")
+
+      super.propertyDefinition(objectType, Name(unadorned))
     }
 
     override protected def array(
         definingType: ObjectType,
         name: Name,
         descriptor: ArrayType,
-        optional: Boolean
+        optionality: PropertyOptionality
     )(implicit context: ModelGenContext): Option[Term] =
-      constructorArg(name, optional, sourceIsFaceted(name))
+      constructorArg(name, optionality)
 
     override protected def integer(
         definingType: ObjectType,
         name: Name,
         descriptor: IntegerType,
-        optional: Boolean
+        optionality: PropertyOptionality
     )(implicit context: ModelGenContext): Option[Term] =
-      constructorArg(name, optional, sourceIsFaceted(name))
+      constructorArg(name, optionality)
 
     override protected def number(
         definingType: ObjectType,
         name: Name,
         descriptor: NumberType,
-        optional: Boolean
+        optionality: PropertyOptionality
     )(implicit context: ModelGenContext): Option[Term] =
-      constructorArg(name, optional, sourceIsFaceted(name))
+      constructorArg(name, optionality)
 
     override protected def string(
         definingType: ObjectType,
         name: Name,
         descriptor: StringType,
-        optional: Boolean
+        optionality: PropertyOptionality
     )(implicit context: ModelGenContext): Option[Term] =
-      constructorArg(name, optional, sourceIsFaceted(name))
+      constructorArg(name, optionality)
 
-    private def constructorArg(name: Name, optional: Boolean, faceted: Boolean)(implicit
+    private def constructorArg(name: Name, optionality: PropertyOptionality)(implicit
         context: ModelGenContext
     ): Option[Term] = {
       // strip leading underscores added in generated variable names
-      val nameToUse = propertyName(name)
+      val nameToUse = propertyNameFrom(name.value)
+        .stripPrefix("__")
 
-      if (faceted && !originalWasFaceted(nameToUse)) {
-        if (optional)
+      // this is a truth table used to identify what Term to create
+      (sourceIsFaceted(nameToUse), originalWasFaceted(nameToUse), optionality.isOptional) match {
+        case (true, false, true) =>
           Some(q"${Term.Name(name.value)}.map(_.value)")
-        else
+
+        case (true, false, false) =>
           Some(q"${Term.Name(name.value)}.value")
-      } else
-        None
+
+        case _ =>
+          None
+      }
     }
 
     private def originalWasFaceted(name: String)(implicit
@@ -298,25 +325,20 @@ object RefinedSupport extends LibrarySupport {
           hasAnyFacets(prop.getType)
         }
 
-    private def propertyName(name: Name): String =
-      name.value
-        .stripPrefix("_")
-        .stripPrefix("_")
-
-    private def sourceIsFaceted(name: Name)(implicit
+    private def sourceIsFaceted(name: String)(implicit
         context: ModelGenContext
     ): Boolean =
-      Option(context.objectType.getProperty(propertyName(name))).exists(p =>
+      Option(context.objectType.getProperty(name)).exists { p =>
         hasAnyFacets(p.getType())
-      )
+      }
   }
 
   object RefinedPropertyDeclaration extends RefinedPropertyMatching[(Type, Option[Term])] {
     override protected def propertyDefinition(
         aType: ObjectType,
         name: Name
-    ): Option[(ObjectType, Property)] = {
-      super.propertyDefinition(aType, name).filter { case (_, prop) =>
+    ): Option[(ObjectType, Property, Name)] = {
+      super.propertyDefinition(aType, name).filter { case (_, prop, _) =>
         hasAnyFacets(prop.getType())
       }
     }
@@ -325,10 +347,10 @@ object RefinedSupport extends LibrarySupport {
         definingType: ObjectType,
         name: Name,
         descriptor: ArrayType,
-        optional: Boolean
+        optionality: PropertyOptionality
     )(implicit context: ModelGenContext): Option[(Type, Option[Term])] = {
       Some(
-        mkDeclType(context.objectType, name.value) -> defaultValue(descriptor, optional) {
+        mkDeclType(context.objectType, name.value) -> defaultValue(descriptor, optionality) {
           None
         }
       )
@@ -338,61 +360,66 @@ object RefinedSupport extends LibrarySupport {
         definingType: ObjectType,
         name: Name,
         descriptor: IntegerType,
-        optional: Boolean
-    )(implicit context: ModelGenContext): Option[(Type, Option[Term])] =
+        optionality: PropertyOptionality
+    )(implicit context: ModelGenContext): Option[(Type, Option[Term])] = {
       Some(
-        mkDeclType(context.objectType, name.value) -> defaultValue(descriptor, optional) {
+        mkDeclType(context.objectType, name.value) -> defaultValue(descriptor, optionality) {
           Some(
             q"${Term.Name(context.objectType.getName)}.${Term.Name(mkTypeName(name.value).value)}.default"
           )
         }
       )
+    }
 
     override protected def number(
         definingType: ObjectType,
         name: Name,
         descriptor: NumberType,
-        optional: Boolean
-    )(implicit context: ModelGenContext): Option[(Type, Option[Term])] =
+        optionality: PropertyOptionality
+    )(implicit context: ModelGenContext): Option[(Type, Option[Term])] = {
       Some(
-        mkDeclType(context.objectType, name.value) -> defaultValue(descriptor, optional) {
+        mkDeclType(context.objectType, name.value) -> defaultValue(descriptor, optionality) {
           Some(
             q"${Term.Name(context.objectType.getName)}.${Term.Name(mkTypeName(name.value).value)}.default"
           )
         }
       )
+    }
 
     override protected def string(
         definingType: ObjectType,
         name: Name,
         descriptor: StringType,
-        optional: Boolean
-    )(implicit context: ModelGenContext): Option[(Type, Option[Term])] =
+        optionality: PropertyOptionality
+    )(implicit context: ModelGenContext): Option[(Type, Option[Term])] = {
       Some(
-        mkDeclType(context.objectType, name.value) -> defaultValue(descriptor, optional) {
+        mkDeclType(context.objectType, name.value) -> defaultValue(descriptor, optionality) {
           Some(
             q"${Term.Name(context.objectType.getName)}.${Term.Name(mkTypeName(name.value).value)}.default"
           )
         }
       )
+    }
 
-    private def defaultValue(descriptor: AnyType, optional: Boolean)(
+    private def defaultValue(descriptor: AnyType, optionality: PropertyOptionality)(
         value: => Option[Term]
     ): Option[Term] =
       Option(descriptor.getDefault)
         .flatMap(_ => value)
-        .orElse(Some(q"None").filter(_ => optional))
+        .orElse(Some(q"None").filter(_ => optionality.isOptional))
   }
 
   object RefinedPropertyItemPredicates extends RefinedPropertyMatching[List[Type.Apply]] {
     override protected def propertyDefinition(
         aType: ObjectType,
         name: Name
-    ): Option[(ObjectType, Property)] = {
-      RMFUtil.findAllDeclarations(aType, name.value).find { case (_, prop) =>
-        hasAnyFacets(prop.getType())
-      }
-    }
+    ): Option[(ObjectType, Property, Name)] =
+      RMFUtil
+        .findAllDeclarations(aType, propertyNameFrom(name))
+        .find { case (_, prop) =>
+          hasAnyFacets(prop.getType())
+        }
+        .map { case (dt, p) => (dt, p, name) }
 
     def apply(declaration: Decl.Def)(implicit
         context: ModelGenContext
@@ -408,7 +435,7 @@ object RefinedSupport extends LibrarySupport {
         definingType: ObjectType,
         name: Name,
         descriptor: ArrayType,
-        optional: Boolean
+        optionality: PropertyOptionality
     )(implicit context: ModelGenContext): Option[List[Type.Apply]] = {
       Option(descriptor.getItems) match {
         case Some(nt: NumberType) if hasFacets(nt) =>
@@ -435,17 +462,19 @@ object RefinedSupport extends LibrarySupport {
     override protected def propertyDefinition(
         aType: ObjectType,
         name: Name
-    ): Option[(ObjectType, Property)] = {
-      RMFUtil.findAllDeclarations(aType, name.value).find { case (_, prop) =>
-        hasAnyFacets(prop.getType())
-      }
-    }
+    ): Option[(ObjectType, Property, Name)] =
+      RMFUtil
+        .findAllDeclarations(aType, propertyNameFrom(name))
+        .find { case (_, prop) =>
+          hasAnyFacets(prop.getType())
+        }
+        .map { case (dt, p) => (dt, p, name) }
 
     override protected def array(
         definingType: ObjectType,
         name: Name,
         descriptor: ArrayType,
-        optional: Boolean
+        optionality: PropertyOptionality
     )(implicit context: ModelGenContext): Option[List[Type.Apply]] = {
       val min = Option(descriptor.getMinItems)
       val max = Option(descriptor.getMaxItems)
@@ -474,7 +503,7 @@ object RefinedSupport extends LibrarySupport {
         definingType: ObjectType,
         name: Name,
         descriptor: IntegerType,
-        optional: Boolean
+        optionality: PropertyOptionality
     )(implicit context: ModelGenContext): Option[List[Type.Apply]] = {
       val min = Option(descriptor.getMinimum)
       val max = Option(descriptor.getMaximum)
@@ -486,7 +515,7 @@ object RefinedSupport extends LibrarySupport {
         definingType: ObjectType,
         name: Name,
         descriptor: NumberType,
-        optional: Boolean
+        optionality: PropertyOptionality
     )(implicit context: ModelGenContext): Option[List[Type.Apply]] = {
       val min = Option(descriptor.getMinimum)
       val max = Option(descriptor.getMaximum)
@@ -498,7 +527,7 @@ object RefinedSupport extends LibrarySupport {
         definingType: ObjectType,
         name: Name,
         descriptor: StringType,
-        optional: Boolean
+        optionality: PropertyOptionality
     )(implicit context: ModelGenContext): Option[List[Type.Apply]] = {
       Some(
         collectionBounds(Option(descriptor.getMinLength), Option(descriptor.getMaxLength)) :::
@@ -519,27 +548,29 @@ object RefinedSupport extends LibrarySupport {
     override protected def propertyDefinition(
         aType: ObjectType,
         name: Name
-    ): Option[(ObjectType, Property)] = {
-      RMFUtil.findAllDeclarations(aType, name.value).find { case (_, prop) =>
-        hasAnyFacets(prop.getType())
-      }
-    }
+    ): Option[(ObjectType, Property, Name)] =
+      RMFUtil
+        .findAllDeclarations(aType, propertyNameFrom(name))
+        .find { case (_, prop) =>
+          hasAnyFacets(prop.getType())
+        }
+        .map { case (dt, p) => (dt, p, name) }
 
     override protected def array(
         definingType: ObjectType,
         name: Name,
         descriptor: ArrayType,
-        optional: Boolean
+        optionality: PropertyOptionality
     )(implicit context: ModelGenContext): Option[(Type.Name, Option[Type.Name], Boolean)] = {
       Option(descriptor.getItems) match {
         case Some(nt: NumberType) if hasFacets(nt) =>
-          Some((mkTypeName(name.value), Some(mkItemTypeName(name.value)), optional))
+          Some((mkTypeName(name.value), Some(mkItemTypeName(name.value)), optionality.isOptional))
 
         case Some(st: StringType) if hasFacets(st) =>
-          Some((mkTypeName(name.value), Some(mkItemTypeName(name.value)), optional))
+          Some((mkTypeName(name.value), Some(mkItemTypeName(name.value)), optionality.isOptional))
 
         case _ =>
-          Some((mkTypeName(name.value), None, optional))
+          Some((mkTypeName(name.value), None, optionality.isOptional))
       }
     }
 
@@ -547,25 +578,25 @@ object RefinedSupport extends LibrarySupport {
         definingType: ObjectType,
         name: Name,
         descriptor: IntegerType,
-        optional: Boolean
+        optionality: PropertyOptionality
     )(implicit context: ModelGenContext): Option[(Type.Name, Option[Type.Name], Boolean)] =
-      Some((mkTypeName(name.value), None, optional))
+      Some((mkTypeName(name.value), None, optionality.isOptional))
 
     override protected def number(
         definingType: ObjectType,
         name: Name,
         descriptor: NumberType,
-        optional: Boolean
+        optionality: PropertyOptionality
     )(implicit context: ModelGenContext): Option[(Type.Name, Option[Type.Name], Boolean)] =
-      Some((mkTypeName(name.value), None, optional))
+      Some((mkTypeName(name.value), None, optionality.isOptional))
 
     override protected def string(
         definingType: ObjectType,
         name: Name,
         descriptor: StringType,
-        optional: Boolean
+        optionality: PropertyOptionality
     )(implicit context: ModelGenContext): Option[(Type.Name, Option[Type.Name], Boolean)] =
-      Some((mkTypeName(name.value), None, optional))
+      Some((mkTypeName(name.value), None, optionality.isOptional))
   }
 
   override def modifyClass(classDef: Defn.Class, companion: Option[Defn.Object])(implicit
@@ -609,7 +640,28 @@ object RefinedSupport extends LibrarySupport {
         other
     }
 
-    classDef.copy(ctor = classDef.ctor.copy(paramss = declarations))
+    val vals = classDef.templ.stats.map {
+      case candidate @ Defn.Val(
+            _,
+            List(RefinedPropertyType(typeName, _, _)),
+            Some(Type.Apply(tpe, _)),
+            _
+          ) =>
+        val fullyQualifiedName = Type.Select(
+          Term.Name(context.objectType.getName),
+          typeName
+        )
+
+        candidate.copy(decltpe = Option(Type.Apply(tpe, List(fullyQualifiedName))))
+
+      case other =>
+        other
+    }
+
+    classDef.copy(
+      ctor = classDef.ctor.copy(paramss = declarations),
+      templ = classDef.templ.copy(stats = vals)
+    )
   }
 
   private def declareRefinements(traitDef: Defn.Trait)(implicit
@@ -631,14 +683,14 @@ object RefinedSupport extends LibrarySupport {
     val types = generatePropertiesCode(classDef) {
       // Properties which have regular expressions as their name cannot
       // be resolved, so are skipped.
-      case prop if context.objectType.getProperty(prop.name.value) ne null =>
-        val originalType = determineOriginalType(prop.name.value)
+      case NamedProperty(param, prop, declaredName) =>
+        val originalType = determineOriginalType(declaredName)
 
-        warnWhenMultipleFacets(prop)
+        warnWhenMultipleFacets(param)
 
-        prop match {
+        param match {
           case RefinedPropertyType(typeName, Some(itemName), optional) if optional =>
-            val itemPredicates = RefinedPropertyItemPredicates(prop) match {
+            val itemPredicates = RefinedPropertyItemPredicates(param) match {
               case Some(one :: Nil) =>
                 q"type $itemName = $one" :: Nil
 
@@ -651,19 +703,19 @@ object RefinedSupport extends LibrarySupport {
 
             itemPredicates ++ List[Stat](
               q"""
-                type $typeName = Option[Refined[$originalType,${predicates(prop)}]]
+                type $typeName = Option[Refined[$originalType,${predicates(param)}]]
                 """,
               refinedTypeObject(
                 typeName,
                 originalType,
-                prop,
+                param,
                 optional = true,
                 collection = true
               )
             )
 
           case RefinedPropertyType(typeName, Some(itemName), _) =>
-            val itemPredicates = RefinedPropertyItemPredicates(prop) match {
+            val itemPredicates = RefinedPropertyItemPredicates(param) match {
               case Some(one :: Nil) =>
                 q"type $itemName = $one" :: Nil
 
@@ -675,11 +727,11 @@ object RefinedSupport extends LibrarySupport {
             }
 
             itemPredicates ++ List[Stat](
-              q"type $typeName = Refined[$originalType,${predicates(prop)}]",
+              q"type $typeName = Refined[$originalType,${predicates(param)}]",
               refinedTypeObject(
                 typeName,
                 originalType,
-                prop,
+                param,
                 optional = false,
                 collection = true
               )
@@ -688,12 +740,12 @@ object RefinedSupport extends LibrarySupport {
           case RefinedPropertyType(typeName, None, optional) if optional =>
             List[Stat](
               q"""
-                type $typeName = Option[Refined[$originalType,${predicates(prop)}]]
+                type $typeName = Option[Refined[$originalType,${predicates(param)}]]
                 """,
               refinedTypeObject(
                 typeName,
                 originalType,
-                prop,
+                param,
                 optional = true,
                 collection = false
               )
@@ -701,11 +753,11 @@ object RefinedSupport extends LibrarySupport {
 
           case RefinedPropertyType(typeName, None, _) =>
             List[Stat](
-              q"type $typeName = Refined[$originalType,${predicates(prop)}]",
+              q"type $typeName = Refined[$originalType,${predicates(param)}]",
               refinedTypeObject(
                 typeName,
                 originalType,
-                prop,
+                param,
                 optional = false,
                 collection = false
               )
@@ -722,23 +774,25 @@ object RefinedSupport extends LibrarySupport {
     val from =
       List[Stat](
         q"""
-          def from( ..${classDef.ctor.paramss.flatten.map(_.copy(mods = Nil))})
+          def from( ..${classDef.ctor.paramss.flatten.map { param =>
+          param.copy(
+            mods = Nil,
+            name = Name(propertyNameFrom(param.name))
+          )
+        }})
           : Either[IllegalArgumentException, ${classDef.name}] = {
             ..${generatePropertiesCode(classDef) {
-          case prop if context.objectType.getProperty(prop.name.value) ne null =>
-            val invocation = prop match {
-              case RefinedPropertyType(typeName, _, optional) if optional =>
-                q"${Term.Name(typeName.value)}.from(${Term.Name(prop.name.value)})"
-
+          case NamedProperty(param, _, declaredName) =>
+            val invocation = param match {
               case RefinedPropertyType(typeName, _, _) =>
-                q"${Term.Name(typeName.value)}.from(${Term.Name(prop.name.value)})"
+                q"${Term.Name(typeName.value)}.from(${Term.Name(propertyNameFrom(param.name))})"
 
               case unrefined =>
-                q"Right(${Term.Name(unrefined.name.value)})"
+                q"Right(${Term.Name(propertyNameFrom(unrefined.name))})"
             }
 
             List[Stat](
-              q"val ${Pat.Var(Term.Name("_" + prop.name.value))} = $invocation"
+              q"val ${Pat.Var(Term.Name("_" + declaredName))} = $invocation"
             )
 
           case _ =>
@@ -799,8 +853,8 @@ object RefinedSupport extends LibrarySupport {
                  """
 
               case head :: tail =>
-                val termName  = Term.Name(head.name.value)
-                val paramName = Term.Name("_" + head.name.value)
+                val termName  = Term.Name(propertyNameFrom(head.name))
+                val paramName = Term.Name("_" + propertyNameFrom(head.name))
 
                 q"""
                    $termName.flatMap { $paramName: ${head.decltpe.get} =>
@@ -809,28 +863,28 @@ object RefinedSupport extends LibrarySupport {
                  """
             }
 
-          val primary = classDef.ctor.paramss.headOption.getOrElse(Nil).map {
-            case prop: Term.Param if context.objectType.getProperty(prop.name.value) ne null =>
-              prop match {
+          val primary = generatePropertiesCode(classDef) {
+            case NamedProperty(param, _, declaredName) =>
+              param match {
                 case RefinedPropertyType(typeName, _, _) =>
-                  prop.copy(
-                    name = Name("_" + prop.name.value),
+                  param.copy(
+                    name = Name("_" + declaredName),
                     decltpe = Some(q"val foo: $typeName".decltpe)
-                  )
+                  ) :: Nil
 
                 case unrefined =>
-                  unrefined.copy(name = Term.Name("_" + unrefined.name.value))
+                  unrefined.copy(name = Term.Name("_" + unrefined.name.value)) :: Nil
               }
 
             case map: Term.Param =>
-              map.copy(name = Name("_values"))
+              map.copy(name = Name("_values")) :: Nil
           }
 
           val additional = context.params.fieldMatchPolicy
             .additionalProperties(context.objectType)(context)
 
           genFlatmaps(
-            primary.map(p => p.copy(name = Term.Name("_" + p.name.value))),
+            primary.map(p => p.copy(name = Term.Name("_" + propertyNameFrom(p.name)))),
             primary,
             additional
           )
@@ -848,14 +902,14 @@ object RefinedSupport extends LibrarySupport {
     val types = generatePropertiesCode(traitDef) {
       // Properties which have regular expressions as their name cannot
       // be resolved, so are skipped.
-      case prop if context.objectType.getProperty(prop.name.value) ne null =>
-        val originalType = determineOriginalType(prop.name.value)
+      case NamedProperty(param, prop, declaredName) =>
+        val originalType = determineOriginalType(param.name.value)
 
-        warnWhenMultipleFacets(prop)
+        warnWhenMultipleFacets(param)
 
-        prop match {
+        param match {
           case RefinedPropertyType(typeName, Some(itemName), optional) if optional =>
-            val itemPredicates = RefinedPropertyItemPredicates(prop) match {
+            val itemPredicates = RefinedPropertyItemPredicates(param) match {
               case Some(one :: Nil) =>
                 q"type $itemName = $one" :: Nil
 
@@ -868,12 +922,12 @@ object RefinedSupport extends LibrarySupport {
 
             itemPredicates ++ List[Stat](
               q"""
-                type $typeName = Option[Refined[$originalType,${predicates(prop)}]]
+                type $typeName = Option[Refined[$originalType,${predicates(param)}]]
                 """
             )
 
           case RefinedPropertyType(typeName, Some(itemName), _) =>
-            val itemPredicates = RefinedPropertyItemPredicates(prop) match {
+            val itemPredicates = RefinedPropertyItemPredicates(param) match {
               case Some(one :: Nil) =>
                 q"type $itemName = $one" :: Nil
 
@@ -885,19 +939,19 @@ object RefinedSupport extends LibrarySupport {
             }
 
             itemPredicates ++ List[Stat](
-              q"type $typeName = Refined[$originalType,${predicates(prop)}]"
+              q"type $typeName = Refined[$originalType,${predicates(param)}]"
             )
 
           case RefinedPropertyType(typeName, _, optional) if optional =>
             List[Stat](
               q"""
-                type $typeName = Option[Refined[$originalType,${predicates(prop)}]]
+                type $typeName = Option[Refined[$originalType,${predicates(param)}]]
                 """
             )
 
           case RefinedPropertyType(typeName, _, _) =>
             List[Stat](
-              q"type $typeName = Refined[$originalType,${predicates(prop)}]"
+              q"type $typeName = Refined[$originalType,${predicates(param)}]"
             )
 
           case _ =>

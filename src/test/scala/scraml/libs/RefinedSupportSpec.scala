@@ -199,6 +199,56 @@ class RefinedSupportSpec extends AnyWordSpec with Matchers with SourceCodeFormat
             |}""".stripMargin.stripTrailingSpaces
         )
       )
+
+      val baseSource = generated.files
+        .find(_.source.name == "BaseType")
+        .map(_.source.source.toString().stripTrailingSpaces)
+
+      val baseCompanion = generated.files
+        .find(_.source.name == "BaseType")
+        .flatMap(_.source.companion)
+        .map(_.toString().stripTrailingSpaces)
+
+      baseSource should be(
+        Some(
+          """sealed trait BaseType extends Any {
+            |  def id: BaseType.IdType
+            |  def optionalCustomArrayTypeProp: BaseType.OptionalCustomArrayTypePropType
+            |}""".stripMargin.stripTrailingSpaces
+        )
+      )
+
+      baseCompanion should be(
+        Some(
+          """object BaseType {
+            |  import io.circe.Decoder.Result
+            |  import io.circe._
+            |  implicit lazy val decoder: Decoder[BaseType] = new Decoder[BaseType] {
+            |    override def apply(c: HCursor): Result[BaseType] = c.downField("type").as[String] match {
+            |      case Right("data") =>
+            |        DataType.decoder(c)
+            |      case other =>
+            |        Left(DecodingFailure(s"unknown discriminator: $other", c.history))
+            |    }
+            |  }
+            |  implicit lazy val encoder: Encoder[BaseType] = new Encoder[BaseType] {
+            |    override def apply(basetype: BaseType): Json = basetype match {
+            |      case datatype: DataType =>
+            |        DataType.encoder(datatype)
+            |    }
+            |  }
+            |  import eu.timepit.refined.api.Refined
+            |  import eu.timepit.refined.boolean.And
+            |  import eu.timepit.refined.collection._
+            |  import eu.timepit.refined.numeric._
+            |  import eu.timepit.refined.string._
+            |  import shapeless.Witness
+            |  type IdType = Refined[String, And[MinSize[Witness.`1`.T], And[MaxSize[Witness.`10`.T], MatchesRegex[Witness.`"^[A-z0-9-.]+$"`.T]]]]
+            |  type OptionalCustomArrayTypePropItemPredicate = GreaterEqual[Witness.`0.0`.T]
+            |  type OptionalCustomArrayTypePropType = Option[Refined[Set[scala.math.BigDecimal], And[MinSize[Witness.`1`.T], And[MaxSize[Witness.`100`.T], Forall[OptionalCustomArrayTypePropItemPredicate]]]]]
+            |}""".stripMargin.stripTrailingSpaces
+        )
+      )
     }
 
     "modify case class refined property types (ignore extra property matching)" in {
@@ -260,7 +310,7 @@ class RefinedSupportSpec extends AnyWordSpec with Matchers with SourceCodeFormat
             |      }
             |    }
             |  }
-            |  implicit lazy val encoder: Encoder[DataType] = new Encoder[DataType] { final def apply(instance: DataType): Json = Json.obj("id" -> instance.id.asJson, "optionalCustomArrayTypeProp" -> instance.optionalCustomArrayTypeProp.asJson, "foo" -> instance.foo.asJson, "bar" -> instance.bar.asJson, "numberProp" -> instance.numberProp.asJson, "customNumberProp" -> instance.customNumberProp.asJson, "customArrayTypeProp" -> instance.customArrayTypeProp.asJson, "optionalStringArray" -> instance.optionalStringArray.asJson) }
+            |  implicit lazy val encoder: Encoder[DataType] = new Encoder[DataType] { final def apply(instance: DataType): Json = Json.obj("type" -> Json.fromString("data"), "id" -> instance.id.asJson, "optionalCustomArrayTypeProp" -> instance.optionalCustomArrayTypeProp.asJson, "foo" -> instance.foo.asJson, "bar" -> instance.bar.asJson, "numberProp" -> instance.numberProp.asJson, "customNumberProp" -> instance.customNumberProp.asJson, "customArrayTypeProp" -> instance.customArrayTypeProp.asJson, "optionalStringArray" -> instance.optionalStringArray.asJson) }
             |  import eu.timepit.refined.api.Refined
             |  import eu.timepit.refined.boolean.And
             |  import eu.timepit.refined.collection._
@@ -694,6 +744,117 @@ class RefinedSupportSpec extends AnyWordSpec with Matchers with SourceCodeFormat
             |    val _id = IdType.from(id)
             |    _id.map {
             |      (__id: IdType) => ChildWithFacetsType(__id.value)
+            |    }
+            |  }
+            |}""".stripMargin.stripTrailingSpaces
+        )
+      )
+    }
+
+    "support optional-to-required property specialization" in {
+      val params = ModelGenParams(
+        new File("src/sbt-test/sbt-scraml/refined/api/refined.raml"),
+        new File("target/scraml-refined-test"),
+        "scraml",
+        FieldMatchPolicy.Exact(),
+        DefaultTypes(),
+        librarySupport = Set(CirceJsonSupport(), RefinedSupport),
+        formatConfig = None,
+        generateDateCreated = true
+      )
+
+      val generated = ModelGenRunner.run(DefaultModelGen)(params).unsafeRunSync()
+
+      generated.files.nonEmpty should be(true)
+
+      val parentSource = generated.files
+        .find(_.source.name == "ParentWithOption")
+        .map(_.source.source.toString().stripTrailingSpaces)
+
+      val parentCompanion = generated.files
+        .find(_.source.name == "ParentWithOption")
+        .flatMap(_.source.companion)
+        .map(_.toString().stripTrailingSpaces)
+
+      val theSource = generated.files
+        .find(_.source.name == "DerivedWithRequired")
+        .map(_.source.source.toString().stripTrailingSpaces)
+
+      val theCompanion = generated.files
+        .find(_.source.name == "DerivedWithRequired")
+        .flatMap(_.source.companion)
+        .map(_.toString().stripTrailingSpaces)
+
+      parentSource should be(
+        Some(
+          """sealed trait ParentWithOption { def _id: ParentWithOption.IdType }"""
+        )
+      )
+
+      parentCompanion should be(
+        Some(
+          """object ParentWithOption {
+            |  import io.circe.Decoder.Result
+            |  import io.circe._
+            |  implicit lazy val decoder: Decoder[ParentWithOption] = new Decoder[ParentWithOption] { override def apply(c: HCursor): Result[ParentWithOption] = DerivedWithRequired.decoder.tryDecode(c) }
+            |  implicit lazy val encoder: Encoder[ParentWithOption] = new Encoder[ParentWithOption] {
+            |    override def apply(parentwithoption: ParentWithOption): Json = parentwithoption match {
+            |      case derivedwithrequired: DerivedWithRequired =>
+            |        DerivedWithRequired.encoder(derivedwithrequired)
+            |    }
+            |  }
+            |  import eu.timepit.refined.api.Refined
+            |  import eu.timepit.refined.boolean.And
+            |  import eu.timepit.refined.collection._
+            |  import eu.timepit.refined.numeric._
+            |  import eu.timepit.refined.string._
+            |  import shapeless.Witness
+            |  type IdType = Option[Refined[String, And[MaxSize[Witness.`128`.T], MatchesRegex[Witness.`"^[A-z0-9]+$"`.T]]]]
+            |}""".stripMargin.stripTrailingSpaces
+        )
+      )
+
+      theSource should be(
+        Some(
+          """final case class DerivedWithRequired(_id$scraml: DerivedWithRequired.IdType) extends ParentWithOption { override val _id: Some[DerivedWithRequired.IdType] = Some(_id$scraml) }"""
+        )
+      )
+
+      theCompanion should be(
+        Some(
+          """object DerivedWithRequired {
+            |  import io.circe._
+            |  import io.circe.generic.semiauto._
+            |  import io.circe.syntax._
+            |  import io.circe.refined._
+            |  implicit lazy val decoder: Decoder[DerivedWithRequired] = new Decoder[DerivedWithRequired] {
+            |    def apply(c: HCursor): Decoder.Result[DerivedWithRequired] = {
+            |      c.downField("_id").as[String].flatMap {
+            |        (__id$scraml: String) => DerivedWithRequired.from(__id$scraml).swap.map(e => DecodingFailure(e.getMessage, Nil)).swap
+            |      }
+            |    }
+            |  }
+            |  implicit lazy val encoder: Encoder[DerivedWithRequired] = new Encoder[DerivedWithRequired] { final def apply(instance: DerivedWithRequired): Json = Json.obj("_id" -> instance._id$scraml.asJson) }
+            |  import eu.timepit.refined.api.Refined
+            |  import eu.timepit.refined.boolean.And
+            |  import eu.timepit.refined.collection._
+            |  import eu.timepit.refined.numeric._
+            |  import eu.timepit.refined.string._
+            |  import shapeless.Witness
+            |  type IdType = Refined[String, And[MaxSize[Witness.`128`.T], MatchesRegex[Witness.`"^[A-z0-9]+$"`.T]]]
+            |  object IdType {
+            |    import eu.timepit.refined.api._
+            |    type ResultType = Refined[String, And[MaxSize[Witness.`128`.T], MatchesRegex[Witness.`"^[A-z0-9]+$"`.T]]]
+            |    private val rt = RefinedType.apply[ResultType]
+            |    def apply(candidate: String): Either[IllegalArgumentException, ResultType] = from(candidate)
+            |    def from(candidate: String): Either[IllegalArgumentException, ResultType] = rt.refine(candidate).left.map(msg => new IllegalArgumentException(msg))
+            |    def unapply(candidate: String): Option[ResultType] = from(candidate).toOption
+            |    def unsafeFrom(candidate: String): ResultType = rt.unsafeRefine(candidate)
+            |  }
+            |  def from(_id: String): Either[IllegalArgumentException, DerivedWithRequired] = {
+            |    val __id = IdType.from(_id)
+            |    __id.map {
+            |      (___id: IdType) => DerivedWithRequired(___id)
             |    }
             |  }
             |}""".stripMargin.stripTrailingSpaces
