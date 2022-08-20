@@ -1,7 +1,7 @@
-scalaVersion := "2.13.6"
+scalaVersion := "2.13.8"
 
-val circeVersion = "0.14.1"
-val tapirVersion = "0.19.0-M9"
+val circeVersion = "0.14.2"
+val tapirVersion = "1.0.5"
 
 lazy val examples = (project in file("."))
   .settings(
@@ -22,6 +22,7 @@ lazy val examples = (project in file("."))
     libraryDependencies += "org.typelevel" %% "cats-effect" % "3.2.8",
 
     ramlFile := Some(file("../src/sbt-test/sbt-scraml/simple/api/simple.raml")),
+    ramlFieldMatchPolicy := scraml.FieldMatchPolicy.Exact(),
     basePackageName := "scraml.examples",
     librarySupport := Set(scraml.libs.CirceJsonSupport(), scraml.libs.TapirSupport("Endpoints")),
     Compile / sourceGenerators += runScraml
