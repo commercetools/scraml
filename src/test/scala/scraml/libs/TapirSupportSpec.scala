@@ -43,6 +43,7 @@ final class TapirSupportSpec
         |  import sttp.model._
         |  import sttp.tapir.CodecFormat.TextPlain
         |  import sttp.tapir.json.circe._
+        |  import sttp.tapir.generic.auto._
         |  type |[+A1, +A2] = Either[A1, A2]
         |  private implicit def anySchema[T]: Schema[T] = Schema[T](SchemaType.SCoproduct(Nil, None)(_ => None), None)
         |  private implicit def eitherTapirCodecPlain[A, B](implicit aCodec: Codec.PlainCodec[A], bCodec: Codec.PlainCodec[B]): Codec.PlainCodec[Either[A, B]] = new Codec.PlainCodec[Either[A, B]] {
@@ -120,7 +121,7 @@ final class TapirSupportSpec
             |    case "B" =>
             |      sttp.tapir.DecodeResult.Value(B)
             |    case other =>
-            |      sttp.tapir.DecodeResult.InvalidValue(sttp.tapir.ValidationError.Primitive[String](sttp.tapir.Validator.enumeration(List("A", "B")), other) :: Nil)
+            |      sttp.tapir.DecodeResult.InvalidValue(sttp.tapir.ValidationError[String](sttp.tapir.Validator.enumeration(List("A", "B")), other) :: Nil)
             |  })({
             |    case A => "A"
             |    case B => "B"

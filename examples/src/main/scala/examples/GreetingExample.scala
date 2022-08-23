@@ -3,7 +3,7 @@ package examples
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import cats.effect.{ExitCode, IO, IOApp}
-import scraml.examples.{DataType, Endpoints}
+import scraml.examples.{DataType, Endpoints, SomeEnum}
 import scraml.examples.Endpoints.Greeting.GetGreetingParams
 import sttp.client3.SttpBackend
 import sttp.client3.asynchttpclient.cats.AsyncHttpClientCatsBackend
@@ -46,15 +46,17 @@ object GreetingServer {
   import akka.http.scaladsl.server.Route
 
   def getGreeting(params: GetGreetingParams): Future[Either[Unit, (DataType, StatusCode, List[Header])]] =
-    Future.successful(Right(DataType(params.name.getOrElse("no input"), customTypeProp = BigDecimal(42)), StatusCode.Ok, List(Header("custom-header", "value"))))
+    Future.successful(Right((DataType(params.name.getOrElse("no input"), customTypeProp = BigDecimal(42)), StatusCode.Ok, List(Header("custom-header", "value")))))
+
+  implicit val httpSystem: ActorSystem = ActorSystem("http")
+
+  import httpSystem.dispatcher
 
   // adding outputs to provide statusCode and headers in the implementation
   val greetingWithStatusAndHeaders = Endpoints.Greeting.getGreeting.out(statusCode and sttp.tapir.headers)
 
   val greetingRoute: Route =
-    AkkaHttpServerInterpreter().toRoute(greetingWithStatusAndHeaders)(getGreeting)
-
-  implicit val httpSystem: ActorSystem = ActorSystem("http")
+    AkkaHttpServerInterpreter().toRoute(greetingWithStatusAndHeaders.serverLogic(getGreeting))
 
   def startServer: IO[Http.ServerBinding] =
     IO.fromFuture(IO(Http().newServerAt("localhost", 8080).bind(greetingRoute)))
@@ -71,7 +73,7 @@ object GreetingApp extends IOApp {
       apiUrl = s"http://${binding.localAddress.getHostName}:${binding.localAddress.getPort}"
     )
     (client, clientBackend) = clientWithBackend
-    result <- client.getGreeting(GetGreetingParams(name = Some("world"))).attempt
+    result <- client.getGreeting(GetGreetingParams(enum_type = SomeEnum.A, name = Some("world"))).attempt
     _ <- IO(println(result))
     _ <-
       clientBackend

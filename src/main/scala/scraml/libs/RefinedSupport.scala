@@ -835,8 +835,8 @@ object RefinedSupport extends LibrarySupport {
                  """
 
               case last :: Nil =>
-                val termName  = Term.Name(last.name.value)
-                val paramName = Term.Name("_" + last.name.value)
+                val termName  = Term.Name(propertyNameFrom(last.name))
+                val paramName = Term.Name("_" + propertyNameFrom(last.name))
 
                 q"""
                    $termName.map { $paramName: ${last.decltpe.get} =>

@@ -256,6 +256,7 @@ final class TapirSupport(endpointsObjectName: String) extends LibrarySupport {
         q"""
           val ${Pat.Var(Term.Name(resourceMethodName))} = $endpointWithErrorOut
         """
+
       List(
         ResourceDefinitions(baseResourceName(templateWithoutSlash), paramTypeDef, endpointValueDef)
       )
@@ -325,6 +326,7 @@ final class TapirSupport(endpointsObjectName: String) extends LibrarySupport {
         import sttp.model._
         import sttp.tapir.CodecFormat.TextPlain
         import sttp.tapir.json.circe._
+        import sttp.tapir.generic.auto._
 
         type |[+A1, +A2] = Either[A1, A2]
 
@@ -366,7 +368,7 @@ final class TapirSupport(endpointsObjectName: String) extends LibrarySupport {
               None,
               q"""
                   sttp.tapir.DecodeResult.InvalidValue(
-                    sttp.tapir.ValidationError.Primitive[String](
+                    sttp.tapir.ValidationError[String](
                       sttp.tapir.Validator.enumeration(
                         $enumValuesAsList
                       ),

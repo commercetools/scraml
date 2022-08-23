@@ -33,7 +33,7 @@ inThisBuild(
   )
 )
 
-val circeVersion = "0.14.1"
+val circeVersion = "0.14.2"
 
 lazy val root = (project in file("."))
   .enablePlugins(SbtPlugin, ParadoxSitePlugin, GhpagesPlugin)

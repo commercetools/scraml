@@ -1,0 +1,14 @@
+#%RAML 1.0 DataType
+(package): DataTypes
+(docs-uri): "https://example.org/default-property"
+displayName: DefaultProperty
+type: object
+(scala-derive-json): true
+properties:
+  message:
+    type: string
+    default: "this is a default message"
+  longDefault:
+    type: number
+    format: int64
+    default: -9223372036854775808

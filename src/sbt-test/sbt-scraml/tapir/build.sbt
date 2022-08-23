@@ -1,25 +1,19 @@
 val circeVersion = "0.14.2"
-val monocleVersion = "3.1.0"
 val refinedVersion = "0.9.27"
 val tapirVersion = "1.0.5"
 
 lazy val root = (project in file("."))
   .settings(
     scalaVersion := "2.13.8",
-    name := "scraml-ct-api-circe-test",
+    name := "scraml-tapir",
     version := "0.1",
-    ramlFile := Some(file("reference/api-specs/api/api.raml")),
-    basePackageName := "de.commercetools.api",
+    ramlFile := Some(file("api/tapir.raml")),
     defaultTypes := scraml.DefaultTypes(
-      array = "scala.collection.immutable.Vector",
       float = "Double",
       number = "scala.math.BigDecimal"
     ),
     librarySupport := Set(
-      scraml.libs.CatsEqSupport,
-      scraml.libs.CatsShowSupport,
       scraml.libs.CirceJsonSupport(),
-      scraml.libs.MonocleOpticsSupport,
       scraml.libs.TapirSupport("Endpoints"),
       scraml.libs.RefinedSupport
     ),
@@ -36,10 +30,7 @@ lazy val root = (project in file("."))
         "io.circe" %% "circe-refined"
     ).map(_ % circeVersion),
     libraryDependencies ++= Seq(
-      "dev.optics" %% "monocle-core",
-      "dev.optics" %% "monocle-macro"
-    ).map(_ % monocleVersion),
-    libraryDependencies += "com.softwaremill.sttp.tapir" %% "tapir-core" % tapirVersion,
-    libraryDependencies += "com.softwaremill.sttp.tapir" %% "tapir-json-circe" % tapirVersion
+      "com.softwaremill.sttp.tapir" %% "tapir-core",
+      "com.softwaremill.sttp.tapir" %% "tapir-json-circe"
+    ).map (_ % tapirVersion)
   )
-
