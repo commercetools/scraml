@@ -105,7 +105,7 @@ final class TapirSupport(endpointsObjectName: String) extends LibrarySupport {
 
   case class BodyWithMediaType(mediaType: String, bodyType: Type)
 
-  implicit val bodyOrder = new Ordering[BodyWithMediaType] {
+  implicit val bodyOrder: Ordering[BodyWithMediaType] = new Ordering[BodyWithMediaType] {
     override def compare(x: BodyWithMediaType, y: BodyWithMediaType): Int =
       s"${x.mediaType}${x.bodyType.toString}".compare(s"${y.mediaType}${y.bodyType.toString()}")
   }

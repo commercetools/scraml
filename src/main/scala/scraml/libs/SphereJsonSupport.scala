@@ -71,7 +71,9 @@ object SphereJsonSupport extends LibrarySupport with JsonSupport {
                   import io.sphere.json._
                   import org.json4s._
 
-                  implicit val json = new JSON[${Type.Name(context.objectType.getName)}] {
+                  implicit val json: JSON[${Type.Name(
+        context.objectType.getName
+      )}] = new JSON[${Type.Name(context.objectType.getName)}] {
                   override def read(jval: JsonAST.JValue): JValidation[${Type.Name(
         context.objectType.getName
       )}] = ${read.parse[Term].get}
@@ -149,7 +151,7 @@ object SphereJsonSupport extends LibrarySupport with JsonSupport {
   )(enumTrait: Defn.Trait, companion: Option[Defn.Object]): DefnWithCompanion[Defn.Trait] = {
     import scala.jdk.CollectionConverters._
 
-    val toJson = q""" 
+    val toJson = q"""
       implicit lazy val toJson: ToJSON[${Type
       .Name(enumType.getName())}] = ToJSON.stringWriter.contramap(_.toString)
     """
@@ -174,7 +176,7 @@ object SphereJsonSupport extends LibrarySupport with JsonSupport {
         .toList ++ List(other)
     )
 
-    val fromJson = q""" 
+    val fromJson = q"""
     implicit lazy val fromJson: FromJSON[${Type
       .Name(enumType.getName())}] = (jval: JsonAST.JValue) =>
       FromJSON.stringReader

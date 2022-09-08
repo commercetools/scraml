@@ -29,7 +29,7 @@ class SphereJsonSupportSpec extends AnyFlatSpec with Matchers {
              |  import io.sphere.json.generic._
              |  import io.sphere.json._
              |  import org.json4s._
-             |  implicit val json = new JSON[NoDiscriminatorBase] {
+             |  implicit val json: JSON[NoDiscriminatorBase] = new JSON[NoDiscriminatorBase] {
              |    override def read(jval: JsonAST.JValue): JValidation[NoDiscriminatorBase] = NoDiscriminatorSub1.json.read(jval).orElse(NoDiscriminatorSub2.json.read(jval))
              |    override def write(value: NoDiscriminatorBase): JsonAST.JValue = value match {
              |      case nodiscriminatorsub1: NoDiscriminatorSub1 =>
