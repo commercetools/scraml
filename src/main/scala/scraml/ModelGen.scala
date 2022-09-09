@@ -633,9 +633,17 @@ object ModelGen {
   }
 
   /** map type refs from the 'asMap' annotation to real scala types */
-  private def mapTypeToScala(anyTypeName: String, context: ModelGenContext): String => Type.Ref = {
+  private def mapTypeToScala(anyTypeName: String, context: ModelGenContext): String => Type = {
     case "string" => Type.Name("String")
     case "any"    => typeFromName(anyTypeName)
+    case arrayLike if arrayLike.endsWith("[]") =>
+      val arrayType          = context.params.defaultTypes.array
+      val itemType: Type.Ref = typeFromName(arrayLike.replaceFirst("\\[]", ""))
+
+      Type.Apply(
+        typeFromName(arrayType),
+        List(itemType)
+      )
     case other =>
       context.api.typesByName
         .get(other)
