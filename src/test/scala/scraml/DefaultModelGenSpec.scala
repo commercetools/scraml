@@ -29,8 +29,10 @@ class DefaultModelGenSpec extends AnyFlatSpec with Matchers {
           emptyBase ::
           noProps ::
           objectAsMap ::
-          parentWithOption ::
+          objectAsMapOfArrays ::
+          _ ::
           enumType ::
+          emptySingleton ::
           packageObject ::
           Nil =>
         baseType.source.packageName should be("datatypes")
@@ -91,6 +93,20 @@ class DefaultModelGenSpec extends AnyFlatSpec with Matchers {
             """object ObjectAsMap"""
           )
         )
+
+        objectAsMapOfArrays.source.source.toString() should be(
+          """final case class ObjectAsMapOfArrays(values: scala.collection.immutable.Map[String, scala.collection.immutable.List[SomeEnum]])"""
+        )
+        objectAsMapOfArrays.source.companion.map(_.toString()) should be(
+          Some(
+            """object ObjectAsMapOfArrays"""
+          )
+        )
+
+        emptySingleton.source.source.toString() should be(
+          """case object EmptySingleton"""
+        )
+        emptySingleton.source.companion.map(_.toString()) should be(None)
 
       case _ => fail("unexpected number of generated source files, had: " + generated.files.length)
     }
@@ -197,7 +213,8 @@ class DefaultModelGenSpec extends AnyFlatSpec with Matchers {
           )
         )
 
-      case _ => fail()
+      case _ =>
+        fail("wrong number of arguments, did you add a type (then you have to match on it)?")
     }
   }
 }
