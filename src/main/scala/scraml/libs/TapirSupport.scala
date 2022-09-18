@@ -21,8 +21,7 @@ final class TapirSupport(endpointsObjectName: String) extends LibrarySupport {
 
   private val jsonContentType = "application/json"
 
-  private def upperCaseFirst(string: String): String =
-    string.take(1).toUpperCase.concat(string.drop(1))
+  private def upperCaseFirst(string: String): String = string.capitalize
 
   private def removeLeadingSlash(uri: String): String =
     uri.replaceFirst("/", "")
@@ -40,10 +39,16 @@ final class TapirSupport(endpointsObjectName: String) extends LibrarySupport {
 
     resourceNamePathParts.zipWithIndex.map {
       // if the first path part is a variable, it is not part of a resource locator, hence we drop it in the name
-      case (pathParam(_, _), index) if (index == 0 && resourceNamePathParts.length > 1) => ""
+      case (pathParam(_, _), 0) if resourceNamePathParts.length > 1 => ""
       // skip the variable prefix on first level
-      case (pathParam(_, name), index) =>
-        if (index == 0) upperCaseFirst(name) else "By" + upperCaseFirst(name)
+      case (pathParam(_, name), 0) =>
+        upperCaseFirst(name)
+      // prefix with "By" for the first parameter
+      case (pathParam(_, name), 1) =>
+        "By" + upperCaseFirst(name)
+      // prefix with "And" for the the rest of the parameters
+      case (pathParam(_, name), _) =>
+        "And" + upperCaseFirst(name)
       // camel case literals
       case (literal, _) => upperCaseFirst(literal)
     }.mkString

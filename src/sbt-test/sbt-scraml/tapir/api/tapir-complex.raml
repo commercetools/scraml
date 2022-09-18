@@ -1,0 +1,37 @@
+#%RAML 1.0
+title: Hello parameterized world # required title
+
+# taken from https://github.com/raml-org/raml-spec
+annotationTypes: !include annotations.raml
+
+# JSON is the default supported media type
+mediaType: application/json
+
+# this is not optional, the file included here must follow the format
+# shown in 'types.raml'
+types: !include types.raml
+
+/greeting/{preamble}/{delay}: # optional resource
+  uriParameters:
+    delay?:
+      description: Simulated delay (in milliseconds)
+      type: integer
+      minimum: 100
+      maximum: 2000
+    preamble:
+      description: Discrete selector for text to prefix greeting.
+      type: Preamble
+  get: # HTTP method declaration
+    queryParameters:
+      name?:
+        type: string
+      repeat?:
+        type: integer
+        minimum: 1
+        maximum: 10
+      uppercase?:
+        type: boolean
+    responses: # declare a response
+      200: # HTTP status code
+        body: # declare content of response
+          type: DataType

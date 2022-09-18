@@ -15,7 +15,7 @@ final class TapirSupportSpec
   "TapirSupport" must {
     "generate simple endpoints" in {
       val params = ModelGenParams(
-        new File("src/sbt-test/sbt-scraml/simple/api/simple.raml"),
+        new File("src/sbt-test/sbt-scraml/tapir/api/tapir.raml"),
         new File("target/scraml-tapir-test"),
         "scraml",
         FieldMatchPolicy.Exact(),
@@ -128,6 +128,75 @@ final class TapirSupportSpec
             |  })
             |}""".stripMargin
         )
+      )
+    }
+
+    "generate complex endpoints" in {
+      val params = ModelGenParams(
+        new File("src/sbt-test/sbt-scraml/tapir/api/tapir-complex.raml"),
+        new File("target/scraml-tapir-complex-test"),
+        "scraml",
+        FieldMatchPolicy.Exact(),
+        DefaultTypes(),
+        librarySupport = Set(CirceJsonSupport(), RefinedSupport, TapirSupport("Endpoints")),
+        formatConfig = None
+      )
+
+      val generated = ModelGenRunner.run(DefaultModelGen)(params).unsafeRunSync()
+
+      generated.packageObject.source.source.toString should be(
+        """package object scraml {
+          |  import io.circe.Decoder.Result
+          |  import io.circe.{ HCursor, Json, Decoder, Encoder }
+          |  implicit def eitherEncoder[A, B](implicit aEncoder: Encoder[A], bEncoder: Encoder[B]): Encoder[Either[A, B]] = new Encoder[Either[A, B]] {
+          |    override def apply(a: Either[A, B]): Json = a match {
+          |      case Right(b) =>
+          |        bEncoder(b)
+          |      case Left(a) =>
+          |        aEncoder(a)
+          |    }
+          |  }
+          |  implicit def eitherDecoder[A, B](implicit aDecoder: Decoder[A], bDecoder: Decoder[B]): Decoder[Either[A, B]] = new Decoder[Either[A, B]] { override def apply(c: HCursor): Result[Either[A, B]] = aDecoder.either(bDecoder)(c) }
+          |  import sttp.tapir._
+          |  import sttp.model._
+          |  import sttp.tapir.CodecFormat.TextPlain
+          |  import sttp.tapir.json.circe._
+          |  import sttp.tapir.generic.auto._
+          |  type |[+A1, +A2] = Either[A1, A2]
+          |  private implicit def anySchema[T]: Schema[T] = Schema[T](SchemaType.SCoproduct(Nil, None)(_ => None), None)
+          |  private implicit def eitherTapirCodecPlain[A, B](implicit aCodec: Codec.PlainCodec[A], bCodec: Codec.PlainCodec[B]): Codec.PlainCodec[Either[A, B]] = new Codec.PlainCodec[Either[A, B]] {
+          |    override val format = TextPlain()
+          |    override val schema = anySchema[Either[A, B]]
+          |    override def rawDecode(l: String): DecodeResult[Either[A, B]] = {
+          |      aCodec.rawDecode(l) match {
+          |        case e: DecodeResult.Failure =>
+          |          bCodec.rawDecode(l).map(Right(_))
+          |        case other =>
+          |          other.map(Left(_))
+          |      }
+          |    }
+          |    override def encode(h: Either[A, B]): String = {
+          |      h match {
+          |        case Left(a) =>
+          |          aCodec.encode(a)
+          |        case Right(b) =>
+          |          bCodec.encode(b)
+          |      }
+          |    }
+          |  }
+          |  private implicit val queryOptionalCollectionCodec: Codec[List[String], Option[scala.collection.immutable.List[String]], TextPlain] = new Codec[List[String], Option[scala.collection.immutable.List[String]], TextPlain] {
+          |    override def rawDecode(l: List[String]): DecodeResult[Option[scala.collection.immutable.List[String]]] = DecodeResult.Value(Some(l.to[scala.collection.immutable.List]))
+          |    override def encode(h: Option[scala.collection.immutable.List[String]]): List[String] = h.map(_.to[List]).getOrElse(Nil)
+          |    override lazy val schema: Schema[Option[scala.collection.immutable.List[String]]] = Schema.binary
+          |    override lazy val format: TextPlain = TextPlain()
+          |  }
+          |  object Endpoints {
+          |    object Greeting {
+          |      final case class GetGreetingByPreambleAndDelayParams(preamble: String, delay: String, name: Option[String] = None, repeat: Option[Int] = None, uppercase: Option[Boolean] = None)
+          |      val getGreetingByPreambleAndDelay = endpoint.get.in("greeting" / path[String]("preamble") / path[String]("delay")).in(query[Option[String]]("name") and query[Option[Int]]("repeat") and query[Option[Boolean]]("uppercase")).mapInTo[GetGreetingByPreambleAndDelayParams].out(jsonBody[DataType])
+          |    }
+          |  }
+          |}""".stripMargin.stripTrailingSpaces
       )
     }
 
