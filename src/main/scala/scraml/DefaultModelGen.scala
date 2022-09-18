@@ -332,7 +332,7 @@ object DefaultModelGen extends ModelGen {
            |* $dateCreated
            |* ${docsUri
           .map("@see " + _)
-          .orElse(Option(objectType.getDescription))
+          .orElse(Option(objectType.getDescription).map(_.getValue))
           .getOrElse(s"generated type for ${objectType.getName}")}
            |*/""".stripMargin
     } yield GeneratedTypeSource(
