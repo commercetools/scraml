@@ -192,8 +192,8 @@ final class TapirSupportSpec
           |  }
           |  object Endpoints {
           |    object Greeting {
-          |      final case class GetGreetingByPreambleAndDelayParams(preamble: String, delay: String, name: Option[String] = None, repeat: Option[Int] = None, uppercase: Option[Boolean] = None)
-          |      val getGreetingByPreambleAndDelay = endpoint.get.in("greeting" / path[String]("preamble") / path[String]("delay")).in(query[Option[String]]("name") and query[Option[Int]]("repeat") and query[Option[Boolean]]("uppercase")).mapInTo[GetGreetingByPreambleAndDelayParams].out(jsonBody[DataType])
+          |      final case class GetGreetingByPreambleAndDelayParams(preamble: Preamble, delay: Option[Int], name: Option[String] = None, repeat: Option[Int] = None, uppercase: Option[Boolean] = None)
+          |      val getGreetingByPreambleAndDelay = endpoint.get.in("greeting" / path[Preamble]("preamble") / path[Option[Int]]("delay")).in(query[Option[String]]("name") and query[Option[Int]]("repeat") and query[Option[Boolean]]("uppercase")).mapInTo[GetGreetingByPreambleAndDelayParams].out(jsonBody[DataType])
           |    }
           |  }
           |}""".stripMargin.stripTrailingSpaces

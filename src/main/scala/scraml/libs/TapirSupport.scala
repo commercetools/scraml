@@ -54,15 +54,22 @@ final class TapirSupport(endpointsObjectName: String) extends LibrarySupport {
     }.mkString
   }
 
-  private def pathMatcher(template: String): Term = {
+  private def pathMatcher(
+      template: String,
+      pathParams: List[Term.Param]
+  ): Term = {
     import meta._
+
+    val paramTypes = pathParams.map { param =>
+      param.name.value -> param.decltpe.map(_.toString).getOrElse("String")
+    }.toMap
 
     val pathMatcherString =
       pathParts(template)
         .map {
           // "prefix=value" path parts would be harder to express with tapirs `paths` so we are catching the full part and drop / add the prefix
           case pathParam(prefix, name) =>
-            s"""path[String]("$name")""".concat(
+            s"""path[${paramTypes(name)}]("$name")""".concat(
               if (prefix.isEmpty) "" else s""".map(_.drop(${prefix.length}))("$prefix".concat)"""
             )
           case literal => s""""$literal""""
@@ -89,14 +96,16 @@ final class TapirSupport(endpointsObjectName: String) extends LibrarySupport {
         q""" $left and $right """
       }
 
-  private def pathParamsFromResource(resource: Resource): List[Term.Param] =
+  private def pathParamsFromResource(resource: Resource)(implicit
+      context: ModelGenContext
+  ): List[Term.Param] =
     resource.getFullUriParameters.asScala.map { uriParam =>
+      val typeName = ModelGen.scalaProperty(uriParam)(fallbackType = "String")
+
       Term.Param(
         Nil,
         Term.Name(uriParam.getName),
-        Some(
-          Type.Name("String")
-        ),
+        typeName.flatMap(_.decltpe),
         None
       )
     }.toList
@@ -155,7 +164,7 @@ final class TapirSupport(endpointsObjectName: String) extends LibrarySupport {
       val endpointWithPathMatcher: Term =
         q"""
            $endpointWithHeaderMatcher
-             .in(${pathMatcher(templateWithoutSlash)})
+             .in(${pathMatcher(templateWithoutSlash, pathParams)})
          """
 
       val endpointWithQueryMatcher: Term = paramMatcher(queryParams)("query")
