@@ -119,7 +119,9 @@ final class TapirSupport(endpointsObjectName: String) extends LibrarySupport {
       context
         .scalaTypeRef(body.getType, optional, None, jsonSupport.jsonType)
         .map(_.scalaType)
-        .map(BodyWithMediaType(body.getContentType, _))
+        .flatMap(scalaType =>
+          Option(body.getContentType).map(contentType => BodyWithMediaType(contentType, scalaType))
+        )
     }.toList
 
   private[libs] def resourceEndpointsDefinitions(
@@ -181,14 +183,19 @@ final class TapirSupport(endpointsObjectName: String) extends LibrarySupport {
             .map((_, body))
         )
         .map { case (typeRef, body) =>
-          val inputBody: Term = body.getContentType.toLowerCase match {
-            case json if json.contains(jsonContentType) || json.contains("application/graphql") =>
+          val inputBody: Term = Option(body.getContentType).map(_.toLowerCase) match {
+            case Some(json)
+                if json.contains(jsonContentType) || json.contains("application/graphql") =>
               q"""
                  jsonBody[${typeRef.scalaType}]
                """
-            case form if form.contains("application/x-www-form-urlencoded") =>
+            case Some(form) if form.contains("application/x-www-form-urlencoded") =>
               q"""
                  formBody[Map[String, String]]
+               """
+            case None if typeRef.scalaType.toString() == context.anyTypeName =>
+              q"""
+                 jsonBody[${context.anyTypeName}]
                """
             case other =>
               throw new IllegalArgumentException(s"unsupported input media type: $other")

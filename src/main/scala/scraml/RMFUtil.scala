@@ -2,13 +2,15 @@ package scraml
 
 import cats.effect.IO
 import io.vrap.rmf.raml.model.RamlModelBuilder
-import io.vrap.rmf.raml.model.modules.Api
+import io.vrap.rmf.raml.model.modules.{Api, ModulesPackage}
 import io.vrap.rmf.raml.model.types.{Annotation, AnyType, ObjectType, Property, StringType}
 import org.eclipse.emf.common.util.URI
+
 import java.io.File
 import scala.collection.immutable.TreeSet
 
 object RMFUtil {
+
   import scala.jdk.CollectionConverters._
 
   implicit val anyTypeOrdering: Ordering[AnyType] = new Ordering[AnyType] {
@@ -50,13 +52,25 @@ object RMFUtil {
   /** find all terminal, or "leaf", types of '''aType'''.
     */
   def leafTypes(aType: AnyType): TreeSet[AnyType] = {
-    def expand(child: AnyType): TreeSet[AnyType] =
-      filterSubTypes(child)(_.getName != aType.getName).foldLeft(TreeSet.empty[AnyType]) {
-        case (acc, subType) if subType.getSubTypes.isEmpty => (acc + subType)
-        case (acc, subType)                                => acc ++ expand(subType)
-      }
+    def expand(child: AnyType): TreeSet[AnyType] = {
+      val subtypes: Set[AnyType] =
+        filterSubTypes(child)(subType => {
+          // make sure we are not iterating property types which also show up as sub-types
+          val isApiType =
+            subType.eContainer().eClass().isSuperTypeOf(ModulesPackage.eINSTANCE.getApi)
+          subType.getName != aType.getName && isApiType
+        })
 
-    expand(aType)
+      if (subtypes.nonEmpty) {
+        subtypes.foldLeft(TreeSet.empty[AnyType]) {
+          case (acc, subType) if subType.getSubTypes.isEmpty => acc + subType
+          case (acc, subType)                                => acc ++ expand(subType)
+        }
+      } else TreeSet(child) // if the child has only ignored types, it is a leaf too
+    }
+
+    lazy val subTypes = expand(aType)
+    subTypes
   }
 
   def discriminators(aType: AnyType): List[String] = aType match {
