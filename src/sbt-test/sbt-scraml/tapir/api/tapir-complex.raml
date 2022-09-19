@@ -13,7 +13,7 @@ types: !include types.raml
 
 /greeting/{preamble}/{delay}: # optional resource
   uriParameters:
-    delay?:
+    delay:
       description: Simulated delay (in milliseconds)
       type: integer
       minimum: 100

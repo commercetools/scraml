@@ -7,7 +7,6 @@ lazy val root = (project in file("."))
     scalaVersion := "2.13.8",
     name := "scraml-tapir",
     version := "0.1",
-    ramlFile := Some(file("api/tapir.raml")),
     defaultTypes := scraml.DefaultTypes(
       float = "Double",
       number = "scala.math.BigDecimal"
@@ -16,6 +15,20 @@ lazy val root = (project in file("."))
       scraml.libs.CirceJsonSupport(),
       scraml.libs.TapirSupport("Endpoints"),
       scraml.libs.RefinedSupport
+    ),
+    ramlDefinitions := Seq(
+      scraml.ModelDefinition(
+        raml = file("api/tapir.raml"),
+        basePackage = "scraml.tapir.simple",
+        formatConfig = None,
+        generateDateCreated = true
+      ),
+      scraml.ModelDefinition(
+        raml = file("api/tapir-complex.raml"),
+        basePackage = "scraml.tapir.complex",
+        formatConfig = None,
+        generateDateCreated = true
+      )
     ),
     Compile / sourceGenerators += runScraml,
     libraryDependencies += "com.chuusai" %% "shapeless" % "2.3.7",
