@@ -34,7 +34,7 @@ class RMFUtilSpec extends AnyFlatSpec with Matchers {
           .map(_.getName) should be(Set("B", "C"))
 
         context.leafTypes
-          .map(_.getName) should be(Set("D"))
+          .map(_.getName) should be(Set("D", "E"))
       case _ => fail("type for test not found")
     }
   }

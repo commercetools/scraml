@@ -14,7 +14,7 @@ object CirceJsonSupport {
 }
 
 class CirceJsonSupport(formats: Map[String, String]) extends LibrarySupport with JsonSupport {
-  import FieldMatchPolicy.{Exact, IgnoreExtra}
+  import FieldMatchPolicy.IgnoreExtra
   import scala.meta._
   import scala.collection.JavaConverters._
 
@@ -123,7 +123,7 @@ class CirceJsonSupport(formats: Map[String, String]) extends LibrarySupport with
               Some(Type.Name("Json")),
               Term.Match(
                 Term.Name(typeName.toLowerCase),
-                subTypes.map { case subType: ObjectType =>
+                cases = subTypes.map { case subType: ObjectType =>
                   Case(
                     Pat.Typed(
                       Pat.Var(Term.Name(subType.getName.toLowerCase)),
@@ -148,7 +148,7 @@ class CirceJsonSupport(formats: Map[String, String]) extends LibrarySupport with
     )
   }
 
-  private def typeDecoder(firstSubType: AnyType, context: ModelGenContext): Defn.Val = {
+  private def typeDecoder(context: ModelGenContext): Defn.Val = {
     val subTypes         = context.leafTypes.toList
     val typeName         = context.objectType.getName
     val discriminatorOpt = discriminator(context.objectType)
@@ -309,21 +309,21 @@ class CirceJsonSupport(formats: Map[String, String]) extends LibrarySupport with
     if (shouldDeriveJson(context.objectType)) {
       val subTypes: List[AnyType] = context.getDirectSubTypes.toList
 
-      subTypes.headOption
-        .map { firstSubType =>
+      subTypes match {
+        case Nil => List.empty
+        case _ =>
           val jsonStats =
             q"""
           import io.circe.Decoder.Result
           import io.circe._
 
-          ${typeDecoder(firstSubType, context)}
+          ${typeDecoder(context)}
 
           ${typeEncoder(context)}
         """.stats
           jsonStats
-        }
-        .getOrElse(List.empty) // no subtypes
-    } else List.empty          // should not derive
+      }
+    } else List.empty // should not derive
 
   private def deriveJson(classDef: Defn.Class)(implicit
       context: ModelGenContext
