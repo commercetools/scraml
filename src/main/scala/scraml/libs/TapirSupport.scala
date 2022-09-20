@@ -21,8 +21,7 @@ final class TapirSupport(endpointsObjectName: String) extends LibrarySupport {
 
   private val jsonContentType = "application/json"
 
-  private def upperCaseFirst(string: String): String =
-    string.take(1).toUpperCase.concat(string.drop(1))
+  private def upperCaseFirst(string: String): String = string.capitalize
 
   private def removeLeadingSlash(uri: String): String =
     uri.replaceFirst("/", "")
@@ -40,24 +39,37 @@ final class TapirSupport(endpointsObjectName: String) extends LibrarySupport {
 
     resourceNamePathParts.zipWithIndex.map {
       // if the first path part is a variable, it is not part of a resource locator, hence we drop it in the name
-      case (pathParam(_, _), index) if (index == 0 && resourceNamePathParts.length > 1) => ""
+      case (pathParam(_, _), 0) if resourceNamePathParts.length > 1 => ""
       // skip the variable prefix on first level
-      case (pathParam(_, name), index) =>
-        if (index == 0) upperCaseFirst(name) else "By" + upperCaseFirst(name)
+      case (pathParam(_, name), 0) =>
+        upperCaseFirst(name)
+      // prefix with "By" for the first parameter
+      case (pathParam(_, name), 1) =>
+        "By" + upperCaseFirst(name)
+      // prefix with "And" for the the rest of the parameters
+      case (pathParam(_, name), _) =>
+        "And" + upperCaseFirst(name)
       // camel case literals
       case (literal, _) => upperCaseFirst(literal)
     }.mkString
   }
 
-  private def pathMatcher(template: String): Term = {
+  private def pathMatcher(
+      template: String,
+      pathParams: List[Term.Param]
+  ): Term = {
     import meta._
+
+    val paramTypes = pathParams.map { param =>
+      param.name.value -> param.decltpe.map(_.toString).getOrElse("String")
+    }.toMap
 
     val pathMatcherString =
       pathParts(template)
         .map {
           // "prefix=value" path parts would be harder to express with tapirs `paths` so we are catching the full part and drop / add the prefix
           case pathParam(prefix, name) =>
-            s"""path[String]("$name")""".concat(
+            s"""path[${paramTypes(name)}]("$name")""".concat(
               if (prefix.isEmpty) "" else s""".map(_.drop(${prefix.length}))("$prefix".concat)"""
             )
           case literal => s""""$literal""""
@@ -84,14 +96,16 @@ final class TapirSupport(endpointsObjectName: String) extends LibrarySupport {
         q""" $left and $right """
       }
 
-  private def pathParamsFromResource(resource: Resource): List[Term.Param] =
+  private def pathParamsFromResource(resource: Resource)(implicit
+      context: ModelGenContext
+  ): List[Term.Param] =
     resource.getFullUriParameters.asScala.map { uriParam =>
+      val typeName = ModelGen.scalaProperty(uriParam)(fallbackType = "String")
+
       Term.Param(
         Nil,
         Term.Name(uriParam.getName),
-        Some(
-          Type.Name("String")
-        ),
+        typeName.flatMap(_.decltpe),
         None
       )
     }.toList
@@ -150,7 +164,7 @@ final class TapirSupport(endpointsObjectName: String) extends LibrarySupport {
       val endpointWithPathMatcher: Term =
         q"""
            $endpointWithHeaderMatcher
-             .in(${pathMatcher(templateWithoutSlash)})
+             .in(${pathMatcher(templateWithoutSlash, pathParams)})
          """
 
       val endpointWithQueryMatcher: Term = paramMatcher(queryParams)("query")
