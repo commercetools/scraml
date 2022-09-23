@@ -46,6 +46,7 @@ class RefinedSupportSpec extends AnyWordSpec with Matchers with SourceCodeFormat
             |  import io.circe._
             |  import io.circe.generic.semiauto._
             |  import io.circe.syntax._
+            |  val jsonTypeHint = "data"
             |  import io.circe.refined._
             |  implicit lazy val decoder: Decoder[DataType] = new Decoder[DataType] {
             |    def apply(c: HCursor): Decoder.Result[DataType] = {
@@ -68,7 +69,7 @@ class RefinedSupportSpec extends AnyWordSpec with Matchers with SourceCodeFormat
             |      }
             |    }
             |  }
-            |  implicit lazy val encoder: Encoder[DataType] = deriveEncoder[DataType].mapJsonObject(_.+:("type" -> Json.fromString("data")))
+            |  implicit lazy val encoder: Encoder[DataType] = deriveEncoder[DataType].mapJsonObject(_.+:("type" -> Json.fromString(jsonTypeHint)))
             |  import eu.timepit.refined.api.Refined
             |  import eu.timepit.refined.boolean.And
             |  import eu.timepit.refined.collection._
@@ -225,7 +226,7 @@ class RefinedSupportSpec extends AnyWordSpec with Matchers with SourceCodeFormat
             |  import io.circe._
             |  implicit lazy val decoder: Decoder[BaseType] = new Decoder[BaseType] {
             |    override def apply(c: HCursor): Result[BaseType] = c.downField("type").as[String] match {
-            |      case Right("data") =>
+            |      case Right(DataType.jsonTypeHint) =>
             |        DataType.decoder(c)
             |      case other =>
             |        Left(DecodingFailure(s"unknown discriminator: $other", c.history))
@@ -288,6 +289,7 @@ class RefinedSupportSpec extends AnyWordSpec with Matchers with SourceCodeFormat
             |  import io.circe._
             |  import io.circe.generic.semiauto._
             |  import io.circe.syntax._
+            |  val jsonTypeHint = "data"
             |  import io.circe.refined._
             |  implicit lazy val decoder: Decoder[DataType] = new Decoder[DataType] {
             |    def apply(c: HCursor): Decoder.Result[DataType] = {
@@ -310,7 +312,7 @@ class RefinedSupportSpec extends AnyWordSpec with Matchers with SourceCodeFormat
             |      }
             |    }
             |  }
-            |  implicit lazy val encoder: Encoder[DataType] = new Encoder[DataType] { final def apply(instance: DataType): Json = Json.obj("type" -> Json.fromString("data"), "id" -> instance.id.asJson, "optionalCustomArrayTypeProp" -> instance.optionalCustomArrayTypeProp.asJson, "foo" -> instance.foo.asJson, "bar" -> instance.bar.asJson, "numberProp" -> instance.numberProp.asJson, "customNumberProp" -> instance.customNumberProp.asJson, "customArrayTypeProp" -> instance.customArrayTypeProp.asJson, "optionalStringArray" -> instance.optionalStringArray.asJson) }
+            |  implicit lazy val encoder: Encoder[DataType] = new Encoder[DataType] { final def apply(instance: DataType): Json = Json.obj("type" -> Json.fromString(jsonTypeHint), "id" -> instance.id.asJson, "optionalCustomArrayTypeProp" -> instance.optionalCustomArrayTypeProp.asJson, "foo" -> instance.foo.asJson, "bar" -> instance.bar.asJson, "numberProp" -> instance.numberProp.asJson, "customNumberProp" -> instance.customNumberProp.asJson, "customArrayTypeProp" -> instance.customArrayTypeProp.asJson, "optionalStringArray" -> instance.optionalStringArray.asJson) }
             |  import eu.timepit.refined.api.Refined
             |  import eu.timepit.refined.boolean.And
             |  import eu.timepit.refined.collection._
@@ -521,6 +523,7 @@ class RefinedSupportSpec extends AnyWordSpec with Matchers with SourceCodeFormat
             |  import io.circe._
             |  import io.circe.generic.semiauto._
             |  import io.circe.syntax._
+            |  val jsonTypeHint = "data"
             |  import io.circe.refined._
             |  implicit lazy val decoder: Decoder[DataType] = new Decoder[DataType] {
             |    def apply(c: HCursor): Decoder.Result[DataType] = {
@@ -545,7 +548,7 @@ class RefinedSupportSpec extends AnyWordSpec with Matchers with SourceCodeFormat
             |      }
             |    }
             |  }
-            |  implicit lazy val encoder: Encoder[DataType] = new Encoder[DataType] { final def apply(instance: DataType): Json = AdditionalProperties.merge(Json.obj("type" -> Json.fromString("data"), "id" -> instance.id.asJson, "optionalCustomArrayTypeProp" -> instance.optionalCustomArrayTypeProp.asJson, "foo" -> instance.foo.asJson, "bar" -> instance.bar.asJson, "numberProp" -> instance.numberProp.asJson, "customNumberProp" -> instance.customNumberProp.asJson, "customArrayTypeProp" -> instance.customArrayTypeProp.asJson, "optionalStringArray" -> instance.optionalStringArray.asJson), instance.additionalProperties) }
+            |  implicit lazy val encoder: Encoder[DataType] = new Encoder[DataType] { final def apply(instance: DataType): Json = AdditionalProperties.merge(Json.obj("type" -> Json.fromString(jsonTypeHint), "id" -> instance.id.asJson, "optionalCustomArrayTypeProp" -> instance.optionalCustomArrayTypeProp.asJson, "foo" -> instance.foo.asJson, "bar" -> instance.bar.asJson, "numberProp" -> instance.numberProp.asJson, "customNumberProp" -> instance.customNumberProp.asJson, "customArrayTypeProp" -> instance.customArrayTypeProp.asJson, "optionalStringArray" -> instance.optionalStringArray.asJson), instance.additionalProperties) }
             |  import eu.timepit.refined.api.Refined
             |  import eu.timepit.refined.boolean.And
             |  import eu.timepit.refined.collection._
@@ -715,6 +718,7 @@ class RefinedSupportSpec extends AnyWordSpec with Matchers with SourceCodeFormat
             |  import io.circe._
             |  import io.circe.generic.semiauto._
             |  import io.circe.syntax._
+            |  val jsonTypeHint = "child"
             |  import io.circe.refined._
             |  implicit lazy val decoder: Decoder[ChildWithFacetsType] = new Decoder[ChildWithFacetsType] {
             |    def apply(c: HCursor): Decoder.Result[ChildWithFacetsType] = {
@@ -723,7 +727,7 @@ class RefinedSupportSpec extends AnyWordSpec with Matchers with SourceCodeFormat
             |      }
             |    }
             |  }
-            |  implicit lazy val encoder: Encoder[ChildWithFacetsType] = deriveEncoder[ChildWithFacetsType].mapJsonObject(_.+:("type" -> Json.fromString("child")))
+            |  implicit lazy val encoder: Encoder[ChildWithFacetsType] = deriveEncoder[ChildWithFacetsType].mapJsonObject(_.+:("type" -> Json.fromString(jsonTypeHint)))
             |  import eu.timepit.refined.api.Refined
             |  import eu.timepit.refined.boolean.And
             |  import eu.timepit.refined.collection._
@@ -914,6 +918,7 @@ class RefinedSupportSpec extends AnyWordSpec with Matchers with SourceCodeFormat
             |  import io.circe._
             |  import io.circe.generic.semiauto._
             |  import io.circe.syntax._
+            |  val jsonTypeHint = "overrides"
             |  import io.circe.refined._
             |  implicit lazy val decoder: Decoder[ChildOverridesAll] = new Decoder[ChildOverridesAll] {
             |    def apply(c: HCursor): Decoder.Result[ChildOverridesAll] = {
@@ -928,7 +933,7 @@ class RefinedSupportSpec extends AnyWordSpec with Matchers with SourceCodeFormat
             |      }
             |    }
             |  }
-            |  implicit lazy val encoder: Encoder[ChildOverridesAll] = deriveEncoder[ChildOverridesAll].mapJsonObject(_.+:("type" -> Json.fromString("overrides")))
+            |  implicit lazy val encoder: Encoder[ChildOverridesAll] = deriveEncoder[ChildOverridesAll].mapJsonObject(_.+:("type" -> Json.fromString(jsonTypeHint)))
             |  import eu.timepit.refined.api.Refined
             |  import eu.timepit.refined.boolean.And
             |  import eu.timepit.refined.collection._
@@ -1048,6 +1053,7 @@ class RefinedSupportSpec extends AnyWordSpec with Matchers with SourceCodeFormat
             |  import io.circe._
             |  import io.circe.generic.semiauto._
             |  import io.circe.syntax._
+            |  val jsonTypeHint = "inherited"
             |  import io.circe.refined._
             |  implicit lazy val decoder: Decoder[ChildInheritsAll] = new Decoder[ChildInheritsAll] {
             |    def apply(c: HCursor): Decoder.Result[ChildInheritsAll] = {
@@ -1062,7 +1068,7 @@ class RefinedSupportSpec extends AnyWordSpec with Matchers with SourceCodeFormat
             |      }
             |    }
             |  }
-            |  implicit lazy val encoder: Encoder[ChildInheritsAll] = deriveEncoder[ChildInheritsAll].mapJsonObject(_.+:("type" -> Json.fromString("inherited")))
+            |  implicit lazy val encoder: Encoder[ChildInheritsAll] = deriveEncoder[ChildInheritsAll].mapJsonObject(_.+:("type" -> Json.fromString(jsonTypeHint)))
             |  import eu.timepit.refined.api.Refined
             |  import eu.timepit.refined.boolean.And
             |  import eu.timepit.refined.collection._
