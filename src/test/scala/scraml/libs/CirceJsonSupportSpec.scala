@@ -77,9 +77,9 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers with SourceCodeForm
                                                                       |  import io.circe._
                                                                       |  implicit lazy val decoder: Decoder[BaseType] = new Decoder[BaseType] {
                                                                       |    override def apply(c: HCursor): Result[BaseType] = c.downField("type").as[String] match {
-                                                                      |      case Right("data") =>
+                                                                      |      case Right(DataType.jsonTypeHint) =>
                                                                       |        DataType.decoder(c)
-                                                                      |      case Right("grandchild") =>
+                                                                      |      case Right(GrandchildType.jsonTypeHint) =>
                                                                       |        GrandchildType.decoder(c)
                                                                       |      case other =>
                                                                       |        Left(DecodingFailure(s"unknown discriminator: $$other", c.history))
@@ -112,8 +112,9 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers with SourceCodeForm
                                                                       |  import io.circe.generic.semiauto._
                                                                       |  import io.circe.syntax._
                                                                       |  import scraml.Formats._
+                                                                      |  val jsonTypeHint = "data"
                                                                       |  implicit lazy val decoder: Decoder[DataType] = deriveDecoder[DataType]
-                                                                      |  implicit lazy val encoder: Encoder[DataType] = deriveEncoder[DataType].mapJsonObject(_.+:("type" -> Json.fromString("data")))
+                                                                      |  implicit lazy val encoder: Encoder[DataType] = deriveEncoder[DataType].mapJsonObject(_.+:("type" -> Json.fromString(jsonTypeHint)))
                                                                       |}""".stripMargin.stripTrailingSpaces
           )
         )
@@ -126,7 +127,7 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers with SourceCodeForm
                                                                        |  import io.circe._
                                                                        |  implicit lazy val decoder: Decoder[EmptyBase] = new Decoder[EmptyBase] {
                                                                        |    override def apply(c: HCursor): Result[EmptyBase] = c.downField("type").as[String] match {
-                                                                       |      case Right("nope") =>
+                                                                       |      case Right(NoProps.jsonTypeHint) =>
                                                                        |        NoProps.decoder(c)
                                                                        |      case other =>
                                                                        |        Left(DecodingFailure(s"unknown discriminator: $$other", c.history))
@@ -147,15 +148,16 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers with SourceCodeForm
              |  import io.circe._
              |  import io.circe.generic.semiauto._
              |  import io.circe.Decoder.Result
+             |  val jsonTypeHint = "nope"
              |  implicit lazy val decoder: Decoder[NoProps.type] = new Decoder[NoProps.type] {
              |    override def apply(c: HCursor): Result[NoProps.type] = c.downField("type").as[String] match {
-             |      case Right("nope") =>
+             |      case Right(jsonTypeHint) =>
              |        Right(NoProps)
              |      case other =>
              |        Left(DecodingFailure(s"unknown type: $$other", c.history))
              |    }
              |  }
-             |  implicit lazy val encoder: Encoder[NoProps.type] = new Encoder[NoProps.type] { override def apply(a: NoProps.type): Json = Json.obj("type" -> Json.fromString("nope")) }
+             |  implicit lazy val encoder: Encoder[NoProps.type] = new Encoder[NoProps.type] { override def apply(a: NoProps.type): Json = Json.obj("type" -> Json.fromString(jsonTypeHint)) }
              |}""".stripMargin.stripTrailingSpaces
         )
 
@@ -167,9 +169,9 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers with SourceCodeForm
                                                                           |  import io.circe._
                                                                           |  implicit lazy val decoder: Decoder[NoSealedBase] = new Decoder[NoSealedBase] {
                                                                           |    override def apply(c: HCursor): Result[NoSealedBase] = c.downField("typeId").as[String] match {
-                                                                          |      case Right("map-like") =>
+                                                                          |      case Right(MapLike.jsonTypeHint) =>
                                                                           |        MapLike.decoder(c)
-                                                                          |      case Right("other-sub") =>
+                                                                          |      case Right(OtherSub.jsonTypeHint) =>
                                                                           |        OtherSub.decoder(c)
                                                                           |      case other =>
                                                                           |        Left(DecodingFailure(s"unknown discriminator: $$other", c.history))
@@ -199,6 +201,7 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers with SourceCodeForm
                                                                      |  import io.circe.Decoder.Result
                                                                      |  implicit lazy val decoder: Decoder[MapLike] = new Decoder[MapLike] { override def apply(c: HCursor): Result[MapLike] = c.as[scala.collection.immutable.Map[String, Long]].map(MapLike.apply) }
                                                                      |  implicit lazy val encoder: Encoder[MapLike] = new Encoder[MapLike] { override def apply(a: MapLike): Json = a.values.asJson }
+                                                                     |  val jsonTypeHint = "map-like"
                                                                      |}""".stripMargin.stripTrailingSpaces
           )
         )
@@ -240,8 +243,9 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers with SourceCodeForm
             |  import io.circe.generic.semiauto._
             |  import io.circe.syntax._
             |  import scraml.Formats._
+            |  val jsonTypeHint = "other-sub"
             |  implicit lazy val decoder: Decoder[OtherSub] = deriveDecoder[OtherSub]
-            |  implicit lazy val encoder: Encoder[OtherSub] = deriveEncoder[OtherSub].mapJsonObject(_.+:("typeId" -> Json.fromString("other-sub")))
+            |  implicit lazy val encoder: Encoder[OtherSub] = deriveEncoder[OtherSub].mapJsonObject(_.+:("typeId" -> Json.fromString(jsonTypeHint)))
             |}""".stripMargin.stripTrailingSpaces
           )
         )
@@ -272,7 +276,7 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers with SourceCodeForm
                   |  import io.circe._
                   |  implicit lazy val decoder: Decoder[IntermediateType] = new Decoder[IntermediateType] {
                   |    override def apply(c: HCursor): Result[IntermediateType] = c.downField("type").as[String] match {
-                  |      case Right("grandchild") =>
+                  |      case Right(GrandchildType.jsonTypeHint) =>
                   |        GrandchildType.decoder(c)
                   |      case other =>
                   |        Left(DecodingFailure(s"unknown discriminator: $$other", c.history))
@@ -297,8 +301,9 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers with SourceCodeForm
               |  import io.circe.generic.semiauto._
               |  import io.circe.syntax._
               |  import scraml.Formats._
+              |  val jsonTypeHint = "grandchild"
               |  implicit lazy val decoder: Decoder[GrandchildType] = deriveDecoder[GrandchildType]
-              |  implicit lazy val encoder: Encoder[GrandchildType] = deriveEncoder[GrandchildType].mapJsonObject(_.+:("type" -> Json.fromString("grandchild")))
+              |  implicit lazy val encoder: Encoder[GrandchildType] = deriveEncoder[GrandchildType].mapJsonObject(_.+:("type" -> Json.fromString(jsonTypeHint)))
               |}""".stripMargin.stripTrailingSpaces
           )
         )
@@ -448,9 +453,9 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers with SourceCodeForm
                |  import io.circe._
                |  implicit lazy val decoder: Decoder[BaseType] = new Decoder[BaseType] {
                |    override def apply(c: HCursor): Result[BaseType] = c.downField("type").as[String] match {
-               |      case Right("data") =>
+               |      case Right(DataType.jsonTypeHint) =>
                |        DataType.decoder(c)
-               |      case Right("grandchild") =>
+               |      case Right(GrandchildType.jsonTypeHint) =>
                |        GrandchildType.decoder(c)
                |      case other =>
                |        Left(DecodingFailure(s"unknown discriminator: $other", c.history))
@@ -522,6 +527,7 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers with SourceCodeForm
                  |  import io.circe.generic.semiauto._
                  |  import io.circe.syntax._
                  |  import scraml.Formats._
+                 |  val jsonTypeHint = "data"
                  |  implicit lazy val decoder: Decoder[DataType] = new Decoder[DataType] {
                  |    def apply(c: HCursor): Decoder.Result[DataType] = {
                  |      c.downField("id").as[String].flatMap { (_id: String) =>
@@ -537,7 +543,7 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers with SourceCodeForm
                  |      }
                  |    }
                  |  }
-                 |  implicit lazy val encoder: Encoder[DataType] = new Encoder[DataType] { final def apply(instance: DataType): Json = AdditionalProperties.merge(Json.obj("type" -> Json.fromString("data"), "id" -> instance.id.asJson, "foo" -> instance.foo.asJson, "customTypeProp" -> instance.customTypeProp.asJson, "customArrayTypeProp" -> instance.customArrayTypeProp.asJson), instance.additionalProperties) }
+                 |  implicit lazy val encoder: Encoder[DataType] = new Encoder[DataType] { final def apply(instance: DataType): Json = AdditionalProperties.merge(Json.obj("type" -> Json.fromString(jsonTypeHint), "id" -> instance.id.asJson, "foo" -> instance.foo.asJson, "customTypeProp" -> instance.customTypeProp.asJson, "customArrayTypeProp" -> instance.customArrayTypeProp.asJson), instance.additionalProperties) }
                  |}""".stripMargin.stripTrailingSpaces)
         )
 
@@ -548,7 +554,7 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers with SourceCodeForm
                   |  import io.circe._
                   |  implicit lazy val decoder: Decoder[EmptyBase] = new Decoder[EmptyBase] {
                   |    override def apply(c: HCursor): Result[EmptyBase] = c.downField("type").as[String] match {
-                  |      case Right("nope") =>
+                  |      case Right(NoProps.jsonTypeHint) =>
                   |        NoProps.decoder(c)
                   |      case other =>
                   |        Left(DecodingFailure(s"unknown discriminator: $other", c.history))
@@ -615,6 +621,7 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers with SourceCodeForm
               |  import io.circe.generic.semiauto._
               |  import io.circe.syntax._
               |  import scraml.Formats._
+              |  val jsonTypeHint = "nope"
               |  implicit lazy val decoder: Decoder[NoProps] = new Decoder[NoProps] {
               |    def apply(c: HCursor): Decoder.Result[NoProps] = {
               |      AdditionalProperties.decoder(c).map {
@@ -622,7 +629,7 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers with SourceCodeForm
               |      }
               |    }
               |  }
-              |  implicit lazy val encoder: Encoder[NoProps] = new Encoder[NoProps] { final def apply(instance: NoProps): Json = AdditionalProperties.merge(Json.obj("type" -> Json.fromString("nope")), instance.additionalProperties) }
+              |  implicit lazy val encoder: Encoder[NoProps] = new Encoder[NoProps] { final def apply(instance: NoProps): Json = AdditionalProperties.merge(Json.obj("type" -> Json.fromString(jsonTypeHint)), instance.additionalProperties) }
               |}""".stripMargin.stripTrailingSpaces
           )
         )
@@ -635,9 +642,9 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers with SourceCodeForm
                |  import io.circe._
                |  implicit lazy val decoder: Decoder[NoSealedBase] = new Decoder[NoSealedBase] {
                |    override def apply(c: HCursor): Result[NoSealedBase] = c.downField("typeId").as[String] match {
-               |      case Right("map-like") =>
+               |      case Right(MapLike.jsonTypeHint) =>
                |        MapLike.decoder(c)
-               |      case Right("other-sub") =>
+               |      case Right(OtherSub.jsonTypeHint) =>
                |        OtherSub.decoder(c)
                |      case other =>
                |        Left(DecodingFailure(s"unknown discriminator: $other", c.history))
@@ -667,6 +674,7 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers with SourceCodeForm
               |  import io.circe.Decoder.Result
               |  implicit lazy val decoder: Decoder[MapLike] = new Decoder[MapLike] { override def apply(c: HCursor): Result[MapLike] = c.as[scala.collection.immutable.Map[String, Long]].map(MapLike.apply) }
               |  implicit lazy val encoder: Encoder[MapLike] = new Encoder[MapLike] { override def apply(a: MapLike): Json = a.values.asJson }
+              |  val jsonTypeHint = "map-like"
               |}""".stripMargin.stripTrailingSpaces
           )
         )
@@ -749,6 +757,7 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers with SourceCodeForm
               |  import io.circe.generic.semiauto._
               |  import io.circe.syntax._
               |  import scraml.Formats._
+              |  val jsonTypeHint = "other-sub"
               |  implicit lazy val decoder: Decoder[OtherSub] = new Decoder[OtherSub] {
               |    def apply(c: HCursor): Decoder.Result[OtherSub] = {
               |      c.downField("id").as[String].flatMap { (_id: String) =>
@@ -758,7 +767,7 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers with SourceCodeForm
               |      }
               |    }
               |  }
-              |  implicit lazy val encoder: Encoder[OtherSub] = new Encoder[OtherSub] { final def apply(instance: OtherSub): Json = AdditionalProperties.merge(Json.obj("typeId" -> Json.fromString("other-sub"), "id" -> instance.id.asJson), instance.additionalProperties) }
+              |  implicit lazy val encoder: Encoder[OtherSub] = new Encoder[OtherSub] { final def apply(instance: OtherSub): Json = AdditionalProperties.merge(Json.obj("typeId" -> Json.fromString(jsonTypeHint), "id" -> instance.id.asJson), instance.additionalProperties) }
               |}""".stripMargin.stripTrailingSpaces
           )
         )
@@ -789,7 +798,7 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers with SourceCodeForm
                   |  import io.circe._
                   |  implicit lazy val decoder: Decoder[IntermediateType] = new Decoder[IntermediateType] {
                   |    override def apply(c: HCursor): Result[IntermediateType] = c.downField("type").as[String] match {
-                  |      case Right("grandchild") =>
+                  |      case Right(GrandchildType.jsonTypeHint) =>
                   |        GrandchildType.decoder(c)
                   |      case other =>
                   |        Left(DecodingFailure(s"unknown discriminator: $other", c.history))
@@ -855,6 +864,7 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers with SourceCodeForm
               |  import io.circe.generic.semiauto._
               |  import io.circe.syntax._
               |  import scraml.Formats._
+              |  val jsonTypeHint = "grandchild"
               |  implicit lazy val decoder: Decoder[GrandchildType] = new Decoder[GrandchildType] {
               |    def apply(c: HCursor): Decoder.Result[GrandchildType] = {
               |      c.downField("id").as[String].flatMap { (_id: String) =>
@@ -878,7 +888,7 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers with SourceCodeForm
               |      }
               |    }
               |  }
-              |  implicit lazy val encoder: Encoder[GrandchildType] = new Encoder[GrandchildType] { final def apply(instance: GrandchildType): Json = AdditionalProperties.merge(Json.obj("type" -> Json.fromString("grandchild"), "id" -> instance.id.asJson, "foo" -> instance.foo.asJson, "aDouble" -> instance.aDouble.asJson, "aFloat" -> instance.aFloat.asJson, "anInt" -> instance.anInt.asJson, "aLong" -> instance.aLong.asJson, "customTypeProp" -> instance.customTypeProp.asJson, "customArrayTypeProp" -> instance.customArrayTypeProp.asJson), instance.additionalProperties) }
+              |  implicit lazy val encoder: Encoder[GrandchildType] = new Encoder[GrandchildType] { final def apply(instance: GrandchildType): Json = AdditionalProperties.merge(Json.obj("type" -> Json.fromString(jsonTypeHint), "id" -> instance.id.asJson, "foo" -> instance.foo.asJson, "aDouble" -> instance.aDouble.asJson, "aFloat" -> instance.aFloat.asJson, "anInt" -> instance.anInt.asJson, "aLong" -> instance.aLong.asJson, "customTypeProp" -> instance.customTypeProp.asJson, "customArrayTypeProp" -> instance.customArrayTypeProp.asJson), instance.additionalProperties) }
               |}""".stripMargin.stripTrailingSpaces
           )
         )

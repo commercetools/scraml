@@ -23,13 +23,13 @@ sealed trait FieldMatchPolicy {
 
   final def namedProperties(objectType: ObjectType): List[Property] =
     RMFUtil
-      .typeProperties(objectType)
+      .typePropertiesWithoutDiscriminator(objectType)
       .filterNot(isPatternProperty)
       .toList
 
   final def patternProperties(objectType: ObjectType): List[Property] =
     RMFUtil
-      .typeProperties(objectType)
+      .typePropertiesWithoutDiscriminator(objectType)
       .filter(isPatternProperty)
       .toList
 

@@ -105,13 +105,16 @@ object RMFUtil {
         .toList
     }
 
+  def typePropertiesWithoutDiscriminator(objectType: ObjectType): Iterator[Property] =
+    typeProperties(objectType).filter(property =>
+      !discriminators(objectType).contains(property.getName)
+    )
+
   /** get all (including inherited) properties of a type note: will not include properties from
     * 'scala-extends' references
     */
   def typeProperties(objectType: ObjectType): Iterator[Property] =
-    objectType.getAllProperties.asScala.iterator.filter(property =>
-      !discriminators(objectType).contains(property.getName)
-    )
+    objectType.getAllProperties.asScala.iterator
 
   def readModel(apiPath: File): IO[Api] = for {
     model <- IO {
