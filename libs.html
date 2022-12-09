@@ -32,7 +32,7 @@
 <span class="home-icon">⌂</span>SCRAML
 </a>
 <div class="version-number">
-0.11.6
+0.13.0+1-ea2eae21+20221209-1708*
 </div>
 </div>
 <div class="nav-toc">
@@ -73,7 +73,7 @@ C16.952,7,17,6.553,17,6c0-0.553-0.048-1-0.6-1H3.6C3.048,5,3,5.447,3,6C3,6.553,3.
 <span class="home-icon">⌂</span>SCRAML
 </a>
 <div class="version-number">
-0.11.6
+0.13.0+1-ea2eae21+20221209-1708*
 </div>
 </div>
 <div class="nav-toc">
@@ -110,9 +110,9 @@ C16.952,7,17,6.553,17,6c0-0.553-0.048-1-0.6-1H3.6C3.048,5,3,5.447,3,6C3,6.553,3.
 <h1><a href="#library-support" name="library-support" class="anchor"><span class="anchor-link"></span></a>Library Support</h1>
 <p>SCRAML allows to generate supporting types for a number of libraries:</p>
 <h2><a href="#cats" name="cats" class="anchor"><span class="anchor-link"></span></a>cats</h2>
-<pre class="prettyprint"><button class="snippet-button copy-snippet" title="Copy snippet to clipboard">copy</button><a class="snippet-button go-to-source" href="https://github.com/commercetools/scraml/tree/v0.11.6/src/sbt-test/sbt-scraml/cats/build.sbt" target="_blank" title="Go to snippet source">source</a><code class="language-sbt">lazy val root = (project in file(&quot;.&quot;))
+<pre class="prettyprint"><button class="snippet-button copy-snippet" title="Copy snippet to clipboard">copy</button><a class="snippet-button go-to-source" href="https://github.com/commercetools/scraml/tree/master/src/sbt-test/sbt-scraml/cats/build.sbt" target="_blank" title="Go to snippet source">source</a><code class="language-sbt">lazy val root = (project in file(&quot;.&quot;))
   .settings(
-    scalaVersion := &quot;2.13.6&quot;,
+    scalaVersion := &quot;2.13.8&quot;,
     name := &quot;scraml-cats-test&quot;,
     version := &quot;0.1&quot;,
     ramlFile := Some(file(&quot;api/simple.raml&quot;)),
@@ -128,12 +128,12 @@ C16.952,7,17,6.553,17,6c0-0.553-0.048-1-0.6-1H3.6C3.048,5,3,5.447,3,6C3,6.553,3.
     )
   )</code></pre>
 <h2><a href="#circe" name="circe" class="anchor"><span class="anchor-link"></span></a>circe</h2>
-<pre class="prettyprint"><button class="snippet-button copy-snippet" title="Copy snippet to clipboard">copy</button><a class="snippet-button go-to-source" href="https://github.com/commercetools/scraml/tree/v0.11.6/src/sbt-test/sbt-scraml/json/build.sbt" target="_blank" title="Go to snippet source">source</a><code class="language-sbt">val circeVersion = &quot;0.14.1&quot;
+<pre class="prettyprint"><button class="snippet-button copy-snippet" title="Copy snippet to clipboard">copy</button><a class="snippet-button go-to-source" href="https://github.com/commercetools/scraml/tree/master/src/sbt-test/sbt-scraml/json/build.sbt" target="_blank" title="Go to snippet source">source</a><code class="language-sbt">val circeVersion = &quot;0.14.2&quot;
 
 lazy val root = (project in file(&quot;.&quot;))
   .settings(
     name := &quot;scraml-json-test&quot;,
-    scalaVersion := &quot;2.12.15&quot;,
+    scalaVersion := &quot;2.12.16&quot;,
     version := &quot;0.1&quot;,
     ramlFile := Some(file(&quot;api/json.raml&quot;)),
     basePackageName := &quot;scraml&quot;,
@@ -147,9 +147,9 @@ lazy val root = (project in file(&quot;.&quot;))
     ).map(_ % circeVersion)
   )</code></pre>
 <h2><a href="#monocle" name="monocle" class="anchor"><span class="anchor-link"></span></a>monocle</h2>
-<pre class="prettyprint"><button class="snippet-button copy-snippet" title="Copy snippet to clipboard">copy</button><a class="snippet-button go-to-source" href="https://github.com/commercetools/scraml/tree/v0.11.6/src/sbt-test/sbt-scraml/cats/build.sbt" target="_blank" title="Go to snippet source">source</a><code class="language-sbt">lazy val root = (project in file(&quot;.&quot;))
+<pre class="prettyprint"><button class="snippet-button copy-snippet" title="Copy snippet to clipboard">copy</button><a class="snippet-button go-to-source" href="https://github.com/commercetools/scraml/tree/master/src/sbt-test/sbt-scraml/cats/build.sbt" target="_blank" title="Go to snippet source">source</a><code class="language-sbt">lazy val root = (project in file(&quot;.&quot;))
   .settings(
-    scalaVersion := &quot;2.13.6&quot;,
+    scalaVersion := &quot;2.13.8&quot;,
     name := &quot;scraml-cats-test&quot;,
     version := &quot;0.1&quot;,
     ramlFile := Some(file(&quot;api/simple.raml&quot;)),
@@ -165,7 +165,7 @@ lazy val root = (project in file(&quot;.&quot;))
     )
   )</code></pre>
 <h2><a href="#refined-with-cats-and-circe-" name="refined-with-cats-and-circe-" class="anchor"><span class="anchor-link"></span></a>refined (with cats and circe)</h2>
-<pre class="prettyprint"><button class="snippet-button copy-snippet" title="Copy snippet to clipboard">copy</button><a class="snippet-button go-to-source" href="https://github.com/commercetools/scraml/tree/v0.11.6/src/sbt-test/sbt-scraml/refined/build.sbt" target="_blank" title="Go to snippet source">source</a><code class="language-sbt">import scraml.FieldMatchPolicy._
+<pre class="prettyprint"><button class="snippet-button copy-snippet" title="Copy snippet to clipboard">copy</button><a class="snippet-button go-to-source" href="https://github.com/commercetools/scraml/tree/master/src/sbt-test/sbt-scraml/refined/build.sbt" target="_blank" title="Go to snippet source">source</a><code class="language-sbt">import scraml.FieldMatchPolicy._
 
 val circeVersion = &quot;0.14.1&quot;
 val refinedVersion = &quot;0.9.27&quot;
@@ -230,11 +230,11 @@ lazy val root = (project in file(&quot;.&quot;))
   )
 </code></pre>
 <h2><a href="#sphere-json" name="sphere-json" class="anchor"><span class="anchor-link"></span></a>Sphere JSON</h2>
-<pre class="prettyprint"><button class="snippet-button copy-snippet" title="Copy snippet to clipboard">copy</button><a class="snippet-button go-to-source" href="https://github.com/commercetools/scraml/tree/v0.11.6/src/sbt-test/sbt-scraml/ct-api-sphere/build.sbt" target="_blank" title="Go to snippet source">source</a><code class="language-sbt">val circeVersion = &quot;0.14.1&quot;
+<pre class="prettyprint"><button class="snippet-button copy-snippet" title="Copy snippet to clipboard">copy</button><a class="snippet-button go-to-source" href="https://github.com/commercetools/scraml/tree/master/src/sbt-test/sbt-scraml/ct-api-sphere/build.sbt" target="_blank" title="Go to snippet source">source</a><code class="language-sbt">val circeVersion = &quot;0.14.1&quot;
 
 lazy val root = (project in file(&quot;.&quot;))
   .settings(
-    scalaVersion := &quot;2.12.12&quot;,
+    scalaVersion := &quot;2.12.16&quot;,
     name := &quot;scraml-ct-api-sphere-test&quot;,
     version := &quot;0.1&quot;,
     ramlFile := Some(file(&quot;reference/api-specs/api/api.raml&quot;)),
@@ -247,10 +247,10 @@ lazy val root = (project in file(&quot;.&quot;))
 <h2><a href="#tapir" name="tapir" class="anchor"><span class="anchor-link"></span></a>tapir</h2>
 <p>the <a href="https://github.com/softwaremill/tapir">tapir</a> support generating endpoint values:</p>
 <h3><a href="#example-tapir-build-sbt" name="example-tapir-build-sbt" class="anchor"><span class="anchor-link"></span></a>Example tapir build.sbt</h3>
-<pre class="prettyprint"><button class="snippet-button copy-snippet" title="Copy snippet to clipboard">copy</button><a class="snippet-button go-to-source" href="https://github.com/commercetools/scraml/tree/v0.11.6/examples/build.sbt" target="_blank" title="Go to snippet source">source</a><code class="language-sbt">scalaVersion := &quot;2.13.6&quot;
+<pre class="prettyprint"><button class="snippet-button copy-snippet" title="Copy snippet to clipboard">copy</button><a class="snippet-button go-to-source" href="https://github.com/commercetools/scraml/tree/master/examples/build.sbt" target="_blank" title="Go to snippet source">source</a><code class="language-sbt">scalaVersion := &quot;2.13.8&quot;
 
-val circeVersion = &quot;0.14.1&quot;
-val tapirVersion = &quot;0.19.0-M9&quot;
+val circeVersion = &quot;0.14.2&quot;
+val tapirVersion = &quot;1.1.0&quot;
 
 lazy val examples = (project in file(&quot;.&quot;))
   .settings(
@@ -271,18 +271,19 @@ lazy val examples = (project in file(&quot;.&quot;))
     libraryDependencies += &quot;org.typelevel&quot; %% &quot;cats-effect&quot; % &quot;3.2.8&quot;,
 
     ramlFile := Some(file(&quot;../src/sbt-test/sbt-scraml/simple/api/simple.raml&quot;)),
+    ramlFieldMatchPolicy := scraml.FieldMatchPolicy.Exact(),
     basePackageName := &quot;scraml.examples&quot;,
     librarySupport := Set(scraml.libs.CirceJsonSupport(), scraml.libs.TapirSupport(&quot;Endpoints&quot;)),
     Compile / sourceGenerators += runScraml
   )</code></pre>
 <h3><a href="#interpreting-tapir-endpoints" name="interpreting-tapir-endpoints" class="anchor"><span class="anchor-link"></span></a>Interpreting tapir endpoints</h3>
 <p>usage of the generated <code>Endpoints.Greeting.getGreeting</code> type from the previous <a href="api.html">api</a> example:</p>
-<pre class="prettyprint"><button class="snippet-button copy-snippet" title="Copy snippet to clipboard">copy</button><a class="snippet-button go-to-source" href="https://github.com/commercetools/scraml/tree/v0.11.6/examples/src/main/scala/examples/GreetingExample.scala" target="_blank" title="Go to snippet source">source</a><code class="language-scala">package examples
+<pre class="prettyprint"><button class="snippet-button copy-snippet" title="Copy snippet to clipboard">copy</button><a class="snippet-button go-to-source" href="https://github.com/commercetools/scraml/tree/master/examples/src/main/scala/examples/GreetingExample.scala" target="_blank" title="Go to snippet source">source</a><code class="language-scala">package examples
 
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import cats.effect.{ExitCode, IO, IOApp}
-import scraml.examples.{DataType, Endpoints}
+import scraml.examples.{DataType, Endpoints, SomeEnum}
 import scraml.examples.Endpoints.Greeting.GetGreetingParams
 import sttp.client3.SttpBackend
 import sttp.client3.asynchttpclient.cats.AsyncHttpClientCatsBackend
@@ -325,15 +326,17 @@ object GreetingServer {
   import akka.http.scaladsl.server.Route
 
   def getGreeting(params: GetGreetingParams): Future[Either[Unit, (DataType, StatusCode, List[Header])]] =
-    Future.successful(Right(DataType(params.name.getOrElse(&quot;no input&quot;), customTypeProp = BigDecimal(42)), StatusCode.Ok, List(Header(&quot;custom-header&quot;, &quot;value&quot;))))
+    Future.successful(Right((DataType(params.name.getOrElse(&quot;no input&quot;), customTypeProp = BigDecimal(42)), StatusCode.Ok, List(Header(&quot;custom-header&quot;, &quot;value&quot;)))))
+
+  implicit val httpSystem: ActorSystem = ActorSystem(&quot;http&quot;)
+
+  import httpSystem.dispatcher
 
   // adding outputs to provide statusCode and headers in the implementation
   val greetingWithStatusAndHeaders = Endpoints.Greeting.getGreeting.out(statusCode and sttp.tapir.headers)
 
   val greetingRoute: Route =
-    AkkaHttpServerInterpreter().toRoute(greetingWithStatusAndHeaders)(getGreeting)
-
-  implicit val httpSystem: ActorSystem = ActorSystem(&quot;http&quot;)
+    AkkaHttpServerInterpreter().toRoute(greetingWithStatusAndHeaders.serverLogic(getGreeting))
 
   def startServer: IO[Http.ServerBinding] =
     IO.fromFuture(IO(Http().newServerAt(&quot;localhost&quot;, 8080).bind(greetingRoute)))
@@ -350,7 +353,7 @@ object GreetingApp extends IOApp {
       apiUrl = s&quot;http://${binding.localAddress.getHostName}:${binding.localAddress.getPort}&quot;
     )
     (client, clientBackend) = clientWithBackend
-    result &lt;- client.getGreeting(GetGreetingParams(name = Some(&quot;world&quot;))).attempt
+    result &lt;- client.getGreeting(GetGreetingParams(enum_type = SomeEnum.A, name = Some(&quot;world&quot;))).attempt
     _ &lt;- IO(println(result))
     _ &lt;-
       clientBackend
@@ -360,7 +363,7 @@ object GreetingApp extends IOApp {
   } yield ExitCode.Success
 }</code></pre>
 <div class="source-github">
-The source code for this page can be found <a href="https://github.com/commercetools/scraml/tree/v0.11.6/src/main/paradox/libs.md">here</a>.
+The source code for this page can be found <a href="https://github.com/commercetools/scraml/tree/master/src/main/paradox/libs.md">here</a>.
 </div>
 
 <div class="nav-next">
@@ -448,7 +451,7 @@ The source code for this page can be found <a href="https://github.com/commercet
 <script type="text/javascript" src="lib/prettify/prettify.js"></script>
 <script type="text/javascript" src="lib/prettify/lang-scala.js"></script>
 <script type="text/javascript">jQuery(function(){window.prettyPrint && prettyPrint()});</script>
-<script type="text/javascript">jQuery(function(jq){initOldVersionWarnings(jq, '0.11.6', 'https://github.com/commercetools/scraml')});</script>
+<script type="text/javascript">jQuery(function(jq){initOldVersionWarnings(jq, '0.13.0+1-ea2eae21+20221209-1708-SNAPSHOT', 'https://github.com/commercetools/scraml')});</script>
 
 
 </html>
