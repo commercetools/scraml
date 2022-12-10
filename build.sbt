@@ -1,5 +1,9 @@
 import sbtghactions.JavaSpec
 
+lazy val javas = List(
+  JavaSpec(JavaSpec.Distribution.Adopt, "15.0.2+7")
+)
+
 inThisBuild(
   List(
     organization := "com.commercetools",
@@ -13,12 +17,10 @@ inThisBuild(
         url("https://commercetools.com")
       )
     ),
-    githubWorkflowJavaVersions := Seq(
-      JavaSpec(JavaSpec.Distribution.Adopt, "15.0.2+7")
-    ),
+    githubWorkflowJavaVersions := javas,
     githubWorkflowPublish := Seq(
       WorkflowStep.Sbt(
-        List("ci-release"),
+        List("ci-release", "ghpagesPushSite"),
         env = Map(
           "PGP_PASSPHRASE"    -> "${{ secrets.PGP_PASSPHRASE }}",
           "PGP_SECRET"        -> "${{ secrets.PGP_SECRET }}",
