@@ -63,7 +63,7 @@ object GreetingServer {
 }
 
 object GreetingApp extends IOApp {
-  implicit class FutureOps[T](future: Future[T]) {
+  implicit class FutureOps[T](future: => Future[T]) {
     def toIO: IO[T] = IO.fromFuture(IO(future))
   }
 
