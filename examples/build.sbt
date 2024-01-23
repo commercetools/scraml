@@ -1,7 +1,7 @@
-scalaVersion := "2.13.8"
+scalaVersion := "2.13.12"
 
-val circeVersion = "0.14.2"
-val tapirVersion = "1.1.0"
+val circeVersion = "0.14.6"
+val tapirVersion = "1.9.6"
 
 lazy val examples = (project in file("."))
   .settings(
@@ -17,9 +17,9 @@ lazy val examples = (project in file("."))
     libraryDependencies += "com.softwaremill.sttp.tapir" %% "tapir-json-circe" % tapirVersion,
     libraryDependencies += "com.softwaremill.sttp.tapir" %% "tapir-sttp-client" % tapirVersion,
     libraryDependencies += "com.softwaremill.sttp.tapir" %% "tapir-akka-http-server" % tapirVersion,
-    libraryDependencies += "com.softwaremill.sttp.client3" %% "async-http-client-backend-cats" % "3.3.14",
+    libraryDependencies += "com.softwaremill.sttp.client3" %% "async-http-client-backend-cats" % "3.9.2",
 
-    libraryDependencies += "org.typelevel" %% "cats-effect" % "3.2.8",
+    libraryDependencies += "org.typelevel" %% "cats-effect" % "3.5.3",
 
     ramlFile := Some(file("../src/sbt-test/sbt-scraml/simple/api/simple.raml")),
     ramlFieldMatchPolicy := scraml.FieldMatchPolicy.Exact(),
