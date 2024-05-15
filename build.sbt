@@ -35,17 +35,17 @@ inThisBuild(
   )
 )
 
-val circeVersion = "0.14.2"
+val circeVersion = "0.14.6"
 
 lazy val root = (project in file("."))
   .enablePlugins(SbtPlugin, ParadoxSitePlugin, GhpagesPlugin)
   .settings(
     name                                          := "sbt-scraml",
-    libraryDependencies += "com.commercetools.rmf" % "raml-model"       % "0.2.0-20220914193841",
-    libraryDependencies += "org.scalameta"        %% "scalameta"        % "4.4.20",
-    libraryDependencies += "org.scalameta"        %% "scalafmt-dynamic" % "3.0.0-RC6",
-    libraryDependencies += "org.typelevel"        %% "cats-effect"      % "3.1.1",
-    libraryDependencies += "org.scalatest"        %% "scalatest"        % "3.2.9" % Test,
+    libraryDependencies += "com.commercetools.rmf" % "raml-model"       % "0.2.0-20240119124459",
+    libraryDependencies += "org.scalameta"        %% "scalameta"        % "4.4.35",
+    libraryDependencies += "org.scalameta"        %% "scalafmt-dynamic" % "3.7.17",
+    libraryDependencies += "org.typelevel"        %% "cats-effect"      % "3.5.3",
+    libraryDependencies += "org.scalatest"        %% "scalatest"        % "3.2.17" % Test,
     libraryDependencies ++= Seq(
       "io.circe" %% "circe-core",
       "io.circe" %% "circe-generic",
