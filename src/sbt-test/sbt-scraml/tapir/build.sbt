@@ -1,10 +1,10 @@
-val circeVersion = "0.14.2"
-val refinedVersion = "0.9.27"
-val tapirVersion = "1.1.0"
+val circeVersion = "0.14.7"
+val refinedVersion = "0.11.1"
+val tapirVersion = "1.10.7"
 
 lazy val root = (project in file("."))
   .settings(
-    scalaVersion := "2.13.8",
+    scalaVersion := "2.13.14",
     name := "scraml-tapir",
     version := "0.1",
     defaultTypes := scraml.DefaultTypes(
