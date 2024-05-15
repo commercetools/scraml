@@ -14,6 +14,8 @@ on:
     branches: ['**']
     tags: [v*]
 
+permissions: write-all
+
 env:
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -28,39 +30,28 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout current branch (full)
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
       - name: Setup Java (adopt-hotspot@15.0.2+7)
         if: matrix.java == 'adopt-hotspot@15.0.2+7'
-        uses: actions/setup-java@v2
+        uses: actions/setup-java@v4
         with:
           distribution: adopt-hotspot
           java-version: 15.0.2+7
-
-      - name: Cache sbt
-        uses: actions/cache@v2
-        with:
-          path: |
-            ~/.sbt
-            ~/.ivy2/cache
-            ~/.coursier/cache/v1
-            ~/.cache/coursier/v1
-            ~/AppData/Local/Coursier/Cache/v1
-            ~/Library/Caches/Coursier/v1
-          key: ${{ runner.os }}-sbt-cache-v2-${{ hashFiles('**/*.sbt') }}-${{ hashFiles('project/build.properties') }}
+          cache: sbt
 
       - name: Check that workflows are up to date
-        run: sbt ++${{ matrix.scala }} githubWorkflowCheck
+        run: sbt '++ ${{ matrix.scala }}' githubWorkflowCheck
 
-      - run: sbt ++${{ matrix.scala }} scalafmtCheckAll test scripted
+      - run: sbt '++ ${{ matrix.scala }}' scalafmtCheckAll test scripted
 
       - name: Compress target directories
         run: tar cf targets.tar target project/target
 
       - name: Upload target directories
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: target-${{ matrix.os }}-${{ matrix.scala }}-${{ matrix.java }}
           path: targets.tar
@@ -77,31 +68,20 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout current branch (full)
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
       - name: Setup Java (adopt-hotspot@15.0.2+7)
         if: matrix.java == 'adopt-hotspot@15.0.2+7'
-        uses: actions/setup-java@v2
+        uses: actions/setup-java@v4
         with:
           distribution: adopt-hotspot
           java-version: 15.0.2+7
-
-      - name: Cache sbt
-        uses: actions/cache@v2
-        with:
-          path: |
-            ~/.sbt
-            ~/.ivy2/cache
-            ~/.coursier/cache/v1
-            ~/.cache/coursier/v1
-            ~/AppData/Local/Coursier/Cache/v1
-            ~/Library/Caches/Coursier/v1
-          key: ${{ runner.os }}-sbt-cache-v2-${{ hashFiles('**/*.sbt') }}-${{ hashFiles('project/build.properties') }}
+          cache: sbt
 
       - name: Download target directories (2.12.19)
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v4
         with:
           name: target-${{ matrix.os }}-2.12.19-${{ matrix.java }}
 
@@ -115,4 +95,4 @@ jobs:
           PGP_SECRET: ${{ secrets.PGP_SECRET }}
           SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
           SONATYPE_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
-        run: sbt ++${{ matrix.scala }} ci-release ghpagesPushSite
+        run: sbt ci-release ghpagesPushSite
