@@ -6,9 +6,9 @@ inThisBuild(
   List(
     organization := "com.commercetools",
     homepage     := Some(url("https://github.com/commercetools/scraml")),
-licenses     := List("Apache-2.0" -> url("http://www.apache.org/licenses/LICENSE-2.0")),
+    licenses     := List("Apache-2.0" -> url("http://www.apache.org/licenses/LICENSE-2.0")),
     developers := List(
-Developer(
+      Developer(
         "commercetools/priceless-backend-team",
         "Priceless Team",
         "priceless-backend@commercetools.com",
@@ -18,18 +18,30 @@ Developer(
     githubWorkflowJavaVersions := javas,
     githubWorkflowPublish := Seq(
       WorkflowStep.Sbt(
-        List("ci-release", "ghpagesPushSite"),
+        List("ci-release"),
         env = Map(
           "PGP_PASSPHRASE"    -> "${{ secrets.PGP_PASSPHRASE }}",
           "PGP_SECRET"        -> "${{ secrets.PGP_SECRET }}",
           "SONATYPE_PASSWORD" -> "${{ secrets.SONATYPE_PASSWORD }}",
           "SONATYPE_USERNAME" -> "${{ secrets.SONATYPE_USERNAME }}"
         )
+      ),
+      WorkflowStep.Sbt(
+        List("makeSite")
+      ),
+      WorkflowStep.Use(
+        UseRef.Public("peaceiris", "actions-gh-pages", "v4"),
+        params = Map(
+          "github_token" -> "${{ secrets.GITHUB_TOKEN }}",
+          "publish_dir"  -> "./target/site"
+        )
       )
     ),
     githubWorkflowTargetTags ++= Seq("v*"),
     githubWorkflowPublishTargetBranches := Seq(RefPredicate.StartsWith(Ref.Tag("v"))),
-    githubWorkflowBuild := Seq(WorkflowStep.Sbt(List("scalafmtCheckAll", "test", "scripted"))),
+    githubWorkflowBuild := Seq(
+      WorkflowStep.Sbt(List("scalafmtCheckAll", "test", "scripted"))
+    ),
     githubWorkflowPermissions := Some(sbtghactions.Permissions.WriteAll)
   )
 )
