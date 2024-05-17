@@ -25,12 +25,7 @@ inThisBuild(
           "SONATYPE_PASSWORD" -> "${{ secrets.SONATYPE_PASSWORD }}",
           "SONATYPE_USERNAME" -> "${{ secrets.SONATYPE_USERNAME }}"
         )
-      )
-    ),
-    githubWorkflowTargetTags ++= Seq("v*"),
-    githubWorkflowPublishTargetBranches := Seq(RefPredicate.StartsWith(Ref.Tag("v"))),
-    githubWorkflowBuild := Seq(
-      WorkflowStep.Sbt(List("scalafmtCheckAll", "test", "scripted")),
+      ),
       WorkflowStep.Sbt(
         List("makeSite")
       ),
@@ -41,6 +36,11 @@ inThisBuild(
           "publish_dir"  -> "./target/site"
         )
       )
+    ),
+    githubWorkflowTargetTags ++= Seq("v*"),
+    githubWorkflowPublishTargetBranches := Seq(RefPredicate.StartsWith(Ref.Tag("v"))),
+    githubWorkflowBuild := Seq(
+      WorkflowStep.Sbt(List("scalafmtCheckAll", "test", "scripted"))
     ),
     githubWorkflowPermissions := Some(sbtghactions.Permissions.WriteAll)
   )
