@@ -47,13 +47,6 @@ jobs:
 
       - run: sbt '++ ${{ matrix.scala }}' scalafmtCheckAll test scripted
 
-      - run: sbt '++ ${{ matrix.scala }}' makeSite
-
-      - uses: peaceiris/actions-gh-pages@v4
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./target/site
-
       - name: Compress target directories
         run: tar cf targets.tar target project/target
 
@@ -103,3 +96,10 @@ jobs:
           SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
           SONATYPE_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
         run: sbt ci-release
+
+      - run: sbt makeSite
+
+      - uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./target/site
