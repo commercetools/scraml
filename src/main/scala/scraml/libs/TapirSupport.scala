@@ -275,7 +275,7 @@ final class TapirSupport(endpointsObjectName: String) extends LibrarySupport {
 
       val endpointValueDef: Defn.Val =
         q"""
-          val ${Pat.Var(Term.Name(resourceMethodName))} = $endpointWithErrorOut
+          lazy val ${Pat.Var(Term.Name(resourceMethodName))} = $endpointWithErrorOut
         """
 
       List(
