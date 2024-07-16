@@ -32,7 +32,7 @@
 <span class="home-icon">⌂</span>SCRAML
 </a>
 <div class="version-number">
-0.14.0
+0.14.1
 </div>
 </div>
 <div class="nav-toc">
@@ -73,7 +73,7 @@ C16.952,7,17,6.553,17,6c0-0.553-0.048-1-0.6-1H3.6C3.048,5,3,5.447,3,6C3,6.553,3.
 <span class="home-icon">⌂</span>SCRAML
 </a>
 <div class="version-number">
-0.14.0
+0.14.1
 </div>
 </div>
 <div class="nav-toc">
@@ -111,7 +111,7 @@ C16.952,7,17,6.553,17,6c0-0.553-0.048-1-0.6-1H3.6C3.048,5,3,5.447,3,6C3,6.553,3.
 <p>SCRAML uses <a href="https://github.com/commercetools/rest-modeling-framework">https://github.com/commercetools/rest-modeling-framework</a> which is based on the <a href="https://raml.org/">RAML API specification</a></p>
 <h2><a href="#example-api" name="example-api" class="anchor"><span class="anchor-link"></span></a>Example API</h2>
 <p>in <code>api/simple.raml</code>:</p>
-<pre class="prettyprint"><button class="snippet-button copy-snippet" title="Copy snippet to clipboard">copy</button><a class="snippet-button go-to-source" href="https://github.com/commercetools/scraml/tree/v0.14.0/src/sbt-test/sbt-scraml/simple/api/simple.raml" target="_blank" title="Go to snippet source">source</a><code class="language-raml">#%RAML 1.0
+<pre class="prettyprint"><button class="snippet-button copy-snippet" title="Copy snippet to clipboard">copy</button><a class="snippet-button go-to-source" href="https://github.com/commercetools/scraml/tree/v0.14.1/src/sbt-test/sbt-scraml/simple/api/simple.raml" target="_blank" title="Go to snippet source">source</a><code class="language-raml">#%RAML 1.0
 title: Hello world # required title
 # taken from https://github.com/raml-org/raml-spec
 annotationTypes: !include annotations.raml
@@ -131,7 +131,7 @@ types: !include types.raml
           application/json: # media type
             type: DataType</code></pre>
 <p>Note the use of annotations:</p>
-<pre class="prettyprint"><button class="snippet-button copy-snippet" title="Copy snippet to clipboard">copy</button><a class="snippet-button go-to-source" href="https://github.com/commercetools/scraml/tree/v0.14.0/src/sbt-test/sbt-scraml/simple/api/annotations.raml" target="_blank" title="Go to snippet source">source</a><code class="language-raml"># the package will be used as the file name, currently no actual package structure is generated
+<pre class="prettyprint"><button class="snippet-button copy-snippet" title="Copy snippet to clipboard">copy</button><a class="snippet-button go-to-source" href="https://github.com/commercetools/scraml/tree/v0.14.1/src/sbt-test/sbt-scraml/simple/api/annotations.raml" target="_blank" title="Go to snippet source">source</a><code class="language-raml"># the package will be used as the file name, currently no actual package structure is generated
 package:
   type: string
   allowedTargets: TypeDeclaration
@@ -157,7 +157,7 @@ scala-extends:
 scala-derive-json:
   type: boolean</code></pre>
 <p>and types aliases (which will be used for the generated type names):</p>
-<pre class="prettyprint"><button class="snippet-button copy-snippet" title="Copy snippet to clipboard">copy</button><a class="snippet-button go-to-source" href="https://github.com/commercetools/scraml/tree/v0.14.0/src/sbt-test/sbt-scraml/simple/api/types.raml" target="_blank" title="Go to snippet source">source</a><code class="language-raml">BaseType: !include basetype.raml
+<pre class="prettyprint"><button class="snippet-button copy-snippet" title="Copy snippet to clipboard">copy</button><a class="snippet-button go-to-source" href="https://github.com/commercetools/scraml/tree/v0.14.1/src/sbt-test/sbt-scraml/simple/api/types.raml" target="_blank" title="Go to snippet source">source</a><code class="language-raml">BaseType: !include basetype.raml
 DataType: !include datatype.raml
 DefaultProperty: !include defaultproperty.raml
 DerivedWithRequired: !include derivedwithrequired.raml
@@ -170,7 +170,7 @@ ParentWithOption: !include parentwithoption.raml
 SomeEnum: !include enum.raml
 EmptySingleton: !include emptysingleton.raml</code></pre>
 <div class="source-github">
-The source code for this page can be found <a href="https://github.com/commercetools/scraml/tree/v0.14.0/src/main/paradox/api.md">here</a>.
+The source code for this page can be found <a href="https://github.com/commercetools/scraml/tree/v0.14.1/src/main/paradox/api.md">here</a>.
 </div>
 
 <div class="nav-next">
@@ -253,7 +253,7 @@ The source code for this page can be found <a href="https://github.com/commercet
 <script type="text/javascript" src="lib/prettify/prettify.js"></script>
 <script type="text/javascript" src="lib/prettify/lang-scala.js"></script>
 <script type="text/javascript">jQuery(function(){window.prettyPrint && prettyPrint()});</script>
-<script type="text/javascript">jQuery(function(jq){initOldVersionWarnings(jq, '0.14.0', 'https://github.com/commercetools/scraml')});</script>
+<script type="text/javascript">jQuery(function(jq){initOldVersionWarnings(jq, '0.14.1', 'https://github.com/commercetools/scraml')});</script>
 
 
 </html>
