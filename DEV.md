@@ -1,6 +1,6 @@
 ## Parsing with Scala meta for debugging etc.
 
-This is helpful to understand how to map source code to the types of the scala meta:
+This can be helpful to understand how to map source code to the types of the scala meta model:
 
 ```sh
 sbt console
