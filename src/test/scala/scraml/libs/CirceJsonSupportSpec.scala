@@ -216,7 +216,7 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers with SourceCodeForm
             s"""object SomeEnum {
                                                                       |  case object A extends SomeEnum
                                                                       |  case object B extends SomeEnum
-                                                                      |  case class Unknown(value: String)
+                                                                      |  case class Unknown(value: String) extends SomeEnum
                                                                       |  import io.circe._
                                                                       |  implicit lazy val encoder: Encoder[SomeEnum] = Encoder[String].contramap({
                                                                       |    case A => "A"

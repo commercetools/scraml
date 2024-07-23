@@ -229,19 +229,17 @@ object DefaultModelGen extends ModelGen {
       new IllegalStateException("enum type should have package name")
     )
     enumInstanceNames = stringType.getEnum.asScala.map(_.getValue.toString)
+    extendedType      = Init(Type.Name(stringType.getName), Name(""), Nil)
     enumInstances: List[Stat] = enumInstanceNames.map { instanceName =>
       q"""
-         case object ${Term.Name(instanceName)} extends ${Init(
-        Type.Name(stringType.getName),
-        Name(""),
-        Nil
-      )}
+         case object ${Term.Name(instanceName)} extends $extendedType
        """
     }.toList
 
     enumDefaultInstance: List[Stat] = params.generateDefaultEnumVariant match {
-      case Some(name) => List(q"""case class ${Type.Name(name)}(value: String)""")
-      case None       => Nil
+      case Some(name) =>
+        List(q"""case class ${Type.Name(name)}(value: String) extends $extendedType""")
+      case None => Nil
     }
 
     enumTrait =
