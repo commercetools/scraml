@@ -13,7 +13,7 @@ final case class ModelDefinition(
     defaultPackageAnnotation: Option[String] = None,
     formatConfig: Option[File] = None,
     generateDateCreated: Boolean = false,
-    defaultEnumVariant: Option[String]
+    defaultEnumVariant: Option[String] = None
 ) {
   def toModelGenParams(
       targetDir: File,
