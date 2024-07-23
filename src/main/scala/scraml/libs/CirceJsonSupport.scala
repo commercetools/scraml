@@ -1,13 +1,12 @@
 package scraml.libs
 
 import scala.util.Try
-
 import io.vrap.rmf.raml.model.modules.Api
-import scraml.LibrarySupport._
-import scraml.MetaUtil._
+import scraml.LibrarySupport.*
+import scraml.MetaUtil.*
 import scraml.RMFUtil.{getAnnotation, isEnumType}
-import scraml._
-import io.vrap.rmf.raml.model.types._
+import scraml.{ModelGenParams, *}
+import io.vrap.rmf.raml.model.types.*
 
 object CirceJsonSupport {
   def apply(formats: Map[String, String] = Map.empty) = new CirceJsonSupport(formats)
@@ -851,7 +850,8 @@ class CirceJsonSupport(formats: Map[String, String]) extends LibrarySupport with
   }
 
   override def modifyEnum(
-      enumType: StringType
+      enumType: StringType,
+      params: ModelGenParams
   )(enumTrait: Defn.Trait, companion: Option[Defn.Object]): DefnWithCompanion[Defn.Trait] = {
     val enumDecode = Defn.Val(
       List(Mod.Implicit(), Mod.Lazy()),
@@ -872,22 +872,36 @@ class CirceJsonSupport(formats: Map[String, String]) extends LibrarySupport with
                   Term.Apply(Term.Name("Right"), List(Term.Name(instance.getValue.toString)))
                 )
               )
-              .toList ++ List(
-              Case(
-                Pat.Var(Term.Name("other")),
-                None,
-                Term.Apply(
-                  Term.Name("Left"),
-                  List(
-                    Term.Interpolate(
-                      Term.Name("s"),
-                      List(Lit.String("invalid enum value: "), Lit.String("")),
-                      List(Term.Name("other"))
+              .toList ++ (params.generateDefaultEnumVariant match {
+              case Some(name) =>
+                List(
+                  Case(
+                    Pat.Var(Term.Name("other")),
+                    None,
+                    Term.Apply(
+                      Term.Name("Right"),
+                      List(Term.Apply(Term.Name(name), List(Term.Name("other"))))
                     )
                   )
                 )
-              )
-            )
+              case None =>
+                List(
+                  Case(
+                    Pat.Var(Term.Name("other")),
+                    None,
+                    Term.Apply(
+                      Term.Name("Left"),
+                      List(
+                        Term.Interpolate(
+                          Term.Name("s"),
+                          List(Lit.String("invalid enum value: "), Lit.String("")),
+                          List(Term.Name("other"))
+                        )
+                      )
+                    )
+                  )
+                )
+            })
           )
         )
       )
@@ -912,7 +926,17 @@ class CirceJsonSupport(formats: Map[String, String]) extends LibrarySupport with
                   Lit.String(instance.getValue.toString)
                 )
               )
-              .toList
+              .toList ++ (params.generateDefaultEnumVariant match {
+              case Some(name) =>
+                List(
+                  Case(
+                    Pat.Extract(Term.Name(name), List(Pat.Var(Term.Name("value")))),
+                    None,
+                    Term.Name("value")
+                  )
+                )
+              case None => Nil
+            })
           )
         )
       )

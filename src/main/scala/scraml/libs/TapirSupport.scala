@@ -4,10 +4,18 @@ import io.vrap.rmf.raml.model.modules.Api
 import io.vrap.rmf.raml.model.resources.Resource
 import io.vrap.rmf.raml.model.responses.Body
 import io.vrap.rmf.raml.model.types.{StringType, TypedElement}
-import scraml.{DefnWithCompanion, JsonSupport, LibrarySupport, ModelGen, ModelGenContext}
+import scraml.{
+  DefnWithCompanion,
+  JsonSupport,
+  LibrarySupport,
+  ModelGen,
+  ModelGenContext,
+  ModelGenParams
+}
+
 import scala.collection.immutable.TreeSet
-import scala.jdk.CollectionConverters._
-import scala.meta._
+import scala.jdk.CollectionConverters.*
+import scala.meta.*
 import scala.util.matching.Regex
 
 final case class ResourceDefinitions(
@@ -358,16 +366,15 @@ final class TapirSupport(endpointsObjectName: String) extends LibrarySupport {
       LibrarySupport.appendPkgObjectStats(packageObject, tapirImports ++ List(endpointsObject))
     }
 
-  override def modifyEnum(enumType: StringType)(
+  override def modifyEnum(enumType: StringType, params: ModelGenParams)(
       enumTrait: Defn.Trait,
       companion: Option[Defn.Object]
   ): DefnWithCompanion[Defn.Trait] = {
+    val enumNames = enumType.getEnum.asScala.toList.map { enum => enum.getValue.toString }
+
     val enumValuesAsList =
       q"""
-         List(
-         ..${enumType.getEnum.asScala.toList.map { enum =>
-        Lit.String(enum.getValue.toString)
-      }})
+         List(..${enumNames.map(Lit.String(_))})
        """
 
     val enumTypeName = Type.Name(enumType.getName)
@@ -383,11 +390,22 @@ final class TapirSupport(endpointsObjectName: String) extends LibrarySupport {
             q"sttp.tapir.DecodeResult.Value(${Term.Name(enum.getValue.toString)})"
           )
         }
-          ++ List[Case](
-            Case(
-              Pat.Var(Term.Name("other")),
-              None,
-              q"""
+          ++
+            (params.generateDefaultEnumVariant match {
+              case Some(name) =>
+                List(
+                  Case(
+                    Pat.Var(Term.Name("other")),
+                    None,
+                    q"sttp.tapir.DecodeResult.Value(${Term.Apply(Term.Name(name), List(Term.Name("other")))})"
+                  )
+                )
+              case None =>
+                List[Case](
+                  Case(
+                    Pat.Var(Term.Name("other")),
+                    None,
+                    q"""
                   sttp.tapir.DecodeResult.InvalidValue(
                     sttp.tapir.ValidationError[String](
                       sttp.tapir.Validator.enumeration(
@@ -397,23 +415,33 @@ final class TapirSupport(endpointsObjectName: String) extends LibrarySupport {
                     ) :: Nil
                   )
                  """
-            )
-          )
+                  )
+                )
+            })
       )}
       )(
         ${Term.PartialFunction(
-        enumType.getEnum.asScala.toList.map { enum =>
+        enumNames.map { enum =>
           Case(
-            Term.Name(enum.getValue.toString),
+            Term.Name(enum),
             None,
-            Lit.String(enum.getValue.toString)
+            Lit.String(enum)
           )
-        }
+        } ++ params.generateDefaultEnumVariant.map(name =>
+          Case(
+            Pat.Extract(Term.Name(name), List(Pat.Var(Term.Name("value")))),
+            None,
+            Term.Name("value")
+          )
+        )
       )}
       )
        """ :: Nil
 
-    super.modifyEnum(enumType)(enumTrait, companion.map(appendObjectStats(_, tapirEnumCodec)))
+    super.modifyEnum(enumType, params)(
+      enumTrait,
+      companion.map(appendObjectStats(_, tapirEnumCodec))
+    )
   }
 }
 

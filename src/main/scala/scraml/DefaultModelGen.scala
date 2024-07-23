@@ -228,21 +228,30 @@ object DefaultModelGen extends ModelGen {
     )(
       new IllegalStateException("enum type should have package name")
     )
-    enumInstances = stringType.getEnum.asScala.map { instance =>
+    enumInstanceNames = stringType.getEnum.asScala.map(_.getValue.toString)
+    enumInstances: List[Stat] = enumInstanceNames.map { instanceName =>
       q"""
-         case object ${Term.Name(instance.getValue.toString)} extends ${Init(
+         case object ${Term.Name(instanceName)} extends ${Init(
         Type.Name(stringType.getName),
         Name(""),
         Nil
       )}
        """
     }.toList
+
+    enumDefaultInstance: List[Stat] = params.generateDefaultEnumVariant match {
+      case Some(name) => List(q"""case class ${Type.Name(name)}(value: String)""")
+      case None       => Nil
+    }
+
     enumTrait =
       q"""
          sealed trait ${Type.Name(stringType.getName)}
       """
-    enumObject = companionObjectSource(stringType.getName, enumInstances)
-    withLibs   = LibrarySupport.applyEnum(stringType)(enumTrait, enumObject)(params.allLibraries)
+    enumObject = companionObjectSource(stringType.getName, enumInstances ++ enumDefaultInstance)
+    withLibs = LibrarySupport.applyEnum(stringType, params)(enumTrait, enumObject)(
+      params.allLibraries
+    )
     comment =
       s"""/*
          |* Enum Type ${stringType.getName}

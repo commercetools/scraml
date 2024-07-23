@@ -1,3 +1,21 @@
+## Parsing with Scala meta for debugging etc.
+
+This is helpful to understand how to map source code to the types of the scala meta:
+
+```sh
+sbt console
+...
+scala> import scala.meta._
+scala> s"""implicit lazy val decoder: Decoder[SomeEnum] = Decoder[String].emap({
+     |   case "A" => Right(A)
+     |   case "B" => Right(B)
+     |   case other => Right(Unknown(other))
+     | })""".parse[Stat].get.structure
+res4: String = Defn.Val(List(Mod.Implicit(), Mod.Lazy()), List(Pat.Var(Term.Name("decoder"))), Some(Type.Apply(Type.Name("Decoder"), List(Type.Name("SomeEnum")))) ...
+```
+
+also see https://scalameta.org/docs/trees/guide.html
+
 ## Running Tests
 
 ```shell

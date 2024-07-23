@@ -23,7 +23,8 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers with SourceCodeForm
       librarySupport = Set(
         CirceJsonSupport(formats = Map("localDateTime" -> "io.circe.Decoder.decodeLocalDateTime"))
       ),
-      None
+      None,
+      generateDefaultEnumVariant = Some("Unknown")
     )
 
     val generated = ModelGenRunner.run(DefaultModelGen)(params).unsafeRunSync()
@@ -215,10 +216,12 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers with SourceCodeForm
             s"""object SomeEnum {
                                                                       |  case object A extends SomeEnum
                                                                       |  case object B extends SomeEnum
+                                                                      |  case class Unknown(value: String)
                                                                       |  import io.circe._
                                                                       |  implicit lazy val encoder: Encoder[SomeEnum] = Encoder[String].contramap({
                                                                       |    case A => "A"
                                                                       |    case B => "B"
+                                                                      |    case Unknown(value) => value
                                                                       |  })
                                                                       |  implicit lazy val decoder: Decoder[SomeEnum] = Decoder[String].emap({
                                                                       |    case "A" =>
@@ -226,7 +229,7 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers with SourceCodeForm
                                                                       |    case "B" =>
                                                                       |      Right(B)
                                                                       |    case other =>
-                                                                      |      Left(s"invalid enum value: $$other")
+                                                                      |      Right(Unknown(other))
                                                                       |  })
                                                                       |}""".stripMargin.stripTrailingSpaces
           )
