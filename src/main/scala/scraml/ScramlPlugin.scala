@@ -26,6 +26,9 @@ object ScramlPlugin extends AutoPlugin {
       settingKey[Option[File]]("config to be used for formatting, no formatting if not set")
 
     val runScraml = taskKey[Seq[File]]("generate Scala from RAML definitions")
+    val defaultEnumVariant = settingKey[Option[String]](
+      "value to used as default enum variant type name (fallback during encode/decode)"
+    )
   }
 
   import autoImport._
@@ -37,7 +40,8 @@ object ScramlPlugin extends AutoPlugin {
     defaultTypes         := DefaultTypes(),
     librarySupport       := Set.empty,
     formatConfig         := None,
-    scramlTargetDir      := None
+    scramlTargetDir      := None,
+    defaultEnumVariant   := None
   )
 
   /// Here, the runScraml task is defined but not automatically added to
@@ -58,7 +62,8 @@ object ScramlPlugin extends AutoPlugin {
               defaultTypes.value,
               librarySupport.value,
               None,
-              formatConfig.value
+              formatConfig.value,
+              defaultEnumVariant = defaultEnumVariant.value
             ) :: Nil
           }
           .getOrElse(ramlDefinitions.value)

@@ -48,7 +48,7 @@ final case class ModelGenParams(
     generateDateCreated: Boolean = false,
     logger: Option[ManagedLogger] = None,
     defaultPackageAnnotation: Option[String] = None,
-    // if set the value of this option will be used as additional enum variant type name
+    // if set the value of this option will be used as additional enum variant type name which will be used as fallback during encode/decode
     // this allows for forward compatible enums which can always be parsed as long as they are represented as string
     // note: enabling this retroactively might need changes on the usage side of the generation code
     generateDefaultEnumVariant: Option[String] = None
