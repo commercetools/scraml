@@ -12,7 +12,8 @@ final case class ModelDefinition(
     librarySupport: Set[LibrarySupport] = Set.empty,
     defaultPackageAnnotation: Option[String] = None,
     formatConfig: Option[File] = None,
-    generateDateCreated: Boolean = false
+    generateDateCreated: Boolean = false,
+    defaultEnumVariant: Option[String] = None
 ) {
   def toModelGenParams(
       targetDir: File,
@@ -45,7 +46,8 @@ final case class ModelDefinition(
       formatConfig = formatConfig,
       generateDateCreated = generateDateCreated,
       logger = Some(logger),
-      defaultPackageAnnotation = defaultPackageAnnotation.map(_.toLowerCase())
+      defaultPackageAnnotation = defaultPackageAnnotation.map(_.toLowerCase()),
+      generateDefaultEnumVariant = defaultEnumVariant
     )
   }
 }

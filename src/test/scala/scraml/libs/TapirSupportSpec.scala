@@ -90,7 +90,8 @@ final class TapirSupportSpec
         FieldMatchPolicy.Exact(),
         DefaultTypes(),
         librarySupport = Set(CirceJsonSupport(), TapirSupport("Endpoints")),
-        formatConfig = None
+        formatConfig = None,
+        generateDefaultEnumVariant = None
       )
 
       val generated = ModelGenRunner.run(DefaultModelGen)(params).unsafeRunSync()
@@ -125,6 +126,59 @@ final class TapirSupportSpec
             |  })({
             |    case A => "A"
             |    case B => "B"
+            |  })
+            |}""".stripMargin
+        )
+      )
+    }
+
+    "generate enumeration types with default variant" in {
+      val params = ModelGenParams(
+        new File("src/sbt-test/sbt-scraml/simple/api/simple.raml"),
+        new File("target/scraml-tapir-test"),
+        "scraml",
+        FieldMatchPolicy.Exact(),
+        DefaultTypes(),
+        librarySupport = Set(CirceJsonSupport(), TapirSupport("Endpoints")),
+        formatConfig = None,
+        generateDefaultEnumVariant = Some("Unknown")
+      )
+
+      val generated = ModelGenRunner.run(DefaultModelGen)(params).unsafeRunSync()
+      val enumCompanion =
+        generated.files.find(_.source.name == "SomeEnum").flatMap(_.source.companion)
+
+      enumCompanion.map(_.toString.stripTrailingSpaces) should be(
+        Some(
+          """object SomeEnum {
+            |  case object A extends SomeEnum
+            |  case object B extends SomeEnum
+            |  case class Unknown(value: String) extends SomeEnum
+            |  import io.circe._
+            |  implicit lazy val encoder: Encoder[SomeEnum] = Encoder[String].contramap({
+            |    case A => "A"
+            |    case B => "B"
+            |    case Unknown(value) => value
+            |  })
+            |  implicit lazy val decoder: Decoder[SomeEnum] = Decoder[String].emap({
+            |    case "A" =>
+            |      Right(A)
+            |    case "B" =>
+            |      Right(B)
+            |    case other =>
+            |      Right(Unknown(other))
+            |  })
+            |  implicit lazy val tapirCodec: sttp.tapir.Codec.PlainCodec[SomeEnum] = sttp.tapir.Codec.string.mapDecode[SomeEnum]({
+            |    case "A" =>
+            |      sttp.tapir.DecodeResult.Value(A)
+            |    case "B" =>
+            |      sttp.tapir.DecodeResult.Value(B)
+            |    case other =>
+            |      sttp.tapir.DecodeResult.Value(Unknown(other))
+            |  })({
+            |    case A => "A"
+            |    case B => "B"
+            |    case Unknown(value) => value
             |  })
             |}""".stripMargin
         )

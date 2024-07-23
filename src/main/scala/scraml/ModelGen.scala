@@ -47,7 +47,11 @@ final case class ModelGenParams(
     formatConfig: Option[File] = None,
     generateDateCreated: Boolean = false,
     logger: Option[ManagedLogger] = None,
-    defaultPackageAnnotation: Option[String] = None
+    defaultPackageAnnotation: Option[String] = None,
+    // if set the value of this option will be used as additional enum variant type name which will be used as fallback during encode/decode
+    // this allows for forward compatible enums which can always be parsed as long as they are represented as string
+    // note: enabling this retroactively might need changes on the usage side of the generation code
+    generateDefaultEnumVariant: Option[String] = None
 ) {
   lazy val allLibraries: List[LibrarySupport] = librarySupport.toList.sorted
 }
@@ -347,7 +351,8 @@ trait LibrarySupport {
   ): Pkg.Object => Pkg.Object = identity
 
   def modifyEnum(
-      enumType: StringType
+      enumType: StringType,
+      params: ModelGenParams
   )(enumTrait: Defn.Trait, companion: Option[Defn.Object]): DefnWithCompanion[Defn.Trait] =
     DefnWithCompanion(enumTrait, companion)
 
@@ -419,11 +424,14 @@ object LibrarySupport {
       lib.modifyPackageObject(libs, api)(context)(acc)
     }
 
-  def applyEnum(enumType: StringType)(enumTrait: Defn.Trait, companion: Defn.Object)(
+  def applyEnum(enumType: StringType, params: ModelGenParams)(
+      enumTrait: Defn.Trait,
+      companion: Defn.Object
+  )(
       libs: List[LibrarySupport]
   ): DefnWithCompanion[Defn.Trait] =
     libs.foldLeft(DefnWithCompanion(enumTrait, Some(companion))) { case (acc, lib) =>
-      lib.modifyEnum(enumType)(acc.defn, acc.companion)
+      lib.modifyEnum(enumType, params)(acc.defn, acc.companion)
     }
 
   def appendObjectStats(defn: Defn.Object, stats: List[Stat]): Defn.Object =

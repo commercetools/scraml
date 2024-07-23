@@ -4,9 +4,9 @@ import _root_.io.vrap.rmf.raml.model.types.ObjectType
 import scraml.LibrarySupport.appendObjectStats
 import scraml.MetaUtil.typeFromName
 import scraml.RMFUtil.getAnnotation
-import scraml.{DefnWithCompanion, JsonSupport, LibrarySupport, ModelGenContext}
+import scraml.{DefnWithCompanion, JsonSupport, LibrarySupport, ModelGenContext, ModelGenParams}
 
-import scala.meta._
+import scala.meta.*
 import _root_.io.vrap.rmf.raml.model.types.StringType
 
 object SphereJsonSupport extends LibrarySupport with JsonSupport {
@@ -147,7 +147,8 @@ object SphereJsonSupport extends LibrarySupport with JsonSupport {
     )
 
   override def modifyEnum(
-      enumType: StringType
+      enumType: StringType,
+      params: ModelGenParams
   )(enumTrait: Defn.Trait, companion: Option[Defn.Object]): DefnWithCompanion[Defn.Trait] = {
     import scala.jdk.CollectionConverters._
 
@@ -163,9 +164,7 @@ object SphereJsonSupport extends LibrarySupport with JsonSupport {
     )
 
     val matchEnumInstances = Term.PartialFunction(
-      enumType
-        .getEnum()
-        .asScala
+      enumType.getEnum.asScala
         .map(instance =>
           Case(
             Lit.String(instance.getValue().toString()),
