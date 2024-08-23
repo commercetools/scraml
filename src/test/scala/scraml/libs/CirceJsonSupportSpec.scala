@@ -472,8 +472,12 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers with SourceCodeForm
           defaultProperty ::
           parentWithOption ::
           derivedWitRequired ::
+          keybasediscriminator ::
+          keybasewildcard ::
           otherSub ::
           mapLike ::
+          keybaseprefixstring ::
+          keybaseprefixint ::
           packageObject ::
           Nil =>
         noDiscBase.source.source.toString().stripTrailingSpaces should be(

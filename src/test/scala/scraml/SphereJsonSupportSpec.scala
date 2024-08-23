@@ -22,7 +22,7 @@ class SphereJsonSupportSpec extends AnyFlatSpec with Matchers {
     val generated = ModelGenRunner.run(DefaultModelGen)(params).unsafeRunSync()
 
     generated.files match {
-      case noDiscBase :: _ :: _ :: baseType :: _ :: _ :: dataType :: emptyBase :: noProps :: _ :: someEnum :: _ :: _ :: _ :: _ :: _ :: _ :: Nil =>
+      case noDiscBase :: _ :: _ :: baseType :: _ :: _ :: dataType :: emptyBase :: noProps :: _ :: someEnum :: _ :: _ :: _ :: _ :: _ :: _ :: _ :: _ :: _ :: _ :: Nil =>
         noDiscBase.source.source.toString() should be("sealed trait NoDiscriminatorBase")
         noDiscBase.source.companion.map(_.toString()) should be(
           Some(s"""object NoDiscriminatorBase {
