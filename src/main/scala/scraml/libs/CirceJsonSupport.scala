@@ -370,7 +370,7 @@ class CirceJsonSupport(formats: Map[String, String]) extends LibrarySupport with
             cond = Some(
               Term.Apply(
                 Term.Select(Term.Name("keySet"), Term.Name("contains")),
-                List(Term.Name(key.get))
+                List(Lit.String(key.get))
               )
             ),
             body = extractKey(keys)

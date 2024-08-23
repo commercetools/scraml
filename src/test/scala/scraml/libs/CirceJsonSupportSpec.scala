@@ -397,9 +397,9 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers with SourceCodeForm
                  |    override def apply(c: HCursor): Result[KeyBaseDiscriminator] = c.value.asObject.toRight(DecodingFailure("expected object", c.history)).flatMap { obj =>
                  |      val keySet = obj.keys.toSet
                  |      keySet match {
-                 |        case _ if keySet.contains(wildcard) =>
+                 |        case _ if keySet.contains("wildcard") =>
                  |          KeyBaseWildcard.decoder.tryDecode(c)
-                 |        case _ if keySet.contains(prefix) =>
+                 |        case _ if keySet.contains("prefix") =>
                  |          KeyBasePrefixString.decoder.tryDecode(c).orElse(KeyBasePrefixInt.decoder.tryDecode(c))
                  |      }
                  |    }
