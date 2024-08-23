@@ -268,10 +268,7 @@ class CirceJsonSupport(formats: Map[String, String]) extends LibrarySupport with
       sortedByProperties: List[ObjectType]
   ) = {
     sortedByProperties match {
-      case Nil =>
-        q"""
-             Left(DecodingFailure("no concrete types exist for: " + $typeName))
-             """
+      case Nil => noTypeDecodingFailure(typeName)
       case single :: Nil =>
         q"""
             ${packageTerm(s"${single.getName}.decoder")}.tryDecode(c)
@@ -297,7 +294,7 @@ class CirceJsonSupport(formats: Map[String, String]) extends LibrarySupport with
     }
   }
 
-  def noTypeFoundDecodingError(typeName: String) = {
+  private def noTypeDecodingFailure(typeName: String) = {
     q"""
            Left(DecodingFailure("No concrete types exist for: " + $typeName))
            """
@@ -324,7 +321,7 @@ class CirceJsonSupport(formats: Map[String, String]) extends LibrarySupport with
     }
 
     val body = if (subTypes.isEmpty) {
-      noTypeFoundDecodingError(typeName)
+      noTypeDecodingFailure(typeName)
     } else {
       val sortedByProperties = subTypes
         .collect { case obj: ObjectType =>
