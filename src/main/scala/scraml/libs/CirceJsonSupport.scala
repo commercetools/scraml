@@ -1,12 +1,13 @@
 package scraml.libs
 
-import scala.util.Try
 import io.vrap.rmf.raml.model.modules.Api
+import io.vrap.rmf.raml.model.types.*
 import scraml.LibrarySupport.*
 import scraml.MetaUtil.*
-import scraml.RMFUtil.{getAnnotation, isEnumType, superTypes}
-import scraml.{ModelGenParams, *}
-import io.vrap.rmf.raml.model.types.*
+import scraml.RMFUtil.{getAnnotation, isEnumType}
+import scraml.*
+
+import scala.util.Try
 
 object CirceJsonSupport {
   def apply(formats: Map[String, String] = Map.empty) = new CirceJsonSupport(formats)
@@ -14,8 +15,9 @@ object CirceJsonSupport {
 
 class CirceJsonSupport(formats: Map[String, String]) extends LibrarySupport with JsonSupport {
   import FieldMatchPolicy.IgnoreExtra
-  import scala.meta._
-  import scala.collection.JavaConverters._
+
+  import scala.collection.JavaConverters.*
+  import scala.meta.*
 
   object HasAnyDefaults {
     def unapply(context: ModelGenContext): Boolean =
