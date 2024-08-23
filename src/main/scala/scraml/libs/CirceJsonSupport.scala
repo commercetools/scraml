@@ -259,6 +259,14 @@ class CirceJsonSupport(formats: Map[String, String]) extends LibrarySupport with
       .sortBy(RMFUtil.typePropertiesWithoutDiscriminator(_).size)
       .reverse
 
+    fromObjectTypes(context, typeName, sortedByProperties)
+  }
+
+  private def fromObjectTypes(
+      context: ModelGenContext,
+      typeName: String,
+      sortedByProperties: List[ObjectType]
+  ) = {
     sortedByProperties match {
       case Nil =>
         q"""
@@ -289,6 +297,12 @@ class CirceJsonSupport(formats: Map[String, String]) extends LibrarySupport with
     }
   }
 
+  def noTypeFoundDecodingError(typeName: String) = {
+    q"""
+           Left(DecodingFailure("No concrete types exist for: " + $typeName))
+           """
+  }
+
   private def extractDecodeForKeyBaseDiscriminator(
       context: ModelGenContext,
       subTypes: List[AnyType],
@@ -303,37 +317,6 @@ class CirceJsonSupport(formats: Map[String, String]) extends LibrarySupport with
    """
     }
 
-    def noTypeFoundDecodingError = {
-      q"""
-           Left(DecodingFailure("No concrete types exist for: " + $typeName))
-           """
-    }
-
-    def extractKey(keys: List[ObjectType]): Term = {
-      keys match {
-        case Nil => noTypeFoundDecodingError
-        case single :: Nil =>
-          q"""
-          ${packageTerm(s"${single.getName}.decoder")}.tryDecode(c)
-          """
-        case head :: tail =>
-          val init: String =
-            q"""
-          ${packageTerm(s"${head.getName}.decoder")}.tryDecode(c)
-          """.toString
-          tail
-            .foldLeft(init) { case (acc, next) =>
-              val nextRead =
-                q"""orElse(${packageTerm(
-                  s"${next.getName}.decoder"
-                )}.tryDecode(c))""".toString
-              s"$acc.$nextRead"
-            }
-            .parse[Term]
-            .get
-      }
-    }
-
     def allSubtypesHasKeyDiscriminator(sortedByProperties: List[ObjectType]) = {
       sortedByProperties.forall(prop =>
         Option(prop.getAnnotation("key-base-discriminator")).isDefined
@@ -341,7 +324,7 @@ class CirceJsonSupport(formats: Map[String, String]) extends LibrarySupport with
     }
 
     val body = if (subTypes.isEmpty) {
-      noTypeFoundDecodingError
+      noTypeFoundDecodingError(typeName)
     } else {
       val sortedByProperties = subTypes
         .collect { case obj: ObjectType =>
@@ -373,7 +356,7 @@ class CirceJsonSupport(formats: Map[String, String]) extends LibrarySupport with
                 List(Lit.String(key.get))
               )
             ),
-            body = extractKey(keys)
+            body = fromObjectTypes(context, typeName, keys)
           )
         },
         Nil
