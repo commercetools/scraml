@@ -150,20 +150,20 @@ class CirceJsonSupport(formats: Map[String, String]) extends LibrarySupport with
   }
 
   private def typeDecoder(context: ModelGenContext): Defn.Val = {
-    val subTypes         = context.leafTypes.toList
-    val typeName         = context.objectType.getName
-    val discriminatorOpt = discriminator(context.objectType)
+    val subTypes                  = context.leafTypes.toList
+    val typeName                  = context.objectType.getName
+    val discriminatorOpt          = discriminator(context.objectType)
     val keyBaseDiscriminatorField = getAnnotation(context.objectType)("key-base-discriminator")
-    if(discriminatorOpt.nonEmpty && keyBaseDiscriminatorField.nonEmpty){
+    if (discriminatorOpt.nonEmpty && keyBaseDiscriminatorField.nonEmpty) {
       throw new IllegalArgumentException(
         s"Either discriminator type or key-base-discriminator type should be defined in type $typeName, cannot define both."
       )
     }
     val decode: Term = if (discriminatorOpt.isEmpty) {
-      if(keyBaseDiscriminatorField.nonEmpty)
-      extractDecodeForKeyBaseDiscriminator(context, subTypes, typeName)
+      if (keyBaseDiscriminatorField.nonEmpty)
+        extractDecodeForKeyBaseDiscriminator(context, subTypes, typeName)
       else
-        extractDecodeForDiscriminator(context,subTypes, typeName)
+        extractDecodeForDiscriminator(context, subTypes, typeName)
     } else
       Term.Match(
         Term.ApplyType(
@@ -243,7 +243,11 @@ class CirceJsonSupport(formats: Map[String, String]) extends LibrarySupport with
     )
   }
 
-  private def extractDecodeForDiscriminator(context: ModelGenContext, subTypes: List[AnyType], typeName: String) = {
+  private def extractDecodeForDiscriminator(
+      context: ModelGenContext,
+      subTypes: List[AnyType],
+      typeName: String
+  ) = {
     // Sort by number of properties so that the first type tried has the most
     // properties, the next has the same or less, etc.  Since there is no
     // discriminator, this ensures types which have a subset of the fields
@@ -271,11 +275,9 @@ class CirceJsonSupport(formats: Map[String, String]) extends LibrarySupport with
             """.toString
         val decoderCalls = tail.foldLeft(initRead) { case (acc, next) =>
           val nextRead =
-            q"""fold(_ => ${
-              packageTerm(
-                s"${next.getName}.decoder"
-              )
-            }.tryDecode(c), Right(_))""".toString
+            q"""fold(_ => ${packageTerm(
+              s"${next.getName}.decoder"
+            )}.tryDecode(c), Right(_))""".toString
           s"$acc.$nextRead"
         }
         decoderCalls.parse[Term].get
@@ -287,7 +289,11 @@ class CirceJsonSupport(formats: Map[String, String]) extends LibrarySupport with
     }
   }
 
-  private def extractDecodeForKeyBaseDiscriminator(context: ModelGenContext, subTypes: List[AnyType], typeName: String): Term = {
+  private def extractDecodeForKeyBaseDiscriminator(
+      context: ModelGenContext,
+      subTypes: List[AnyType],
+      typeName: String
+  ): Term = {
     def header(withBody: Term) = {
       q"""
      c.value.asObject.toRight(DecodingFailure("expected object", c.history)).flatMap { obj =>
@@ -315,23 +321,26 @@ class CirceJsonSupport(formats: Map[String, String]) extends LibrarySupport with
             q"""
           ${packageTerm(s"${head.getName}.decoder")}.tryDecode(c)
           """.toString
-          tail.foldLeft(init) { case (acc, next) =>
-            val nextRead =
-              q"""orElse(${
-                packageTerm(
+          tail
+            .foldLeft(init) { case (acc, next) =>
+              val nextRead =
+                q"""orElse(${packageTerm(
                   s"${next.getName}.decoder"
-                )
-              }.tryDecode(c))""".toString
-            s"$acc.$nextRead"
-          }.parse[Term].get
+                )}.tryDecode(c))""".toString
+              s"$acc.$nextRead"
+            }
+            .parse[Term]
+            .get
       }
     }
 
     def allSubtypesHasKeyDiscriminator(sortedByProperties: List[ObjectType]) = {
-      sortedByProperties.forall(prop => Option(prop.getAnnotation("key-base-discriminator")).isDefined)
+      sortedByProperties.forall(prop =>
+        Option(prop.getAnnotation("key-base-discriminator")).isDefined
+      )
     }
 
-    val body = if(subTypes.isEmpty) {
+    val body = if (subTypes.isEmpty) {
       noTypeFoundDecodingError
     } else {
       val sortedByProperties = subTypes
@@ -339,18 +348,18 @@ class CirceJsonSupport(formats: Map[String, String]) extends LibrarySupport with
           obj
         }
 
-        if (!allSubtypesHasKeyDiscriminator(sortedByProperties)){
-          throw new IllegalArgumentException(
-            s"Not all subtype of type $typeName contains `key-base-discriminator`. This property is required for decoder derivation."
-          )
-        }
-       val sortedByPropertiesGroupedByKey =
+      if (!allSubtypesHasKeyDiscriminator(sortedByProperties)) {
+        throw new IllegalArgumentException(
+          s"Not all subtype of type $typeName contains `key-base-discriminator`. This property is required for decoder derivation."
+        )
+      }
+      val sortedByPropertiesGroupedByKey =
         sortedByProperties
-        .sortBy(RMFUtil.typePropertiesWithoutDiscriminator(_).size)
-        .reverse
-        .groupBy { obj: ObjectType =>
-          Option(obj.getAnnotation("key-base-discriminator")).map(_.getValue.getValue.toString)
-        }
+          .sortBy(RMFUtil.typePropertiesWithoutDiscriminator(_).size)
+          .reverse
+          .groupBy { obj: ObjectType =>
+            Option(obj.getAnnotation("key-base-discriminator")).map(_.getValue.getValue.toString)
+          }
 
       Term.Match(
         Term.Name("keySet"),
