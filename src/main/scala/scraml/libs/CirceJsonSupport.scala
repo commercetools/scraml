@@ -4,7 +4,7 @@ import scala.util.Try
 import io.vrap.rmf.raml.model.modules.Api
 import scraml.LibrarySupport.*
 import scraml.MetaUtil.*
-import scraml.RMFUtil.{getAnnotation, isEnumType}
+import scraml.RMFUtil.{getAnnotation, isEnumType, superTypes}
 import scraml.{ModelGenParams, *}
 import io.vrap.rmf.raml.model.types.*
 
@@ -151,46 +151,17 @@ class CirceJsonSupport(formats: Map[String, String]) extends LibrarySupport with
     val subTypes         = context.leafTypes.toList
     val typeName         = context.objectType.getName
     val discriminatorOpt = discriminator(context.objectType)
+    val keyBaseDiscriminatorField = getAnnotation(context.objectType)("key-base-discriminator")
+    if(discriminatorOpt.nonEmpty && keyBaseDiscriminatorField.nonEmpty){
+      throw new IllegalArgumentException(
+        s"Either discriminator type or key-base-discriminator type should be defined in type $typeName, cannot define both."
+      )
+    }
     val decode: Term = if (discriminatorOpt.isEmpty) {
-      // Sort by number of properties so that the first type tried has the most
-      // properties, the next has the same or less, etc.  Since there is no
-      // discriminator, this ensures types which have a subset of the fields
-      // other types have are tried later.
-      val sortedByProperties = subTypes
-        .collect { case obj: ObjectType =>
-          obj
-        }
-        .sortBy(RMFUtil.typePropertiesWithoutDiscriminator(_).size)
-        .reverse
-
-      sortedByProperties match {
-        case Nil =>
-          q"""
-             Left(DecodingFailure("no concrete types exist for: " + $typeName))
-             """
-        case single :: Nil =>
-          q"""
-            ${packageTerm(s"${single.getName}.decoder")}.tryDecode(c)
-            """
-        case head :: tail if tail.length < decoderChunkThreshold =>
-          val initRead: String =
-            q"""
-            ${packageTerm(s"${head.getName}.decoder")}.tryDecode(c)
-            """.toString
-
-          val decoderCalls = tail.foldLeft(initRead) { case (acc, next) =>
-            val nextRead = q"""fold(_ => ${packageTerm(
-              s"${next.getName}.decoder"
-            )}.tryDecode(c), Right(_))""".toString
-            s"$acc.$nextRead"
-          }
-          decoderCalls.parse[Term].get
-        // For situations where there are a large number of leaf types, a
-        // "chunked" type decoder is generated so that we do not have a
-        // stack overflow in `scala.meta`.
-        case large =>
-          chunkedTypeDecoder(context, large)
-      }
+      if(keyBaseDiscriminatorField.nonEmpty)
+      extractDecodeForKeyBaseDiscriminator(context, subTypes, typeName)
+      else
+        extractDecodeForDiscriminator(context,subTypes, typeName)
     } else
       Term.Match(
         Term.ApplyType(
@@ -268,6 +239,137 @@ class CirceJsonSupport(formats: Map[String, String]) extends LibrarySupport with
         )
       )
     )
+  }
+
+  private def extractDecodeForDiscriminator(context: ModelGenContext, subTypes: List[AnyType], typeName: String) = {
+    // Sort by number of properties so that the first type tried has the most
+    // properties, the next has the same or less, etc.  Since there is no
+    // discriminator, this ensures types which have a subset of the fields
+    // other types have are tried later.
+    val sortedByProperties = subTypes
+      .collect { case obj: ObjectType =>
+        obj
+      }
+      .sortBy(RMFUtil.typePropertiesWithoutDiscriminator(_).size)
+      .reverse
+
+    sortedByProperties match {
+      case Nil =>
+        q"""
+             Left(DecodingFailure("no concrete types exist for: " + $typeName))
+             """
+      case single :: Nil =>
+        q"""
+            ${packageTerm(s"${single.getName}.decoder")}.tryDecode(c)
+            """
+      case head :: tail if tail.length < decoderChunkThreshold =>
+        val initRead: String =
+          q"""
+            ${packageTerm(s"${head.getName}.decoder")}.tryDecode(c)
+            """.toString
+        val decoderCalls = tail.foldLeft(initRead) { case (acc, next) =>
+          val nextRead =
+            q"""fold(_ => ${
+              packageTerm(
+                s"${next.getName}.decoder"
+              )
+            }.tryDecode(c), Right(_))""".toString
+          s"$acc.$nextRead"
+        }
+        decoderCalls.parse[Term].get
+      // For situations where there are a large number of leaf types, a
+      // "chunked" type decoder is generated so that we do not have a
+      // stack overflow in `scala.meta`.
+      case large =>
+        chunkedTypeDecoder(context, large)
+    }
+  }
+
+  private def extractDecodeForKeyBaseDiscriminator(context: ModelGenContext, subTypes: List[AnyType], typeName: String): Term = {
+    def header(withBody: Term) = {
+      q"""
+     c.value.asObject.toRight(DecodingFailure("expected object", c.history)).flatMap { obj =>
+       val keySet = obj.keys.toSet
+       $withBody
+     }
+   """
+    }
+
+    def noTypeFoundDecodingError = {
+      q"""
+           Left(DecodingFailure("No concrete types exist for: " + $typeName))
+           """
+    }
+
+    def extractKey(keys: List[ObjectType]): Term = {
+      keys match {
+        case Nil => noTypeFoundDecodingError
+        case single :: Nil =>
+          q"""
+          ${packageTerm(s"${single.getName}.decoder")}.tryDecode(c)
+          """
+        case head :: tail =>
+          val init: String =
+            q"""
+          ${packageTerm(s"${head.getName}.decoder")}.tryDecode(c)
+          """.toString
+          tail.foldLeft(init) { case (acc, next) =>
+            val nextRead =
+              q"""orElse(${
+                packageTerm(
+                  s"${next.getName}.decoder"
+                )
+              }.tryDecode(c))""".toString
+            s"$acc.$nextRead"
+          }.parse[Term].get
+      }
+    }
+
+    def allSubtypesHasKeyDiscriminator(sortedByProperties: List[ObjectType]) = {
+      sortedByProperties.forall(prop => Option(prop.getAnnotation("key-base-discriminator")).isDefined)
+    }
+
+    val body = if(subTypes.isEmpty) {
+      noTypeFoundDecodingError
+    } else {
+      val sortedByProperties = subTypes
+        .collect { case obj: ObjectType =>
+          obj
+        }
+
+        if (!allSubtypesHasKeyDiscriminator(sortedByProperties)){
+          throw new IllegalArgumentException(
+            s"Not all subtype of type $typeName contains `key-base-discriminator`. This property is required for decoder derivation."
+          )
+        }
+       val sortedByPropertiesGroupedByKey =
+        sortedByProperties
+        .sortBy(RMFUtil.typePropertiesWithoutDiscriminator(_).size)
+        .reverse
+        .groupBy { obj: ObjectType =>
+          Option(obj.getAnnotation("key-base-discriminator")).map(_.getValue.getValue.toString)
+        }
+
+      Term.Match(
+        Term.Name("keySet"),
+        sortedByPropertiesGroupedByKey.keys.toList.map { key =>
+          val keys: List[ObjectType] = sortedByPropertiesGroupedByKey.getOrElse(key, List.empty)
+          Case(
+            pat = Pat.Wildcard(),
+            cond = Some(
+              Term.Apply(
+                Term.Select(Term.Name("keySet"), Term.Name("contains")),
+                List(Term.Name(key.get))
+              )
+            ),
+            body = extractKey(keys)
+          )
+        },
+        Nil
+      )
+    }
+
+    header(withBody = body)
   }
 
   private def chunkedTypeDecoder(context: ModelGenContext, leaves: List[ObjectType]): Term.Block = {

@@ -44,8 +44,12 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers with SourceCodeForm
           defaultProperty ::
           parentWithOption ::
           derivedWitRequired ::
+          keybasediscriminator ::
+          keybasewildcard ::
           otherSub ::
           mapLike ::
+          keybaseprefixstring ::
+          keybaseprefixint ::
           packageObject ::
           Nil =>
         noDiscBase.source.source.toString().stripTrailingSpaces should be(
@@ -384,6 +388,51 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers with SourceCodeForm
               |  implicit lazy val encoder: Encoder[DerivedWithRequired] = new Encoder[DerivedWithRequired] { final def apply(instance: DerivedWithRequired): Json = Json.obj("id" -> instance.id$scraml.asJson) }
               |}""".stripMargin.stripTrailingSpaces
           )
+        )
+        keybasediscriminator.source.companion.map(_.toString().stripTrailingSpaces) should be(
+          Some("""object KeyBaseDiscriminator {
+                 |  import io.circe.Decoder.Result
+                 |  import io.circe._
+                 |  implicit lazy val decoder: Decoder[KeyBaseDiscriminator] = new Decoder[KeyBaseDiscriminator] {
+                 |    override def apply(c: HCursor): Result[KeyBaseDiscriminator] = c.value.asObject.toRight(DecodingFailure("expected object", c.history)).flatMap { obj =>
+                 |      val keySet = obj.keys.toSet
+                 |      keySet match {
+                 |        case _ if keySet.contains(wildcard) =>
+                 |          KeyBaseWildcard.decoder.tryDecode(c)
+                 |        case _ if keySet.contains(prefix) =>
+                 |          KeyBasePrefixString.decoder.tryDecode(c).orElse(KeyBasePrefixInt.decoder.tryDecode(c))
+                 |      }
+                 |    }
+                 |  }
+                 |  implicit lazy val encoder: Encoder[KeyBaseDiscriminator] = new Encoder[KeyBaseDiscriminator] {
+                 |    override def apply(keybasediscriminator: KeyBaseDiscriminator): Json = keybasediscriminator match {
+                 |      case keybaseprefixint: KeyBasePrefixInt =>
+                 |        KeyBasePrefixInt.encoder(keybaseprefixint)
+                 |      case keybaseprefixstring: KeyBasePrefixString =>
+                 |        KeyBasePrefixString.encoder(keybaseprefixstring)
+                 |      case keybasewildcard: KeyBaseWildcard =>
+                 |        KeyBaseWildcard.encoder(keybasewildcard)
+                 |    }
+                 |  }
+                 |}""".stripMargin)
+        )
+        keybasediscriminator.source.source.toString().stripTrailingSpaces should be(
+          """trait KeyBaseDiscriminator"""
+        )
+
+        keybasewildcard.source.source.toString().stripTrailingSpaces should be(
+          """final case class KeyBaseWildcard(wildcard: String) extends KeyBaseDiscriminator"""
+        )
+
+        keybasewildcard.source.companion.map(_.toString().stripTrailingSpaces) should be(
+          Some("""object KeyBaseWildcard {
+                 |  import io.circe._
+                 |  import io.circe.generic.semiauto._
+                 |  import io.circe.syntax._
+                 |  import scraml.Formats._
+                 |  implicit lazy val decoder: Decoder[KeyBaseWildcard] = deriveDecoder[KeyBaseWildcard]
+                 |  implicit lazy val encoder: Encoder[KeyBaseWildcard] = deriveEncoder[KeyBaseWildcard]
+                 |}""".stripMargin)
         )
     }
   }
