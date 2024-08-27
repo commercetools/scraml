@@ -44,8 +44,12 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers with SourceCodeForm
           defaultProperty ::
           parentWithOption ::
           derivedWitRequired ::
+          keybasediscriminator ::
+          keybasewildcard ::
           otherSub ::
           mapLike ::
+          keybaseprefixstring ::
+          keybaseprefixint ::
           packageObject ::
           Nil =>
         noDiscBase.source.source.toString().stripTrailingSpaces should be(
@@ -385,6 +389,50 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers with SourceCodeForm
               |}""".stripMargin.stripTrailingSpaces
           )
         )
+        keybasediscriminator.source.companion.map(_.toString().stripTrailingSpaces) should be(
+          Some("""object KeyBaseDiscriminator {
+                 |  import io.circe.Decoder.Result
+                 |  import io.circe._
+                 |  implicit lazy val decoder: Decoder[KeyBaseDiscriminator] = new Decoder[KeyBaseDiscriminator] {
+                 |    override def apply(c: HCursor): Result[KeyBaseDiscriminator] = c.value.asObject.toRight(DecodingFailure("Expected object", c.history)).flatMap { obj =>
+                 |      obj match {
+                 |        case _ if obj.contains("prefix") =>
+                 |          KeyBasePrefixString.decoder.tryDecode(c).fold(_ => KeyBasePrefixInt.decoder.tryDecode(c), Right(_))
+                 |        case _ if obj.contains("wildcard") =>
+                 |          KeyBaseWildcard.decoder.tryDecode(c)
+                 |      }
+                 |    }
+                 |  }
+                 |  implicit lazy val encoder: Encoder[KeyBaseDiscriminator] = new Encoder[KeyBaseDiscriminator] {
+                 |    override def apply(keybasediscriminator: KeyBaseDiscriminator): Json = keybasediscriminator match {
+                 |      case keybaseprefixint: KeyBasePrefixInt =>
+                 |        KeyBasePrefixInt.encoder(keybaseprefixint)
+                 |      case keybaseprefixstring: KeyBasePrefixString =>
+                 |        KeyBasePrefixString.encoder(keybaseprefixstring)
+                 |      case keybasewildcard: KeyBaseWildcard =>
+                 |        KeyBaseWildcard.encoder(keybasewildcard)
+                 |    }
+                 |  }
+                 |}""".stripMargin)
+        )
+        keybasediscriminator.source.source.toString().stripTrailingSpaces should be(
+          """trait KeyBaseDiscriminator"""
+        )
+
+        keybasewildcard.source.source.toString().stripTrailingSpaces should be(
+          """final case class KeyBaseWildcard(wildcard: String) extends KeyBaseDiscriminator"""
+        )
+
+        keybasewildcard.source.companion.map(_.toString().stripTrailingSpaces) should be(
+          Some("""object KeyBaseWildcard {
+                 |  import io.circe._
+                 |  import io.circe.generic.semiauto._
+                 |  import io.circe.syntax._
+                 |  import scraml.Formats._
+                 |  implicit lazy val decoder: Decoder[KeyBaseWildcard] = deriveDecoder[KeyBaseWildcard]
+                 |  implicit lazy val encoder: Encoder[KeyBaseWildcard] = deriveEncoder[KeyBaseWildcard]
+                 |}""".stripMargin)
+        )
     }
   }
 
@@ -423,8 +471,12 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers with SourceCodeForm
           defaultProperty ::
           parentWithOption ::
           derivedWitRequired ::
+          keybasediscriminator ::
+          keybasewildcard ::
           otherSub ::
           mapLike ::
+          keybaseprefixstring ::
+          keybaseprefixint ::
           packageObject ::
           Nil =>
         noDiscBase.source.source.toString().stripTrailingSpaces should be(

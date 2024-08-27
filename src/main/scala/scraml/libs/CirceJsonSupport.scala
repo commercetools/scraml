@@ -1,12 +1,13 @@
 package scraml.libs
 
-import scala.util.Try
 import io.vrap.rmf.raml.model.modules.Api
+import io.vrap.rmf.raml.model.types.*
 import scraml.LibrarySupport.*
 import scraml.MetaUtil.*
 import scraml.RMFUtil.{getAnnotation, isEnumType}
-import scraml.{ModelGenParams, *}
-import io.vrap.rmf.raml.model.types.*
+import scraml.*
+
+import scala.util.Try
 
 object CirceJsonSupport {
   def apply(formats: Map[String, String] = Map.empty) = new CirceJsonSupport(formats)
@@ -14,8 +15,9 @@ object CirceJsonSupport {
 
 class CirceJsonSupport(formats: Map[String, String]) extends LibrarySupport with JsonSupport {
   import FieldMatchPolicy.IgnoreExtra
-  import scala.meta._
-  import scala.collection.JavaConverters._
+
+  import scala.collection.JavaConverters.*
+  import scala.meta.*
 
   object HasAnyDefaults {
     def unapply(context: ModelGenContext): Boolean =
@@ -147,50 +149,32 @@ class CirceJsonSupport(formats: Map[String, String]) extends LibrarySupport with
     )
   }
 
+  private def getDiscriminatorMapType(objectType: ObjectType): Option[Map[String, List[String]]] = {
+    getAnnotation(objectType)("discriminator-map").map(_.getValue) match {
+      case Some(discriminatorMap: ObjectInstance) =>
+        Some(
+          discriminatorMap.getValue.asScala
+            .groupBy(_.getName)
+            .map { case (key, values) =>
+              key -> values.map(v => v.getValue.getValue.toString).toList
+            }
+        )
+      case _ => None
+    }
+  }
+
   private def typeDecoder(context: ModelGenContext): Defn.Val = {
     val subTypes         = context.leafTypes.toList
     val typeName         = context.objectType.getName
     val discriminatorOpt = discriminator(context.objectType)
+    val discriminatorMap = getDiscriminatorMapType(context.objectType).getOrElse(Map.empty)
+    validateDiscriminatorsMutualExclusion(discriminatorOpt, discriminatorMap, typeName)
+    if (discriminatorMap.nonEmpty) validateDiscriminatorMap(discriminatorMap, subTypes, typeName)
     val decode: Term = if (discriminatorOpt.isEmpty) {
-      // Sort by number of properties so that the first type tried has the most
-      // properties, the next has the same or less, etc.  Since there is no
-      // discriminator, this ensures types which have a subset of the fields
-      // other types have are tried later.
-      val sortedByProperties = subTypes
-        .collect { case obj: ObjectType =>
-          obj
-        }
-        .sortBy(RMFUtil.typePropertiesWithoutDiscriminator(_).size)
-        .reverse
-
-      sortedByProperties match {
-        case Nil =>
-          q"""
-             Left(DecodingFailure("no concrete types exist for: " + $typeName))
-             """
-        case single :: Nil =>
-          q"""
-            ${packageTerm(s"${single.getName}.decoder")}.tryDecode(c)
-            """
-        case head :: tail if tail.length < decoderChunkThreshold =>
-          val initRead: String =
-            q"""
-            ${packageTerm(s"${head.getName}.decoder")}.tryDecode(c)
-            """.toString
-
-          val decoderCalls = tail.foldLeft(initRead) { case (acc, next) =>
-            val nextRead = q"""fold(_ => ${packageTerm(
-              s"${next.getName}.decoder"
-            )}.tryDecode(c), Right(_))""".toString
-            s"$acc.$nextRead"
-          }
-          decoderCalls.parse[Term].get
-        // For situations where there are a large number of leaf types, a
-        // "chunked" type decoder is generated so that we do not have a
-        // stack overflow in `scala.meta`.
-        case large =>
-          chunkedTypeDecoder(context, large)
-      }
+      if (discriminatorMap.nonEmpty)
+        extractDecodeForDiscriminatorMap(context, subTypes, typeName, discriminatorMap)
+      else
+        extractDecodeWithoutDiscriminator(context, subTypes, typeName)
     } else
       Term.Match(
         Term.ApplyType(
@@ -266,6 +250,137 @@ class CirceJsonSupport(formats: Map[String, String]) extends LibrarySupport with
           ),
           Nil
         )
+      )
+    )
+  }
+
+  private def validateDiscriminatorsMutualExclusion(
+      discriminatorOpt: Option[String],
+      discriminatorMap: Map[String, List[String]],
+      typeName: String
+  ): Unit = {
+    if (discriminatorOpt.nonEmpty && discriminatorMap.nonEmpty) {
+      throw new IllegalArgumentException(
+        s"Either discriminator type or key-base-discriminator type should be defined in type $typeName, cannot define both."
+      )
+    }
+  }
+
+  private def validateDiscriminatorMap(
+      discriminatorMap: Map[String, List[String]],
+      subTypes: Seq[AnyType],
+      typeName: String
+  ): Unit =
+    if (
+      subTypes.isEmpty || Some(discriminatorMap.values.toList.flatten).exists { toBeDerivedValues =>
+        val toBeDerivedTypes = subTypes.map(_.getName).toList
+        toBeDerivedTypes.length != toBeDerivedValues.length || toBeDerivedTypes
+          .diff(toBeDerivedValues)
+          .nonEmpty
+      }
+    ) {
+      throw new IllegalArgumentException(
+        s"Discriminator map derivation cannot be executed. " +
+          s"Type $typeName does not have subtypes or mapping of types does not cover all cases."
+      )
+    }
+
+  private def extractDecodeWithoutDiscriminator(
+      context: ModelGenContext,
+      subTypes: List[AnyType],
+      typeName: String
+  ) = {
+    // Sort by number of properties so that the first type tried has the most
+    // properties, the next has the same or less, etc.  Since there is no
+    // discriminator, this ensures types which have a subset of the fields
+    // other types have are tried later.
+    val sortedByProperties = subTypes
+      .collect { case obj: ObjectType =>
+        obj
+      }
+      .sortBy(RMFUtil.typePropertiesWithoutDiscriminator(_).size)
+      .reverse
+
+    fromObjectTypes(context, typeName, sortedByProperties)
+  }
+
+  private def fromObjectTypes(
+      context: ModelGenContext,
+      typeName: String,
+      sortedByProperties: List[ObjectType]
+  ) = {
+    sortedByProperties match {
+      case Nil => noTypeDecodingFailure(typeName)
+      case single :: Nil =>
+        q"""
+            ${packageTerm(s"${single.getName}.decoder")}.tryDecode(c)
+            """
+      case head :: tail if tail.length < decoderChunkThreshold =>
+        val initRead: String =
+          q"""
+            ${packageTerm(s"${head.getName}.decoder")}.tryDecode(c)
+            """.toString
+        val decoderCalls = tail.foldLeft(initRead) { case (acc, next) =>
+          val nextRead =
+            q"""fold(_ => ${packageTerm(
+              s"${next.getName}.decoder"
+            )}.tryDecode(c), Right(_))""".toString
+          s"$acc.$nextRead"
+        }
+        decoderCalls.parse[Term].get
+      // For situations where there are a large number of leaf types, a
+      // "chunked" type decoder is generated so that we do not have a
+      // stack overflow in `scala.meta`.
+      case large =>
+        chunkedTypeDecoder(context, large)
+    }
+  }
+
+  private def noTypeDecodingFailure(typeName: String) = {
+    q"""
+           Left(DecodingFailure("No concrete types exist for: " + $typeName))
+           """
+  }
+
+  private def extractDecodeForDiscriminatorMap(
+      context: ModelGenContext,
+      subTypes: List[AnyType],
+      typeName: String,
+      discriminatorMap: Map[String, List[String]]
+  ): Term = {
+    def header(withBody: Term) = {
+      q"""
+         c.value.asObject.toRight(DecodingFailure("Expected object", c.history)).flatMap { obj =>
+           $withBody
+         }"""
+    }
+
+    val sortedByProperties = subTypes
+      .collect { case obj: ObjectType =>
+        obj
+      }
+      .sortBy(RMFUtil.typePropertiesWithoutDiscriminator(_).size)
+      .reverse
+
+    header(withBody =
+      Term.Match(
+        Term.Name("obj"),
+        discriminatorMap.map { case (key, values) =>
+          Case(
+            pat = Pat.Wildcard(),
+            cond = Some(
+              Term.Apply(
+                Term.Select(Term.Name("obj"), Term.Name("contains")),
+                List(Lit.String(key))
+              )
+            ),
+            body = {
+              val keys = sortedByProperties.filter(objType => values.contains(objType.getName))
+              fromObjectTypes(context, typeName, keys)
+            }
+          )
+        }.toList,
+        Nil
       )
     )
   }

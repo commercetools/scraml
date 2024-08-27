@@ -1,0 +1,11 @@
+#%RAML 1.0 DataType
+(package): DataTypes
+(docs-uri): "https://example.org/key-base-type"
+displayName: KeyBaseDiscriminator
+type: object
+(scala-derive-json): true
+properties:
+(discriminator-map):
+  prefix: KeyBasePrefixInt
+  prefix: KeyBasePrefixString
+  wildcard: KeyBaseWildcard
