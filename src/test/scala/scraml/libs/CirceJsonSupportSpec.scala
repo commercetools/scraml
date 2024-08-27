@@ -394,13 +394,12 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers with SourceCodeForm
                  |  import io.circe.Decoder.Result
                  |  import io.circe._
                  |  implicit lazy val decoder: Decoder[KeyBaseDiscriminator] = new Decoder[KeyBaseDiscriminator] {
-                 |    override def apply(c: HCursor): Result[KeyBaseDiscriminator] = c.value.asObject.toRight(DecodingFailure("expected object", c.history)).flatMap { obj =>
-                 |      val keySet = obj.keys.toSet
-                 |      keySet match {
-                 |        case _ if keySet.contains("wildcard") =>
-                 |          KeyBaseWildcard.decoder.tryDecode(c)
-                 |        case _ if keySet.contains("prefix") =>
+                 |    override def apply(c: HCursor): Result[KeyBaseDiscriminator] = c.value.asObject.toRight(DecodingFailure("Expected object", c.history)).flatMap { obj =>
+                 |      obj match {
+                 |        case _ if obj.contains("prefix") =>
                  |          KeyBasePrefixString.decoder.tryDecode(c).fold(_ => KeyBasePrefixInt.decoder.tryDecode(c), Right(_))
+                 |        case _ if obj.contains("wildcard") =>
+                 |          KeyBaseWildcard.decoder.tryDecode(c)
                  |      }
                  |    }
                  |  }

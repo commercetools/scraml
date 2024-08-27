@@ -149,21 +149,32 @@ class CirceJsonSupport(formats: Map[String, String]) extends LibrarySupport with
     )
   }
 
-  private def typeDecoder(context: ModelGenContext): Defn.Val = {
-    val subTypes                  = context.leafTypes.toList
-    val typeName                  = context.objectType.getName
-    val discriminatorOpt          = discriminator(context.objectType)
-    val keyBaseDiscriminatorField = getAnnotation(context.objectType)("key-base-discriminator")
-    if (discriminatorOpt.nonEmpty && keyBaseDiscriminatorField.nonEmpty) {
-      throw new IllegalArgumentException(
-        s"Either discriminator type or key-base-discriminator type should be defined in type $typeName, cannot define both."
-      )
+  private def getDiscriminatorMapType(objectType: ObjectType): Option[Map[String, List[String]]] = {
+    getAnnotation(objectType)("discriminator-map").map(_.getValue) match {
+      case Some(discriminatorMap: ObjectInstance) =>
+        Some(
+          discriminatorMap.getValue.asScala
+            .groupBy(_.getName)
+            .map { case (key, values) =>
+              key -> values.map(v => v.getValue.getValue.toString).toList
+            }
+        )
+      case _ => None
     }
+  }
+
+  private def typeDecoder(context: ModelGenContext): Defn.Val = {
+    val subTypes         = context.leafTypes.toList
+    val typeName         = context.objectType.getName
+    val discriminatorOpt = discriminator(context.objectType)
+    val discriminatorMap = getDiscriminatorMapType(context.objectType).getOrElse(Map.empty)
+    validateDiscriminatorsMutualExclusion(discriminatorOpt, discriminatorMap, typeName)
+    if (discriminatorMap.nonEmpty) validateDiscriminatorMap(discriminatorMap, subTypes, typeName)
     val decode: Term = if (discriminatorOpt.isEmpty) {
-      if (keyBaseDiscriminatorField.nonEmpty)
-        extractDecodeForKeyBaseDiscriminator(context, subTypes, typeName)
+      if (discriminatorMap.nonEmpty)
+        extractDecodeForDiscriminatorMap(context, subTypes, typeName, discriminatorMap)
       else
-        extractDecodeForDiscriminator(context, subTypes, typeName)
+        extractDecodeWithoutDiscriminator(context, subTypes, typeName)
     } else
       Term.Match(
         Term.ApplyType(
@@ -243,7 +254,38 @@ class CirceJsonSupport(formats: Map[String, String]) extends LibrarySupport with
     )
   }
 
-  private def extractDecodeForDiscriminator(
+  private def validateDiscriminatorsMutualExclusion(
+      discriminatorOpt: Option[String],
+      discriminatorMap: Map[String, List[String]],
+      typeName: String
+  ): Unit = {
+    if (discriminatorOpt.nonEmpty && discriminatorMap.nonEmpty) {
+      throw new IllegalArgumentException(
+        s"Either discriminator type or key-base-discriminator type should be defined in type $typeName, cannot define both."
+      )
+    }
+  }
+
+  private def validateDiscriminatorMap(
+      discriminatorMap: Map[String, List[String]],
+      subTypes: Seq[AnyType],
+      typeName: String
+  ): Unit =
+    if (
+      subTypes.isEmpty || Some(discriminatorMap.values.toList.flatten).exists { toBeDerivedValues =>
+        val toBeDerivedTypes = subTypes.map(_.getName).toList
+        toBeDerivedTypes.length != toBeDerivedValues.length || toBeDerivedTypes
+          .diff(toBeDerivedValues)
+          .nonEmpty
+      }
+    ) {
+      throw new IllegalArgumentException(
+        s"Discriminator map derivation cannot be executed. " +
+          s"Type $typeName does not have subtypes or mapping of types does not cover all cases."
+      )
+    }
+
+  private def extractDecodeWithoutDiscriminator(
       context: ModelGenContext,
       subTypes: List[AnyType],
       typeName: String
@@ -300,67 +342,47 @@ class CirceJsonSupport(formats: Map[String, String]) extends LibrarySupport with
            """
   }
 
-  private def extractDecodeForKeyBaseDiscriminator(
+  private def extractDecodeForDiscriminatorMap(
       context: ModelGenContext,
       subTypes: List[AnyType],
-      typeName: String
+      typeName: String,
+      discriminatorMap: Map[String, List[String]]
   ): Term = {
     def header(withBody: Term) = {
       q"""
-     c.value.asObject.toRight(DecodingFailure("expected object", c.history)).flatMap { obj =>
-       val keySet = obj.keys.toSet
-       $withBody
-     }
-   """
+         c.value.asObject.toRight(DecodingFailure("Expected object", c.history)).flatMap { obj =>
+           $withBody
+         }"""
     }
 
-    def allSubtypesHasKeyDiscriminator(sortedByProperties: List[ObjectType]) = {
-      sortedByProperties.forall(prop =>
-        Option(prop.getAnnotation("key-base-discriminator")).isDefined
-      )
-    }
-
-    val body = if (subTypes.isEmpty) {
-      noTypeDecodingFailure(typeName)
-    } else {
-      val sortedByProperties = subTypes
-        .collect { case obj: ObjectType =>
-          obj
-        }
-
-      if (!allSubtypesHasKeyDiscriminator(sortedByProperties)) {
-        throw new IllegalArgumentException(
-          s"Not all subtype of type $typeName contains `key-base-discriminator`. This property is required for decoder derivation."
-        )
+    val sortedByProperties = subTypes
+      .collect { case obj: ObjectType =>
+        obj
       }
-      val sortedByPropertiesGroupedByKey =
-        sortedByProperties
-          .sortBy(RMFUtil.typePropertiesWithoutDiscriminator(_).size)
-          .reverse
-          .groupBy { obj: ObjectType =>
-            Option(obj.getAnnotation("key-base-discriminator")).map(_.getValue.getValue.toString)
-          }
+      .sortBy(RMFUtil.typePropertiesWithoutDiscriminator(_).size)
+      .reverse
 
+    header(withBody =
       Term.Match(
-        Term.Name("keySet"),
-        sortedByPropertiesGroupedByKey.keys.toList.map { key =>
-          val keys: List[ObjectType] = sortedByPropertiesGroupedByKey.getOrElse(key, List.empty)
+        Term.Name("obj"),
+        discriminatorMap.map { case (key, values) =>
           Case(
             pat = Pat.Wildcard(),
             cond = Some(
               Term.Apply(
-                Term.Select(Term.Name("keySet"), Term.Name("contains")),
-                List(Lit.String(key.get))
+                Term.Select(Term.Name("obj"), Term.Name("contains")),
+                List(Lit.String(key))
               )
             ),
-            body = fromObjectTypes(context, typeName, keys)
+            body = {
+              val keys = sortedByProperties.filter(objType => values.contains(objType.getName))
+              fromObjectTypes(context, typeName, keys)
+            }
           )
-        },
+        }.toList,
         Nil
       )
-    }
-
-    header(withBody = body)
+    )
   }
 
   private def chunkedTypeDecoder(context: ModelGenContext, leaves: List[ObjectType]): Term.Block = {
