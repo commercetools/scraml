@@ -394,18 +394,24 @@ class CirceJsonSupport(formats: Map[String, String]) extends LibrarySupport with
                       List(Lit.String("unknown discriminator: "), Lit.String("")),
                       List(
                         Term.Apply(
-                        fun =
-                          Term.Select(Term.Select(Term.Select(Term.Name("other"), Term.Name("keys")), Term.Name("headOption")), Term.Name("getOrElse")),
-                        args = List(Lit.String("unknown_value"))
+                          fun = Term.Select(
+                            Term.Select(
+                              Term.Select(Term.Name("other"), Term.Name("keys")),
+                              Term.Name("headOption")
+                            ),
+                            Term.Name("getOrElse")
+                          ),
+                          args = List(Lit.String("unknown_value"))
                         )
-                        )
+                      )
                     ),
                     Term.Select(Term.Name("c"), Term.Name("history"))
                   )
                 )
               )
             )
-          )),
+          )
+        ),
         Nil
       )
     )
