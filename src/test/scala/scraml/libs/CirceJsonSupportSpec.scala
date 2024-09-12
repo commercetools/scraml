@@ -400,6 +400,8 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers with SourceCodeForm
                  |          KeyBasePrefixString.decoder.tryDecode(c).fold(_ => KeyBasePrefixInt.decoder.tryDecode(c), Right(_))
                  |        case _ if obj.contains("wildcard") =>
                  |          KeyBaseWildcard.decoder.tryDecode(c)
+                 |        case other =>
+                 |          Left(DecodingFailure(s"unknown discriminator: ${other.keys.headOption.getOrElse("unknown_value")}", c.history))
                  |      }
                  |    }
                  |  }

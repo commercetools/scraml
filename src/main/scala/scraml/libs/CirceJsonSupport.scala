@@ -379,7 +379,33 @@ class CirceJsonSupport(formats: Map[String, String]) extends LibrarySupport with
               fromObjectTypes(context, typeName, keys)
             }
           )
-        }.toList,
+        }.toList ++ List(
+          Case(
+            pat = Pat.Var(Term.Name("other")),
+            cond = Option.empty[Term],
+            body = Term.Apply(
+              Term.Name("Left"),
+              List(
+                Term.Apply(
+                  Term.Name("DecodingFailure"),
+                  List(
+                    Term.Interpolate(
+                      Term.Name("s"),
+                      List(Lit.String("unknown discriminator: "), Lit.String("")),
+                      List(
+                        Term.Apply(
+                        fun =
+                          Term.Select(Term.Select(Term.Select(Term.Name("other"), Term.Name("keys")), Term.Name("headOption")), Term.Name("getOrElse")),
+                        args = List(Lit.String("unknown_value"))
+                        )
+                        )
+                    ),
+                    Term.Select(Term.Name("c"), Term.Name("history"))
+                  )
+                )
+              )
+            )
+          )),
         Nil
       )
     )
