@@ -221,7 +221,7 @@ final class TapirSupport(endpointsObjectName: String) extends LibrarySupport {
                """
             case _ =>
               q"""
-                  rawBinaryBody[Any]
+                 inputStreamBody
                """
           }
 
