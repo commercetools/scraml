@@ -21,6 +21,7 @@ types: !include types.raml
     preamble:
       description: Discrete selector for text to prefix greeting.
       type: Preamble
+
   get: # HTTP method declaration
     queryParameters:
       name?:
@@ -35,3 +36,7 @@ types: !include types.raml
       200: # HTTP status code
         body: # declare content of response
           type: DataType
+/upload:
+  post:
+    body:
+      image/png:
