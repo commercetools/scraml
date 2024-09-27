@@ -249,7 +249,7 @@ final class TapirSupportSpec
           |      final case class GetGreetingByPreambleAndDelayParams(preamble: Preamble, delay: Int, name: Option[String] = None, repeat: Option[Int] = None, uppercase: Option[Boolean] = None)
           |      lazy val getGreetingByPreambleAndDelay = endpoint.get.in("greeting" / path[Preamble]("preamble") / path[Int]("delay")).in(query[Option[String]]("name") and query[Option[Int]]("repeat") and query[Option[Boolean]]("uppercase")).mapInTo[GetGreetingByPreambleAndDelayParams].out(jsonBody[DataType])
           |    }
-          |    object Upload { lazy val postUpload = endpoint.post.in("upload").in(rawBinaryBody[Any]) }
+          |    object Upload { lazy val postUpload = endpoint.post.in("upload").in(inputStreamBody) }
           |  }
           |}""".stripMargin.stripTrailingSpaces
       )
