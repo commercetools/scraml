@@ -219,8 +219,10 @@ final class TapirSupport(endpointsObjectName: String) extends LibrarySupport {
               q"""
                  jsonBody[${context.anyTypeName}]
                """
-            case other =>
-              throw new IllegalArgumentException(s"unsupported input media type: $other")
+            case _ =>
+              q"""
+                 inputStreamBody
+               """
           }
 
           q"""
