@@ -469,7 +469,7 @@ object ModelGen {
     def addDefaultEnum(property: StringType): TypeRefDetails = {
       Option(property.getDefault).fold(this) { instance =>
         val enumType     = Term.Name(property.getName)
-        val enumInstance = Term.Name(instance.getValue.toString)
+        val enumInstance = Term.Name(instance.getValue.toString.toUpperCase)
 
         copy(defaultValue = Option(q"$enumType.$enumInstance"))
       }

@@ -232,7 +232,7 @@ object DefaultModelGen extends ModelGen {
     extendedType      = Init(Type.Name(stringType.getName), Name(""), Nil)
     enumInstances: List[Stat] = enumInstanceNames.map { instanceName =>
       q"""
-         case object ${Term.Name(instanceName)} extends $extendedType
+         case object ${Term.Name(instanceName.toUpperCase())} extends $extendedType
        """
     }.toList
 

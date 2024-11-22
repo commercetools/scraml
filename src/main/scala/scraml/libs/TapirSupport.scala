@@ -389,7 +389,7 @@ final class TapirSupport(endpointsObjectName: String) extends LibrarySupport {
           Case(
             Lit.String(enum.getValue.toString),
             None,
-            q"sttp.tapir.DecodeResult.Value(${Term.Name(enum.getValue.toString)})"
+            q"sttp.tapir.DecodeResult.Value(${Term.Name(enum.getValue.toString.toUpperCase())})"
           )
         }
           ++
@@ -425,7 +425,7 @@ final class TapirSupport(endpointsObjectName: String) extends LibrarySupport {
         ${Term.PartialFunction(
         enumNames.map { enum =>
           Case(
-            Term.Name(enum),
+            Term.Name(enum.toUpperCase),
             None,
             Lit.String(enum)
           )

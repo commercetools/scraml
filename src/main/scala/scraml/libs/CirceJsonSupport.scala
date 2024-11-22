@@ -40,7 +40,7 @@ class CirceJsonSupport(formats: Map[String, String]) extends LibrarySupport with
   object HasRefinements extends HasFacets {
     def apply(context: ModelGenContext, classDef: Defn.Class): Boolean =
       context.isLibraryEnabled[RefinedSupport.type]() &&
-        classDef.ctor.paramss.flatten
+        classDef.ctor.paramClauses.flatten
           .map(p => propertyNameFrom(p.name.value))
           .flatMap(name => RMFUtil.findAllDeclarations(context.objectType, name).map(_._2))
           .exists { prop =>
@@ -1016,7 +1016,7 @@ class CirceJsonSupport(formats: Map[String, String]) extends LibrarySupport with
                 Case(
                   Lit.String(instance.getValue.toString),
                   None,
-                  Term.Apply(Term.Name("Right"), List(Term.Name(instance.getValue.toString)))
+                  Term.Apply(Term.Name("Right"), List(Term.Name(instance.getValue.toString.toUpperCase)))
                 )
               )
               .toList ++ (params.generateDefaultEnumVariant match {
@@ -1068,7 +1068,7 @@ class CirceJsonSupport(formats: Map[String, String]) extends LibrarySupport with
             enumType.getEnum.asScala
               .map(instance =>
                 Case(
-                  Term.Name(instance.getValue.toString),
+                  Term.Name(instance.getValue.toString.toUpperCase),
                   None,
                   Lit.String(instance.getValue.toString)
                 )

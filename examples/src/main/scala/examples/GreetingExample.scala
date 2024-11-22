@@ -1,7 +1,7 @@
 package examples
 
-import akka.actor.ActorSystem
-import akka.http.scaladsl.Http
+import org.apache.pekko.actor.ActorSystem
+import org.apache.pekko.http.scaladsl.Http
 import cats.effect.{ExitCode, IO, IOApp}
 import scraml.examples.{DataType, Endpoints, SomeEnum}
 import scraml.examples.Endpoints.Greeting.GetGreetingParams
@@ -41,9 +41,9 @@ object GreetingClient {
 
 object GreetingServer {
   import sttp.tapir._
-  import sttp.tapir.server.akkahttp.AkkaHttpServerInterpreter
+  import sttp.tapir.server.pekkohttp.PekkoHttpServerInterpreter
   import scala.concurrent.Future
-  import akka.http.scaladsl.server.Route
+  import org.apache.pekko.http.scaladsl.server.Route
 
   def getGreeting(params: GetGreetingParams): Future[Either[Unit, (DataType, StatusCode, List[Header])]] =
     Future.successful(Right((DataType(params.name.getOrElse("no input"), customTypeProp = BigDecimal(42)), StatusCode.Ok, List(Header("custom-header", "value")))))
@@ -56,7 +56,7 @@ object GreetingServer {
   val greetingWithStatusAndHeaders = Endpoints.Greeting.getGreeting.out(statusCode and sttp.tapir.headers)
 
   val greetingRoute: Route =
-    AkkaHttpServerInterpreter().toRoute(greetingWithStatusAndHeaders.serverLogic(getGreeting))
+    PekkoHttpServerInterpreter().toRoute(greetingWithStatusAndHeaders.serverLogic(getGreeting))
 
   def startServer: IO[Http.ServerBinding] =
     IO.fromFuture(IO(Http().newServerAt("localhost", 8080).bind(greetingRoute)))

@@ -169,7 +169,7 @@ object SphereJsonSupport extends LibrarySupport with JsonSupport {
           Case(
             Lit.String(instance.getValue().toString()),
             None,
-            Term.Select(Term.Name(instance.getValue().toString()), Term.Name("valid"))
+            Term.Select(Term.Name(instance.getValue().toString().toUpperCase()), Term.Name("valid"))
           )
         )
         .toList ++ List(other)

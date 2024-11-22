@@ -72,6 +72,8 @@ class DefaultModelGenSpec extends AnyFlatSpec with Matchers {
         enumType.source.companion.map(_.toString()) should be(Some(s"""object SomeEnum {
              |  case object A extends SomeEnum
              |  case object B extends SomeEnum
+             |  case object ENUM extends SomeEnum
+             |  case object TYPE extends SomeEnum
              |}""".stripMargin))
 
         packageObject.source.source.toString should be("package object scraml")
