@@ -590,7 +590,7 @@ class CirceJsonSupport(formats: Map[String, String]) extends LibrarySupport with
           propertyType match {
             case Some(stringEnum: StringType) if isEnumType(stringEnum) =>
               val enumType     = Term.Name(stringEnum.getName)
-              val enumInstance = Term.Name(stringEnum.getDefault.getValue.toString)
+              val enumInstance = Term.Name(stringEnum.getDefault.getValue.toString.toUpperCase)
 
               if (isRequired)
                 Option(q"$enumType.$enumInstance")
@@ -1016,7 +1016,10 @@ class CirceJsonSupport(formats: Map[String, String]) extends LibrarySupport with
                 Case(
                   Lit.String(instance.getValue.toString),
                   None,
-                  Term.Apply(Term.Name("Right"), List(Term.Name(instance.getValue.toString.toUpperCase)))
+                  Term.Apply(
+                    Term.Name("Right"),
+                    List(Term.Name(instance.getValue.toString.toUpperCase))
+                  )
                 )
               )
               .toList ++ (params.generateDefaultEnumVariant match {
