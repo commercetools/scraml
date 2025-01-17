@@ -10,10 +10,13 @@ import scraml.*
 import scala.util.Try
 
 object CirceJsonSupport {
-  def apply(formats: Map[String, String] = Map.empty) = new CirceJsonSupport(formats)
+  def apply(formats: Map[String, String] = Map.empty, imports: Seq[String] = Seq.empty) =
+    new CirceJsonSupport(formats, imports)
 }
 
-class CirceJsonSupport(formats: Map[String, String]) extends LibrarySupport with JsonSupport {
+class CirceJsonSupport(formats: Map[String, String], imports: Seq[String])
+    extends LibrarySupport
+    with JsonSupport {
   import FieldMatchPolicy.IgnoreExtra
 
   import scala.collection.JavaConverters.*
@@ -127,7 +130,7 @@ class CirceJsonSupport(formats: Map[String, String]) extends LibrarySupport with
                 cases = subTypes.map { case subType: ObjectType =>
                   Case(
                     Pat.Typed(
-                      Pat.Var(Term.Name(subType.getName.toLowerCase)),
+                      Pat.Var(Term.Name("x")),
                       if (ModelGen.isSingleton(subType, context.anyTypeName))
                         Type.Singleton(Term.Name(subType.getName))
                       else Type.Name(subType.getName)
@@ -135,7 +138,7 @@ class CirceJsonSupport(formats: Map[String, String]) extends LibrarySupport with
                     None,
                     Term.Apply(
                       packageTerm(s"${subType.getName}.encoder"),
-                      List(Term.Name(subType.getName.toLowerCase))
+                      List(Term.Name("x"))
                     )
                   )
                 },
@@ -557,7 +560,9 @@ class CirceJsonSupport(formats: Map[String, String]) extends LibrarySupport with
       val importStats: List[Stat] = q"""import io.circe._
           import io.circe.generic.semiauto._
           import io.circe.syntax._
-          """.stats ++ formats.headOption.map(_ => q"import $packageObjectRef.Formats._").toList
+          """.stats ++ formats.headOption.map(_ =>
+        q"import $packageObjectRef.Formats._"
+      ) ++ imports.map(pkg => s"import $pkg".parse[Stat].get)
 
       val jsonTypeHint = discriminatorValue(objectType).map(discriminatorValue => {
         q"""

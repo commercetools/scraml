@@ -234,8 +234,8 @@ class RefinedSupportSpec extends AnyWordSpec with Matchers with SourceCodeFormat
             |  }
             |  implicit lazy val encoder: Encoder[BaseType] = new Encoder[BaseType] {
             |    override def apply(basetype: BaseType): Json = basetype match {
-            |      case datatype: DataType =>
-            |        DataType.encoder(datatype)
+            |      case x: DataType =>
+            |        DataType.encoder(x)
             |    }
             |  }
             |  import eu.timepit.refined.api.Refined
@@ -803,8 +803,8 @@ class RefinedSupportSpec extends AnyWordSpec with Matchers with SourceCodeFormat
             |  implicit lazy val decoder: Decoder[ParentWithOption] = new Decoder[ParentWithOption] { override def apply(c: HCursor): Result[ParentWithOption] = DerivedWithRequired.decoder.tryDecode(c) }
             |  implicit lazy val encoder: Encoder[ParentWithOption] = new Encoder[ParentWithOption] {
             |    override def apply(parentwithoption: ParentWithOption): Json = parentwithoption match {
-            |      case derivedwithrequired: DerivedWithRequired =>
-            |        DerivedWithRequired.encoder(derivedwithrequired)
+            |      case x: DerivedWithRequired =>
+            |        DerivedWithRequired.encoder(x)
             |    }
             |  }
             |  import eu.timepit.refined.api.Refined

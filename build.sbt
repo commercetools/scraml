@@ -54,8 +54,8 @@ lazy val root = (project in file("."))
     name                                          := "sbt-scraml",
     libraryDependencies += "com.commercetools.rmf" % "raml-model"       % "0.2.0-20240722205528",
     libraryDependencies += "org.scalameta"        %% "scalameta"        % "4.8.15",
-    libraryDependencies += "org.scalameta"        %% "scalafmt-dynamic" % "3.8.3",
-    libraryDependencies += "org.typelevel"        %% "cats-effect"      % "3.5.6",
+    libraryDependencies += "org.scalameta"        %% "scalafmt-dynamic" % "3.8.5",
+    libraryDependencies += "org.typelevel"        %% "cats-effect"      % "3.5.7",
     libraryDependencies += "org.scalatest"        %% "scalatest"        % "3.2.19" % Test,
     libraryDependencies ++= Seq(
       "io.circe" %% "circe-core",
