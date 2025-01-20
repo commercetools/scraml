@@ -69,7 +69,7 @@ lazy val root = (project in file("."))
     },
     scriptedLaunchOpts := {
       scriptedLaunchOpts.value ++
-        Seq("-Xmx2048M", "-Dplugin.version=" + version.value)
+        Seq("-Xmx4G", "-Dplugin.version=" + version.value)
     },
     scriptedBufferLog               := false,
     git.remoteRepo                  := "git@github.com:commercetools/scraml.git",
