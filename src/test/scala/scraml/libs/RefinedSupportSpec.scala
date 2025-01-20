@@ -504,12 +504,12 @@ class RefinedSupportSpec extends AnyWordSpec with Matchers with SourceCodeFormat
             |      final def apply(c: HCursor): Decoder.Result[Option[AdditionalProperties]] = {
             |        val allKeys = c.keys.fold(Set.empty[String])(_.toSet)
             |        Right(Option(allKeys.filterNot(propertyNames.contains)).filterNot(_.isEmpty).map {
-            |          _.foldLeft(scala.collection.immutable.Map.newBuilder[String, Json])({
+            |          _.foldLeft(scala.collection.immutable.Map.newBuilder[String, Json]) {
             |            case (accum, key) =>
             |              c.downField(key).focus.fold(accum) {
             |                v => accum += key -> v
             |              }
-            |          })
+            |          }
             |        }.map(b => AdditionalProperties(b.result())))
             |      }
             |    }

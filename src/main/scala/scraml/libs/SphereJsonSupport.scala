@@ -38,7 +38,7 @@ object SphereJsonSupport extends LibrarySupport with JsonSupport {
       val subTypes = context.getDirectSubTypes.toList
       val matchTypes = Term.Match(
         Term.Name("value"),
-        cases = subTypes.map(subType => {
+        casesBlock = subTypes.map(subType => {
           val caseName = subType.getName.toLowerCase
           val typeName = subType.getName
           Case(

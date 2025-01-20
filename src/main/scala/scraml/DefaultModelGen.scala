@@ -134,15 +134,19 @@ object DefaultModelGen extends ModelGen {
           .fold(List(typeParamsToUse))(extra => List(typeParamsToUse) ::: List(List(extra)))
       ),
       templ = Template(
-        early = Nil,
+        earlyClause = None,
         inits = initFromTypeOpt(context.scalaBaseType.map(_.scalaType)) ++ initFromTypeOpt(
           context.extendType
         ),
-        self = Self(
-          name = Name.Anonymous(),
-          decltpe = None
+        body = Template.Body(
+          selfOpt = Some(
+            Self(
+              name = Name.Anonymous(),
+              decltpe = None
+            )
+          ),
+          stats = propertyOverrides
         ),
-        stats = propertyOverrides,
         derives = Nil
       )
     )
@@ -156,13 +160,17 @@ object DefaultModelGen extends ModelGen {
       List(),
       Term.Name(typeName),
       Template(
-        early = Nil,
+        earlyClause = None,
         inits = Nil,
-        self = Self(
-          name = Name.Anonymous(),
-          decltpe = None
+        body = Template.Body(
+          selfOpt = Some(
+            Self(
+              name = Name.Anonymous(),
+              decltpe = None
+            )
+          ),
+          stats = stats
         ),
-        stats = stats,
         derives = Nil
       )
     )
@@ -173,12 +181,19 @@ object DefaultModelGen extends ModelGen {
       mods = List(Mod.Case()),
       Term.Name(context.objectType.getName),
       Template(
-        early = Nil,
+        earlyClause = None,
         inits = initFromTypeOpt(context.scalaBaseType.map(_.scalaType)) ++ initFromTypeOpt(
           context.extendType
         ),
-        Self(Name(""), None),
-        stats = Nil,
+        body = Template.Body(
+          selfOpt = Some(
+            Self(
+              name = Name(""),
+              decltpe = None
+            )
+          ),
+          stats = Nil
+        ),
         derives = Nil
       )
     )
@@ -210,12 +225,19 @@ object DefaultModelGen extends ModelGen {
       tparamClause = Type.ParamClause(Nil),
       ctor = Ctor.Primary(Nil, Name(""), Seq.empty),
       templ = Template(
-        early = Nil,
+        earlyClause = None,
         inits = initFromTypeOpt(context.scalaBaseType.map(_.scalaType)) ++ initFromTypeOpt(
           context.extendType
         ),
-        self = Self(Name(""), None),
-        stats = defs,
+        body = Template.Body(
+          selfOpt = Some(
+            Self(
+              name = Name(""),
+              decltpe = None
+            )
+          ),
+          stats = defs
+        ),
         derives = Nil
       )
     )
@@ -385,7 +407,7 @@ object DefaultModelGen extends ModelGen {
           packageFile.getParentFile.mkdirs()
           packageFile
         }
-        packageStatement = Pkg(packageTerm(s"${params.basePackage}"), Nil).toString()
+        packageStatement = Pkg(packageTerm(s"${params.basePackage}"), Pkg.Body(Nil)).toString()
         fileWithPackage <- FileUtil.writeToFile(file, s"$packageStatement\n\n")
         files <- generatedPackage.sources
           .map(appendSource(fileWithPackage, _, params.formatConfig, scalafmt))

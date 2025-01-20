@@ -55,7 +55,7 @@ class SphereJsonSupportSpec extends AnyFlatSpec with Matchers {
             |  import cats.data.Validated
             |  import cats.syntax.validated._
             |  implicit lazy val toJson: ToJSON[SomeEnum] = ToJSON.stringWriter.contramap(_.toString)
-            |  implicit lazy val fromJson: FromJSON[SomeEnum] = (jval: JsonAST.JValue) => FromJSON.stringReader.read(jval).andThen({
+            |  implicit lazy val fromJson: FromJSON[SomeEnum] = (jval: JsonAST.JValue) => FromJSON.stringReader.read(jval).andThen {
             |    case "A" =>
             |      A.valid
             |    case "B" =>
@@ -66,7 +66,7 @@ class SphereJsonSupportSpec extends AnyFlatSpec with Matchers {
             |      TYPE.valid
             |    case other =>
             |      JSONParseError(s"not a instance of required enum: $$other").invalidNel
-            |  })
+            |  }
             |}""".stripMargin))
 
         baseType.source.packageName should be("datatypes")

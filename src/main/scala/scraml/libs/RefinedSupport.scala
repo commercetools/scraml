@@ -637,7 +637,7 @@ object RefinedSupport extends LibrarySupport {
       })
     }
 
-    val vals = classDef.templ.stats.map {
+    val vals = classDef.templ.body.stats.map {
       case candidate @ Defn.Val(
             _,
             List(RefinedPropertyType(typeName, _, _)),

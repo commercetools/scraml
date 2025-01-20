@@ -329,10 +329,17 @@ final class TapirSupport(endpointsObjectName: String) extends LibrarySupport {
                 mods = Nil,
                 Term.Name(baseName),
                 Template(
-                  early = Nil,
+                  earlyClause = None,
                   inits = Nil,
-                  Self(Name(""), None),
-                  stats = resources.flatMap(_.paramTypeDef) ++ resources.map(_.endpointValueDef),
+                  body = Template.Body(
+                    selfOpt = Some(
+                      Self(
+                        name = Name(""),
+                        decltpe = None
+                      )
+                    ),
+                    stats = resources.flatMap(_.paramTypeDef) ++ resources.map(_.endpointValueDef),
+                  ),
                   derives = Nil
                 )
               )
@@ -343,10 +350,17 @@ final class TapirSupport(endpointsObjectName: String) extends LibrarySupport {
         mods = Nil,
         Term.Name(endpointsObjectName),
         Template(
-          early = Nil,
+          earlyClause = None,
           inits = Nil,
-          Self(Name(""), None),
-          stats = endpointsGrouped,
+          body = Template.Body(
+            selfOpt = Some(
+              Self(
+                name = Name(""),
+                decltpe = None
+              )
+            ),
+            stats = endpointsGrouped
+          ),
           derives = Nil
         )
       )

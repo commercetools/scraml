@@ -241,7 +241,7 @@ trait LibrarySupport {
       defn.ctor.paramClauses.exists(_.nonEmpty)
 
     def unapply(defn: Defn.Trait): Boolean =
-      defn.templ.stats.exists {
+      defn.templ.body.stats.exists {
         // a declaration without parameters is considered a property
         case prop: Decl.Def if prop.paramClauses.isEmpty => true
         case _                                           => false
@@ -366,7 +366,7 @@ trait LibrarySupport {
   final protected def generatePropertiesCode[A](defn: Defn.Trait)(
       f: Decl.Def => List[A]
   ): List[A] =
-    defn.templ.stats
+    defn.templ.body.stats
       .collect {
         case prop: Decl.Def if prop.paramClauses.isEmpty => prop
       }
@@ -435,13 +435,13 @@ object LibrarySupport {
     }
 
   def appendObjectStats(defn: Defn.Object, stats: List[Stat]): Defn.Object =
-    defn.copy(templ = defn.templ.copy(stats = defn.templ.stats ++ stats))
+    defn.copy(templ = defn.templ.copy(stats = defn.templ.body.stats ++ stats))
   def appendPkgObjectStats(packageObject: Pkg.Object, stats: List[Stat]): Pkg.Object =
-    packageObject.copy(templ = packageObject.templ.copy(stats = packageObject.templ.stats ++ stats))
+    packageObject.copy(templ = packageObject.templ.copy(stats = packageObject.templ.body.stats ++ stats))
   def appendClassStats(defn: Defn.Class, stats: List[Stat]): Defn.Class =
-    defn.copy(templ = defn.templ.copy(stats = defn.templ.stats ++ stats))
+    defn.copy(templ = defn.templ.copy(stats = defn.templ.body.stats ++ stats))
   def appendTraitStats(defn: Defn.Trait, stats: List[Stat]): Defn.Trait =
-    defn.copy(templ = defn.templ.copy(stats = defn.templ.stats ++ stats))
+    defn.copy(templ = defn.templ.copy(stats = defn.templ.body.stats ++ stats))
 }
 
 trait ModelGen {

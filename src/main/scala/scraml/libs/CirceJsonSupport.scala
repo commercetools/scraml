@@ -104,59 +104,66 @@ class CirceJsonSupport(formats: Map[String, String], imports: Seq[String])
       Some(Type.Apply(Type.Name("Encoder"), Type.ArgClause(List(Type.Name(typeName))))),
       Term.NewAnonymous(
         Template(
-          Nil,
-          List(
+          earlyClause = None,
+          inits = List(
             Init(
               Type.Apply(Type.Name("Encoder"), Type.ArgClause(List(Type.Name(typeName)))),
               Name(""),
               Seq.empty
             )
           ),
-          Self(Name(""), None),
-          List(
-            Defn.Def(
-              mods = List(Mod.Override()),
-              name = Term.Name("apply"),
-              paramClauseGroups = List(
-                Member.ParamClauseGroup(
-                  Type.ParamClause(Nil),
-                  List(
-                    Term.ParamClause(
-                      List(
-                        Term.Param(
-                          Nil,
-                          Term.Name(typeName.toLowerCase),
-                          Some(Type.Name(typeName)),
-                          None
+          body = Template.Body(
+            selfOpt = Some(
+              Self(
+                name = Name(""),
+                decltpe = None
+              )
+            ),
+            stats = List(
+              Defn.Def(
+                mods = List(Mod.Override()),
+                name = Term.Name("apply"),
+                paramClauseGroups = List(
+                  Member.ParamClauseGroup(
+                    Type.ParamClause(Nil),
+                    List(
+                      Term.ParamClause(
+                        List(
+                          Term.Param(
+                            Nil,
+                            Term.Name(typeName.toLowerCase),
+                            Some(Type.Name(typeName)),
+                            None
+                          )
                         )
                       )
                     )
                   )
-                )
-              ),
-              decltpe = Some(Type.Name("Json")),
-              body = Term.Match(
-                Term.Name(typeName.toLowerCase),
-                cases = subTypes.map { case subType: ObjectType =>
-                  Case(
-                    Pat.Typed(
-                      Pat.Var(Term.Name("x")),
-                      if (ModelGen.isSingleton(subType, context.anyTypeName))
-                        Type.Singleton(Term.Name(subType.getName))
-                      else Type.Name(subType.getName)
-                    ),
-                    None,
-                    Term.Apply(
-                      packageTerm(s"${subType.getName}.encoder"),
-                      Term.ArgClause(List(Term.Name("x")))
+                ),
+                decltpe = Some(Type.Name("Json")),
+                body = Term.Match(
+                  Term.Name(typeName.toLowerCase),
+                  casesBlock = subTypes.map { case subType: ObjectType =>
+                    Case(
+                      Pat.Typed(
+                        Pat.Var(Term.Name("x")),
+                        if (ModelGen.isSingleton(subType, context.anyTypeName))
+                          Type.Singleton(Term.Name(subType.getName))
+                        else Type.Name(subType.getName)
+                      ),
+                      None,
+                      Term.Apply(
+                        packageTerm(s"${subType.getName}.encoder"),
+                        Term.ArgClause(List(Term.Name("x")))
+                      )
                     )
-                  )
-                },
-                Nil
+                  },
+                  Nil
+                )
               )
             )
           ),
-          Nil
+          derives = Nil
         )
       )
     )
@@ -190,7 +197,7 @@ class CirceJsonSupport(formats: Map[String, String], imports: Seq[String])
         extractDecodeWithoutDiscriminator(context, subTypes, typeName)
     } else
       Term.Match(
-        Term.ApplyType(
+        expr = Term.ApplyType(
           fun = Term.Select(
             Term.Apply(
               Term.Select(Term.Name("c"), Term.Name("downField")),
@@ -200,7 +207,7 @@ class CirceJsonSupport(formats: Map[String, String], imports: Seq[String])
           ),
           targClause = Type.ArgClause(List(Type.Name("String")))
         ),
-        subTypes.flatMap { case subType: ObjectType =>
+        casesBlock = subTypes.flatMap { case subType: ObjectType =>
           discriminatorValue(subType).map { _ =>
             Case(
               Pat
@@ -243,7 +250,7 @@ class CirceJsonSupport(formats: Map[String, String], imports: Seq[String])
             )
           )
         ),
-        Nil
+        mods = Nil
       )
 
     Defn.Val(
@@ -252,42 +259,49 @@ class CirceJsonSupport(formats: Map[String, String], imports: Seq[String])
       Some(Type.Apply(Type.Name("Decoder"), Type.ArgClause(List(Type.Name(typeName))))),
       Term.NewAnonymous(
         Template(
-          Nil,
-          List(
+          earlyClause = None,
+          inits = List(
             Init(
               Type.Apply(Type.Name("Decoder"), Type.ArgClause(List(Type.Name(typeName)))),
               Name(""),
               Seq.empty
             )
           ),
-          Self(Name(""), None),
-          List(
-            Defn.Def(
-              mods = List(Mod.Override()),
-              name = Term.Name("apply"),
-              paramClauseGroups = List(
-                Member.ParamClauseGroup(
-                  Type.ParamClause(Nil),
-                  List(
-                    Term.ParamClause(
-                      List(
-                        Term.Param(
-                          Nil,
-                          Term.Name("c"),
-                          Some(Type.Name("HCursor")),
-                          None
+          body = Template.Body(
+            selfOpt = Some(
+              Self(
+                name = Name(""),
+                decltpe = None
+              )
+            ),
+            stats = List(
+              Defn.Def(
+                mods = List(Mod.Override()),
+                name = Term.Name("apply"),
+                paramClauseGroups = List(
+                  Member.ParamClauseGroup(
+                    Type.ParamClause(Nil),
+                    List(
+                      Term.ParamClause(
+                        List(
+                          Term.Param(
+                            Nil,
+                            Term.Name("c"),
+                            Some(Type.Name("HCursor")),
+                            None
+                          )
                         )
                       )
                     )
                   )
-                )
-              ),
-              decltpe =
-                Some(Type.Apply(Type.Name("Result"), Type.ArgClause(List(Type.Name(typeName))))),
-              body = decode
+                ),
+                decltpe =
+                  Some(Type.Apply(Type.Name("Result"), Type.ArgClause(List(Type.Name(typeName))))),
+                body = decode
+              )
             )
           ),
-          Nil
+          derives = Nil
         )
       )
     )
@@ -403,8 +417,8 @@ class CirceJsonSupport(formats: Map[String, String], imports: Seq[String])
 
     header(withBody =
       Term.Match(
-        Term.Name("obj"),
-        discriminatorMap.map { case (key, values) =>
+        expr = Term.Name("obj"),
+        casesBlock = discriminatorMap.map { case (key, values) =>
           Case(
             pat = Pat.Wildcard(),
             cond = Some(
@@ -455,7 +469,7 @@ class CirceJsonSupport(formats: Map[String, String], imports: Seq[String])
             )
           )
         ),
-        Nil
+        mods = Nil
       )
     )
   }

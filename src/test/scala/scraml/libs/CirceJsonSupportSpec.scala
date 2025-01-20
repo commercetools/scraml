@@ -224,14 +224,14 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers with SourceCodeForm
                                                                       |  case object TYPE extends SomeEnum
                                                                       |  case class Unknown(value: String) extends SomeEnum
                                                                       |  import io.circe._
-                                                                      |  implicit lazy val encoder: Encoder[SomeEnum] = Encoder[String].contramap({
+                                                                      |  implicit lazy val encoder: Encoder[SomeEnum] = Encoder[String].contramap {
                                                                       |    case A => "A"
                                                                       |    case B => "B"
                                                                       |    case ENUM => "enum"
                                                                       |    case TYPE => "type"
                                                                       |    case Unknown(value) => value
-                                                                      |  })
-                                                                      |  implicit lazy val decoder: Decoder[SomeEnum] = Decoder[String].emap({
+                                                                      |  }
+                                                                      |  implicit lazy val decoder: Decoder[SomeEnum] = Decoder[String].emap {
                                                                       |    case "A" =>
                                                                       |      Right(A)
                                                                       |    case "B" =>
@@ -242,7 +242,7 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers with SourceCodeForm
                                                                       |      Right(TYPE)
                                                                       |    case other =>
                                                                       |      Right(Unknown(other))
-                                                                      |  })
+                                                                      |  }
                                                                       |}""".stripMargin.stripTrailingSpaces
           )
         )
@@ -572,12 +572,12 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers with SourceCodeForm
                  |      final def apply(c: HCursor): Decoder.Result[Option[AdditionalProperties]] = {
                  |        val allKeys = c.keys.fold(Set.empty[String])(_.toSet)
                  |        Right(Option(allKeys.filterNot(propertyNames.contains)).filterNot(_.isEmpty).map {
-                 |          _.foldLeft(scala.collection.immutable.Map.newBuilder[String, Json])({
+                 |          _.foldLeft(scala.collection.immutable.Map.newBuilder[String, Json]) {
                  |            case (accum, key) =>
                  |              c.downField(key).focus.fold(accum) {
                  |                v => accum += key -> v
                  |              }
-                 |          })
+                 |          }
                  |        }.map(b => AdditionalProperties(b.result())))
                  |      }
                  |    }
@@ -666,12 +666,12 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers with SourceCodeForm
               |      final def apply(c: HCursor): Decoder.Result[Option[AdditionalProperties]] = {
               |        val allKeys = c.keys.fold(Set.empty[String])(_.toSet)
               |        Right(Option(allKeys.filterNot(propertyNames.contains)).filterNot(_.isEmpty).map {
-              |          _.foldLeft(scala.collection.immutable.Map.newBuilder[String, Json])({
+              |          _.foldLeft(scala.collection.immutable.Map.newBuilder[String, Json]) {
               |            case (accum, key) =>
               |              c.downField(key).focus.fold(accum) {
               |                v => accum += key -> v
               |              }
-              |          })
+              |          }
               |        }.map(b => AdditionalProperties(b.result())))
               |      }
               |    }
@@ -756,13 +756,13 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers with SourceCodeForm
               |  case object ENUM extends SomeEnum
               |  case object TYPE extends SomeEnum
               |  import io.circe._
-              |  implicit lazy val encoder: Encoder[SomeEnum] = Encoder[String].contramap({
+              |  implicit lazy val encoder: Encoder[SomeEnum] = Encoder[String].contramap {
               |    case A => "A"
               |    case B => "B"
               |    case ENUM => "enum"
               |    case TYPE => "type"
-              |  })
-              |  implicit lazy val decoder: Decoder[SomeEnum] = Decoder[String].emap({
+              |  }
+              |  implicit lazy val decoder: Decoder[SomeEnum] = Decoder[String].emap {
               |    case "A" =>
               |      Right(A)
               |    case "B" =>
@@ -773,7 +773,7 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers with SourceCodeForm
               |      Right(TYPE)
               |    case other =>
               |      Left(s"invalid enum value: $other")
-              |  })
+              |  }
               |}""".stripMargin.stripTrailingSpaces
           )
         )
@@ -810,12 +810,12 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers with SourceCodeForm
               |      final def apply(c: HCursor): Decoder.Result[Option[AdditionalProperties]] = {
               |        val allKeys = c.keys.fold(Set.empty[String])(_.toSet)
               |        Right(Option(allKeys.filterNot(propertyNames.contains)).filterNot(_.isEmpty).map {
-              |          _.foldLeft(scala.collection.immutable.Map.newBuilder[String, Json])({
+              |          _.foldLeft(scala.collection.immutable.Map.newBuilder[String, Json]) {
               |            case (accum, key) =>
               |              c.downField(key).focus.fold(accum) {
               |                v => accum += key -> v
               |              }
-              |          })
+              |          }
               |        }.map(b => AdditionalProperties(b.result())))
               |      }
               |    }
@@ -917,12 +917,12 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers with SourceCodeForm
               |      final def apply(c: HCursor): Decoder.Result[Option[AdditionalProperties]] = {
               |        val allKeys = c.keys.fold(Set.empty[String])(_.toSet)
               |        Right(Option(allKeys.filterNot(propertyNames.contains)).filterNot(_.isEmpty).map {
-              |          _.foldLeft(scala.collection.immutable.Map.newBuilder[String, Json])({
+              |          _.foldLeft(scala.collection.immutable.Map.newBuilder[String, Json]) {
               |            case (accum, key) =>
               |              c.downField(key).focus.fold(accum) {
               |                v => accum += key -> v
               |              }
-              |          })
+              |          }
               |        }.map(b => AdditionalProperties(b.result())))
               |      }
               |    }
@@ -997,12 +997,12 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers with SourceCodeForm
                |      final def apply(c: HCursor): Decoder.Result[Option[AdditionalProperties]] = {
                |        val allKeys = c.keys.fold(Set.empty[String])(_.toSet)
                |        Right(Option(allKeys.filterNot(propertyNames.contains)).filterNot(_.isEmpty).map {
-               |          _.foldLeft(scala.collection.immutable.Map.newBuilder[String, Json])({
+               |          _.foldLeft(scala.collection.immutable.Map.newBuilder[String, Json]) {
                |            case (accum, key) =>
                |              c.downField(key).focus.fold(accum) {
                |                v => accum += key -> v
                |              }
-               |          })
+               |          }
                |        }.map(b => AdditionalProperties(b.result())))
                |      }
                |    }
