@@ -1,5 +1,5 @@
 lazy val javas = List(
-  JavaSpec(JavaSpec.Distribution.Adopt, "15.0.2+7")
+  JavaSpec.temurin("21")
 )
 
 inThisBuild(
