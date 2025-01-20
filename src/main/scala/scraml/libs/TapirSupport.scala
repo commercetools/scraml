@@ -338,7 +338,7 @@ final class TapirSupport(endpointsObjectName: String) extends LibrarySupport {
                         decltpe = None
                       )
                     ),
-                    stats = resources.flatMap(_.paramTypeDef) ++ resources.map(_.endpointValueDef),
+                    stats = resources.flatMap(_.paramTypeDef) ++ resources.map(_.endpointValueDef)
                   ),
                   derives = Nil
                 )

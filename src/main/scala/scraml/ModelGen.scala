@@ -437,7 +437,9 @@ object LibrarySupport {
   def appendObjectStats(defn: Defn.Object, stats: List[Stat]): Defn.Object =
     defn.copy(templ = defn.templ.copy(stats = defn.templ.body.stats ++ stats))
   def appendPkgObjectStats(packageObject: Pkg.Object, stats: List[Stat]): Pkg.Object =
-    packageObject.copy(templ = packageObject.templ.copy(stats = packageObject.templ.body.stats ++ stats))
+    packageObject.copy(templ =
+      packageObject.templ.copy(stats = packageObject.templ.body.stats ++ stats)
+    )
   def appendClassStats(defn: Defn.Class, stats: List[Stat]): Defn.Class =
     defn.copy(templ = defn.templ.copy(stats = defn.templ.body.stats ++ stats))
   def appendTraitStats(defn: Defn.Trait, stats: List[Stat]): Defn.Trait =
