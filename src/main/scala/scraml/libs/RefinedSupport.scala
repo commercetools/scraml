@@ -204,7 +204,7 @@ object RefinedSupport extends LibrarySupport {
     protected def predicateType(name: String, constants: AnyRef*): Type.Apply =
       Type.Apply(
         MetaUtil.typeFromName(name),
-        constants.toList.map { constant =>
+        Type.ArgClause(constants.toList.map { constant =>
           Type.Select(
             Term.Select(
               Term.Name("Witness"),
@@ -212,7 +212,7 @@ object RefinedSupport extends LibrarySupport {
             ),
             Type.Name("T")
           )
-        }
+        })
       )
 
     protected def propertyDefinition(
@@ -538,7 +538,7 @@ object RefinedSupport extends LibrarySupport {
     private def forall(itemPredicateName: Name): List[Type.Apply] = {
       Type.Apply(
         Type.Name("Forall"),
-        Type.Name(itemPredicateName.value) :: Nil
+        Type.ArgClause(Type.Name(itemPredicateName.value) :: Nil)
       ) :: Nil
     }
   }
@@ -628,23 +628,20 @@ object RefinedSupport extends LibrarySupport {
   private def declareRefinements(classDef: Defn.Class)(implicit
       context: ModelGenContext
   ): Defn.Class = {
-    val declarations = classDef.ctor.paramss match {
-      case primary :: extra =>
-        primary.map {
-          case prop @ RefinedPropertyDeclaration((typeName, default)) =>
-            prop.copy(decltpe = Some(typeName), default = default)
-          case unrefined =>
-            unrefined
-        } :: extra
-      case other =>
-        other
+    val declarations = classDef.ctor.paramClauses.map { clause =>
+      clause.copy(values = clause.values.map {
+        case prop @ RefinedPropertyDeclaration((typeName, default)) =>
+          prop.copy(decltpe = Some(typeName), default = default)
+        case unrefined =>
+          unrefined
+      })
     }
 
     val vals = classDef.templ.stats.map {
       case candidate @ Defn.Val(
             _,
             List(RefinedPropertyType(typeName, _, _)),
-            Some(Type.Apply(tpe, _)),
+            Some(Type.Apply.After_4_6_0(tpe, _)),
             _
           ) =>
         val fullyQualifiedName = Type.Select(
@@ -652,14 +649,14 @@ object RefinedSupport extends LibrarySupport {
           typeName
         )
 
-        candidate.copy(decltpe = Option(Type.Apply(tpe, List(fullyQualifiedName))))
+        candidate.copy(decltpe = Option(Type.Apply(tpe, Type.ArgClause(List(fullyQualifiedName)))))
 
       case other =>
         other
     }
 
     classDef.copy(
-      ctor = classDef.ctor.copy(paramss = declarations),
+      ctor = classDef.ctor.copy(paramss = declarations.map(_.values).toList),
       templ = classDef.templ.copy(stats = vals)
     )
   }
@@ -774,7 +771,7 @@ object RefinedSupport extends LibrarySupport {
     val from =
       List[Stat](
         q"""
-          def from( ..${classDef.ctor.paramss.flatten.map { param =>
+          def from( ..${classDef.ctor.paramClauses.map(_.values).toList.flatten.map { param =>
           param.copy(
             mods = Nil,
             name = Name(propertyNameFrom(param.name))

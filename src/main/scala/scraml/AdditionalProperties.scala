@@ -1,7 +1,6 @@
 package scraml
 
-import scala.meta._
-
+import scala.meta.*
 import _root_.io.vrap.rmf.raml.model.types.ObjectType
 import scraml.MetaUtil.typeFromName
 
@@ -75,7 +74,7 @@ protected[scraml] final case class AdditionalProperties(
       if (spec.optional)
         Type.Apply(
           Type.Name("Option"),
-          propertyType :: Nil
+          Type.ArgClause(propertyType :: Nil)
         )
       else
         propertyType

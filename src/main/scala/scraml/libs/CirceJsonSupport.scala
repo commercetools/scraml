@@ -101,31 +101,41 @@ class CirceJsonSupport(formats: Map[String, String], imports: Seq[String])
     Defn.Val(
       List(Mod.Implicit(), Mod.Lazy()),
       List(Pat.Var(Term.Name("encoder"))),
-      Some(Type.Apply(Type.Name("Encoder"), List(Type.Name(typeName)))),
+      Some(Type.Apply(Type.Name("Encoder"), Type.ArgClause(List(Type.Name(typeName))))),
       Term.NewAnonymous(
         Template(
           Nil,
           List(
-            Init(Type.Apply(Type.Name("Encoder"), List(Type.Name(typeName))), Name(""), Nil)
+            Init(
+              Type.Apply(Type.Name("Encoder"), Type.ArgClause(List(Type.Name(typeName)))),
+              Name(""),
+              Seq.empty
+            )
           ),
           Self(Name(""), None),
           List(
             Defn.Def(
-              List(Mod.Override()),
-              Term.Name("apply"),
-              Nil,
-              List(
-                List(
-                  Term.Param(
-                    Nil,
-                    Term.Name(typeName.toLowerCase),
-                    Some(Type.Name(typeName)),
-                    None
+              mods = List(Mod.Override()),
+              name = Term.Name("apply"),
+              paramClauseGroups = List(
+                Member.ParamClauseGroup(
+                  Type.ParamClause(Nil),
+                  List(
+                    Term.ParamClause(
+                      List(
+                        Term.Param(
+                          Nil,
+                          Term.Name(typeName.toLowerCase),
+                          Some(Type.Name(typeName)),
+                          None
+                        )
+                      )
+                    )
                   )
                 )
               ),
-              Some(Type.Name("Json")),
-              Term.Match(
+              decltpe = Some(Type.Name("Json")),
+              body = Term.Match(
                 Term.Name(typeName.toLowerCase),
                 cases = subTypes.map { case subType: ObjectType =>
                   Case(
@@ -138,7 +148,7 @@ class CirceJsonSupport(formats: Map[String, String], imports: Seq[String])
                     None,
                     Term.Apply(
                       packageTerm(s"${subType.getName}.encoder"),
-                      List(Term.Name("x"))
+                      Term.ArgClause(List(Term.Name("x")))
                     )
                   )
                 },
@@ -181,14 +191,14 @@ class CirceJsonSupport(formats: Map[String, String], imports: Seq[String])
     } else
       Term.Match(
         Term.ApplyType(
-          Term.Select(
+          fun = Term.Select(
             Term.Apply(
               Term.Select(Term.Name("c"), Term.Name("downField")),
-              discriminatorOpt.map(Lit.String(_)).toList
+              Term.ArgClause(discriminatorOpt.map(Lit.String(_)).toList)
             ),
             Term.Name("as")
           ),
-          List(Type.Name("String"))
+          targClause = Type.ArgClause(List(Type.Name("String")))
         ),
         subTypes.flatMap { case subType: ObjectType =>
           discriminatorValue(subType).map { _ =>
@@ -196,12 +206,14 @@ class CirceJsonSupport(formats: Map[String, String], imports: Seq[String])
               Pat
                 .Extract(
                   Term.Name("Right"),
-                  List(Term.Select(Term.Name(subType.getName), Term.Name("jsonTypeHint")))
+                  Pat.ArgClause(
+                    List(Term.Select(Term.Name(subType.getName), Term.Name("jsonTypeHint")))
+                  )
                 ),
               None,
               Term.Apply(
                 Term.Select(Term.Name(subType.getName), Term.Name("decoder")),
-                List(Term.Name("c"))
+                Term.ArgClause(List(Term.Name("c")))
               )
             )
           }
@@ -211,16 +223,20 @@ class CirceJsonSupport(formats: Map[String, String], imports: Seq[String])
             None,
             Term.Apply(
               Term.Name("Left"),
-              List(
-                Term.Apply(
-                  Term.Name("DecodingFailure"),
-                  List(
-                    Term.Interpolate(
-                      Term.Name("s"),
-                      List(Lit.String("unknown discriminator: "), Lit.String("")),
-                      List(Term.Name("other"))
-                    ),
-                    Term.Select(Term.Name("c"), Term.Name("history"))
+              Term.ArgClause(
+                List(
+                  Term.Apply(
+                    Term.Name("DecodingFailure"),
+                    Term.ArgClause(
+                      List(
+                        Term.Interpolate(
+                          Term.Name("s"),
+                          List(Lit.String("unknown discriminator: "), Lit.String("")),
+                          List(Term.Name("other"))
+                        ),
+                        Term.Select(Term.Name("c"), Term.Name("history"))
+                      )
+                    )
                   )
                 )
               )
@@ -233,22 +249,42 @@ class CirceJsonSupport(formats: Map[String, String], imports: Seq[String])
     Defn.Val(
       List(Mod.Implicit(), Mod.Lazy()),
       List(Pat.Var(Term.Name("decoder"))),
-      Some(Type.Apply(Type.Name("Decoder"), List(Type.Name(typeName)))),
+      Some(Type.Apply(Type.Name("Decoder"), Type.ArgClause(List(Type.Name(typeName))))),
       Term.NewAnonymous(
         Template(
           Nil,
           List(
-            Init(Type.Apply(Type.Name("Decoder"), List(Type.Name(typeName))), Name(""), Nil)
+            Init(
+              Type.Apply(Type.Name("Decoder"), Type.ArgClause(List(Type.Name(typeName)))),
+              Name(""),
+              Seq.empty
+            )
           ),
           Self(Name(""), None),
           List(
             Defn.Def(
-              List(Mod.Override()),
-              Term.Name("apply"),
-              Nil,
-              List(List(Term.Param(Nil, Term.Name("c"), Some(Type.Name("HCursor")), None))),
-              Some(Type.Apply(Type.Name("Result"), List(Type.Name(typeName)))),
-              decode
+              mods = List(Mod.Override()),
+              name = Term.Name("apply"),
+              paramClauseGroups = List(
+                Member.ParamClauseGroup(
+                  Type.ParamClause(Nil),
+                  List(
+                    Term.ParamClause(
+                      List(
+                        Term.Param(
+                          Nil,
+                          Term.Name("c"),
+                          Some(Type.Name("HCursor")),
+                          None
+                        )
+                      )
+                    )
+                  )
+                )
+              ),
+              decltpe =
+                Some(Type.Apply(Type.Name("Result"), Type.ArgClause(List(Type.Name(typeName))))),
+              body = decode
             )
           ),
           Nil
@@ -374,7 +410,7 @@ class CirceJsonSupport(formats: Map[String, String], imports: Seq[String])
             cond = Some(
               Term.Apply(
                 Term.Select(Term.Name("obj"), Term.Name("contains")),
-                List(Lit.String(key))
+                Term.ArgClause(List(Lit.String(key)))
               )
             ),
             body = {
@@ -388,27 +424,31 @@ class CirceJsonSupport(formats: Map[String, String], imports: Seq[String])
             cond = Option.empty[Term],
             body = Term.Apply(
               Term.Name("Left"),
-              List(
-                Term.Apply(
-                  Term.Name("DecodingFailure"),
-                  List(
-                    Term.Interpolate(
-                      Term.Name("s"),
-                      List(Lit.String("unknown discriminator: "), Lit.String("")),
+              Term.ArgClause(
+                List(
+                  Term.Apply(
+                    Term.Name("DecodingFailure"),
+                    Term.ArgClause(
                       List(
-                        Term.Apply(
-                          fun = Term.Select(
-                            Term.Select(
-                              Term.Select(Term.Name("other"), Term.Name("keys")),
-                              Term.Name("headOption")
-                            ),
-                            Term.Name("getOrElse")
-                          ),
-                          args = List(Lit.String("unknown_value"))
-                        )
+                        Term.Interpolate(
+                          Term.Name("s"),
+                          List(Lit.String("unknown discriminator: "), Lit.String("")),
+                          List(
+                            Term.Apply(
+                              fun = Term.Select(
+                                Term.Select(
+                                  Term.Select(Term.Name("other"), Term.Name("keys")),
+                                  Term.Name("headOption")
+                                ),
+                                Term.Name("getOrElse")
+                              ),
+                              argClause = Term.ArgClause(List(Lit.String("unknown_value")))
+                            )
+                          )
+                        ),
+                        Term.Select(Term.Name("c"), Term.Name("history"))
                       )
-                    ),
-                    Term.Select(Term.Name("c"), Term.Name("history"))
+                    )
                   )
                 )
               )
@@ -656,7 +696,7 @@ class CirceJsonSupport(formats: Map[String, String], imports: Seq[String])
         }
     }
 
-    def genFlatMaps(args: List[Term.Param])(
+    def genFlatMaps(args: Seq[Term.Param])(
         genLastProperty: (Lit.String, Term.Name, Type, Term.Name, Option[Term]) => Term.Apply
     ): Term.Apply =
       args match {
@@ -700,17 +740,18 @@ class CirceJsonSupport(formats: Map[String, String], imports: Seq[String])
         implicit lazy val decoder: Decoder[$objectTypeName] =
           new Decoder[$objectTypeName] {
             def apply(c: HCursor): Decoder.Result[$objectTypeName] = {
-              ${genFlatMaps(classDef.ctor.paramss.flatten) { case (_, _, _, companionName, _) =>
-          val additionalParamName = Term.Name("_" + additional.propertyName)
+              ${genFlatMaps(classDef.ctor.paramClauses.flatten) {
+          case (_, _, _, companionName, _) =>
+            val additionalParamName = Term.Name("_" + additional.propertyName)
 
-          q"""
+            q"""
                 AdditionalProperties.decoder(c).flatMap {
                   $additionalParamName: Option[${additional.propertyType}] =>
                     $companionName.from( ..${generatePropertiesCode(classDef) { prop =>
-            Term.Name("_" + prop.name.value) :: Nil
-          }.collect { case t: Term =>
-            t
-          }},
+              Term.Name("_" + prop.name.value) :: Nil
+            }.collect { case t: Term =>
+              t
+            }},
             $additionalParamName
             ).swap.map(e => DecodingFailure(e.getMessage, Nil)).swap
             }
@@ -727,7 +768,7 @@ class CirceJsonSupport(formats: Map[String, String], imports: Seq[String])
         implicit lazy val decoder: Decoder[$objectTypeName] =
           new Decoder[$objectTypeName] {
             def apply(c: HCursor): Decoder.Result[$objectTypeName] = {
-              ${genFlatMaps(classDef.ctor.paramss.flatten) {
+              ${genFlatMaps(classDef.ctor.paramClauses.flatten) {
           case (fieldName, paramName, paramType, companionName, Some(default)) =>
             q"""
               c.getOrElse[$paramType]($fieldName)($default).flatMap {
@@ -762,17 +803,18 @@ class CirceJsonSupport(formats: Map[String, String], imports: Seq[String])
           implicit lazy val decoder: Decoder[$objectTypeName] =
           new Decoder[$objectTypeName] {
             def apply(c: HCursor): Decoder.Result[$objectTypeName] = {
-              ${genFlatMaps(classDef.ctor.paramss.flatten) { case (_, _, _, companionName, _) =>
-            val additionalParamName = Term.Name("_" + additional.propertyName)
+              ${genFlatMaps(classDef.ctor.paramClauses.flatten) {
+            case (_, _, _, companionName, _) =>
+              val additionalParamName = Term.Name("_" + additional.propertyName)
 
-            q"""
+              q"""
                 AdditionalProperties.decoder(c).map {
                   $additionalParamName: Option[${additional.propertyType}] =>
                     $companionName(..${generatePropertiesCode(classDef) { prop =>
-              Term.Name("_" + prop.name.value) :: Nil
-            }.collect { case t: Term =>
-              t
-            }}
+                Term.Name("_" + prop.name.value) :: Nil
+              }.collect { case t: Term =>
+                t
+              }}
               )($additionalParamName)
             }
            """
@@ -788,7 +830,7 @@ class CirceJsonSupport(formats: Map[String, String], imports: Seq[String])
         implicit lazy val decoder: Decoder[$objectTypeName] =
           new Decoder[$objectTypeName] {
             def apply(c: HCursor): Decoder.Result[$objectTypeName] = {
-              ${genFlatMaps(classDef.ctor.paramss.flatten) {
+              ${genFlatMaps(classDef.ctor.paramClauses.flatten) {
             case (fieldName, paramName, paramType, companionName, Some(default)) =>
               q"""
               c.getOrElse[$paramType]($fieldName)($default).map {
@@ -832,10 +874,11 @@ class CirceJsonSupport(formats: Map[String, String], imports: Seq[String])
     if (shouldDeriveJson(context.objectType)) {
       context.isMapType match {
         case Some(mapType) =>
-          val mapApply = Type.Apply(mapType.mapType, List(mapType.keyType, mapType.valueType))
+          val mapApply =
+            Type.Apply(mapType.mapType, Type.ArgClause(List(mapType.keyType, mapType.valueType)))
 
           val decodeType: Type.Apply = if (mapType.optional) {
-            Type.Apply(Type.Name("Option"), List(mapApply))
+            Type.Apply(Type.Name("Option"), Type.ArgClause(List(mapApply)))
           } else mapApply
 
           val jsonTypeHint = discriminatorValue(context.objectType).map(discriminatorValue => {
@@ -1007,55 +1050,63 @@ class CirceJsonSupport(formats: Map[String, String], imports: Seq[String])
     val enumDecode = Defn.Val(
       List(Mod.Implicit(), Mod.Lazy()),
       List(Pat.Var(Term.Name("decoder"))),
-      Some(Type.Apply(Type.Name("Decoder"), List(Type.Name(enumType.getName)))),
+      Some(Type.Apply(Type.Name("Decoder"), Type.ArgClause(List(Type.Name(enumType.getName))))),
       Term.Apply(
         Term.Select(
-          Term.ApplyType(Term.Name("Decoder"), List(Type.Name("String"))),
+          Term.ApplyType(Term.Name("Decoder"), Type.ArgClause(List(Type.Name("String")))),
           Term.Name("emap")
         ),
-        List(
-          Term.PartialFunction(
-            enumType.getEnum.asScala
-              .map(instance =>
-                Case(
-                  Lit.String(instance.getValue.toString),
-                  None,
-                  Term.Apply(
-                    Term.Name("Right"),
-                    List(Term.Name(instance.getValue.toString.toUpperCase))
-                  )
-                )
-              )
-              .toList ++ (params.generateDefaultEnumVariant match {
-              case Some(name) =>
-                List(
+        Term.ArgClause(
+          List(
+            Term.PartialFunction(
+              enumType.getEnum.asScala
+                .map(instance =>
                   Case(
-                    Pat.Var(Term.Name("other")),
+                    Lit.String(instance.getValue.toString),
                     None,
                     Term.Apply(
                       Term.Name("Right"),
-                      List(Term.Apply(Term.Name(name), List(Term.Name("other"))))
+                      Term.ArgClause(List(Term.Name(instance.getValue.toString.toUpperCase)))
                     )
                   )
                 )
-              case None =>
-                List(
-                  Case(
-                    Pat.Var(Term.Name("other")),
-                    None,
-                    Term.Apply(
-                      Term.Name("Left"),
-                      List(
-                        Term.Interpolate(
-                          Term.Name("s"),
-                          List(Lit.String("invalid enum value: "), Lit.String("")),
-                          List(Term.Name("other"))
+                .toList ++ (params.generateDefaultEnumVariant match {
+                case Some(name) =>
+                  List(
+                    Case(
+                      Pat.Var(Term.Name("other")),
+                      None,
+                      Term.Apply(
+                        Term.Name("Right"),
+                        Term.ArgClause(
+                          List(
+                            Term.Apply(Term.Name(name), Term.ArgClause(List(Term.Name("other"))))
+                          )
                         )
                       )
                     )
                   )
-                )
-            })
+                case None =>
+                  List(
+                    Case(
+                      Pat.Var(Term.Name("other")),
+                      None,
+                      Term.Apply(
+                        Term.Name("Left"),
+                        Term.ArgClause(
+                          List(
+                            Term.Interpolate(
+                              Term.Name("s"),
+                              List(Lit.String("invalid enum value: "), Lit.String("")),
+                              List(Term.Name("other"))
+                            )
+                          )
+                        )
+                      )
+                    )
+                  )
+              })
+            )
           )
         )
       )
@@ -1064,33 +1115,36 @@ class CirceJsonSupport(formats: Map[String, String], imports: Seq[String])
     val enumEncode = Defn.Val(
       List(Mod.Implicit(), Mod.Lazy()),
       List(Pat.Var(Term.Name("encoder"))),
-      Some(Type.Apply(Type.Name("Encoder"), List(Type.Name(enumType.getName)))),
+      Some(Type.Apply(Type.Name("Encoder"), Type.ArgClause(List(Type.Name(enumType.getName))))),
       Term.Apply(
         Term.Select(
-          Term.ApplyType(Term.Name("Encoder"), List(Type.Name("String"))),
+          Term.ApplyType(Term.Name("Encoder"), Type.ArgClause(List(Type.Name("String")))),
           Term.Name("contramap")
         ),
-        List(
-          Term.PartialFunction(
-            enumType.getEnum.asScala
-              .map(instance =>
-                Case(
-                  Term.Name(instance.getValue.toString.toUpperCase),
-                  None,
-                  Lit.String(instance.getValue.toString)
-                )
-              )
-              .toList ++ (params.generateDefaultEnumVariant match {
-              case Some(name) =>
-                List(
+        Term.ArgClause(
+          List(
+            Term.PartialFunction(
+              enumType.getEnum.asScala
+                .map(instance =>
                   Case(
-                    Pat.Extract(Term.Name(name), List(Pat.Var(Term.Name("value")))),
+                    Term.Name(instance.getValue.toString.toUpperCase),
                     None,
-                    Term.Name("value")
+                    Lit.String(instance.getValue.toString)
                   )
                 )
-              case None => Nil
-            })
+                .toList ++ (params.generateDefaultEnumVariant match {
+                case Some(name) =>
+                  List(
+                    Case(
+                      Pat
+                        .Extract(Term.Name(name), Pat.ArgClause(List(Pat.Var(Term.Name("value"))))),
+                      None,
+                      Term.Name("value")
+                    )
+                  )
+                case None => Nil
+              })
+            )
           )
         )
       )

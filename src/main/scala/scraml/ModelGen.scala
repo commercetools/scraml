@@ -200,13 +200,13 @@ final case class ModelGenContext(
     case Some(mapTypeSpec) =>
       val mapApply = Type.Apply(
         mapTypeSpec.mapType,
-        List(mapTypeSpec.keyType, mapTypeSpec.valueType)
+        Type.ArgClause(List(mapTypeSpec.keyType, mapTypeSpec.valueType))
       )
 
       val finalType = if (mapTypeSpec.optional) {
         Type.Apply(
           Type.Name("Option"),
-          List(mapApply)
+          Type.ArgClause(List(mapApply))
         )
       } else mapApply
 
@@ -238,13 +238,13 @@ trait LibrarySupport {
 
   object HasAnyProperties {
     def unapply(defn: Defn.Class): Boolean =
-      defn.ctor.paramss.exists(_.nonEmpty)
+      defn.ctor.paramClauses.exists(_.nonEmpty)
 
     def unapply(defn: Defn.Trait): Boolean =
       defn.templ.stats.exists {
         // a declaration without parameters is considered a property
-        case prop: Decl.Def if prop.paramss.isEmpty => true
-        case _                                      => false
+        case prop: Decl.Def if prop.paramClauses.isEmpty => true
+        case _                                           => false
       }
   }
 
@@ -359,7 +359,7 @@ trait LibrarySupport {
   final protected def generatePropertiesCode[A](defn: Defn.Class)(
       f: Term.Param => List[A]
   ): List[A] =
-    defn.ctor.paramss.headOption.fold(List.empty[A]) {
+    defn.ctor.paramClauses.headOption.fold(List.empty[A]) {
       _.flatMap(f)
     }
 
@@ -368,7 +368,7 @@ trait LibrarySupport {
   ): List[A] =
     defn.templ.stats
       .collect {
-        case prop: Decl.Def if prop.paramss.isEmpty => prop
+        case prop: Decl.Def if prop.paramClauses.isEmpty => prop
       }
       .flatMap(f)
 
@@ -552,11 +552,13 @@ object ModelGen {
         TypeRefDetails(
           Type.Apply(
             typeFromName(arrayType),
-            scalaTypeRef(array.getItems, false, itemTypeOverride, defaultAnyTypeName)
-              .map(
-                _.scalaType
-              )
-              .toList
+            Type.ArgClause(
+              scalaTypeRef(array.getItems, false, itemTypeOverride, defaultAnyTypeName)
+                .map(
+                  _.scalaType
+                )
+                .toList
+            )
           ),
           None,
           Some(Term.Select(packageTerm(arrayType), Term.Name("empty"))),
@@ -570,10 +572,12 @@ object ModelGen {
         TypeRefDetails(
           Type.Apply(
             Type.Name("Either"),
-            union.getOneOf.asScala
-              .flatMap(scalaTypeRef(_, false, None, defaultAnyTypeName))
-              .map(_.scalaType)
-              .toList
+            Type.ArgClause(
+              union.getOneOf.asScala
+                .flatMap(scalaTypeRef(_, false, None, defaultAnyTypeName))
+                .map(_.scalaType)
+                .toList
+            )
           )
         )
 
@@ -602,7 +606,7 @@ object ModelGen {
       case TypeRefDetails(baseType, packageName, Some(_), true) =>
         Some(
           TypeRef(
-            Type.Apply(Type.Name("Option"), List(baseType)),
+            Type.Apply(Type.Name("Option"), Type.ArgClause(List(baseType))),
             packageName,
             Some(q"None")
           )
@@ -611,7 +615,7 @@ object ModelGen {
       case TypeRefDetails(baseType, packageName, Some(defaultValue), false) =>
         Some(
           TypeRef(
-            Type.Apply(Type.Name("Option"), List(baseType)),
+            Type.Apply(Type.Name("Option"), Type.ArgClause(List(baseType))),
             packageName,
             Some(q"Some($defaultValue)")
           )
@@ -620,7 +624,7 @@ object ModelGen {
       case TypeRefDetails(baseType, packageName, None, _) =>
         Some(
           TypeRef(
-            Type.Apply(Type.Name("Option"), List(baseType)),
+            Type.Apply(Type.Name("Option"), Type.ArgClause(List(baseType))),
             packageName,
             Some(q"None")
           )
@@ -650,7 +654,7 @@ object ModelGen {
 
       Type.Apply(
         typeFromName(arrayType),
-        List(itemType)
+        Type.ArgClause(List(itemType))
       )
     case other =>
       context.api.typesByName

@@ -399,7 +399,8 @@ final class TapirSupport(endpointsObjectName: String) extends LibrarySupport {
                   Case(
                     Pat.Var(Term.Name("other")),
                     None,
-                    q"sttp.tapir.DecodeResult.Value(${Term.Apply(Term.Name(name), List(Term.Name("other")))})"
+                    q"sttp.tapir.DecodeResult.Value(${Term
+                      .Apply(Term.Name(name), Term.ArgClause(List(Term.Name("other"))))})"
                   )
                 )
               case None =>
@@ -431,7 +432,7 @@ final class TapirSupport(endpointsObjectName: String) extends LibrarySupport {
           )
         } ++ params.generateDefaultEnumVariant.map(name =>
           Case(
-            Pat.Extract(Term.Name(name), List(Pat.Var(Term.Name("value")))),
+            Pat.Extract(Term.Name(name), Pat.ArgClause(List(Pat.Var(Term.Name("value"))))),
             None,
             Term.Name("value")
           )

@@ -46,7 +46,7 @@ object SphereJsonSupport extends LibrarySupport with JsonSupport {
             None,
             Term.Apply(
               Term.Select(Term.Select(Term.Name(typeName), Term.Name("json")), Term.Name("write")),
-              List(Term.Name(caseName))
+              Term.ArgClause(List(Term.Name(caseName)))
             )
           ),
         }),
@@ -90,7 +90,7 @@ object SphereJsonSupport extends LibrarySupport with JsonSupport {
           Init(
             typeFromName("io.sphere.json.annotations.JSONTypeHint"),
             Name(""),
-            List(List(Lit.String(objectType.getDiscriminatorValue)))
+            Seq(Term.ArgClause(List(Lit.String(objectType.getDiscriminatorValue))))
           )
         )
       )
@@ -129,7 +129,7 @@ object SphereJsonSupport extends LibrarySupport with JsonSupport {
               Init(
                 typeFromName("io.sphere.json.annotations.JSONTypeHintField"),
                 Name(""),
-                List(List(Lit.String(context.objectType.getDiscriminator)))
+                Seq(Term.ArgClause(List(Lit.String(context.objectType.getDiscriminator))))
               )
             )
           )
