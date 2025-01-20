@@ -560,9 +560,8 @@ class CirceJsonSupport(formats: Map[String, String], imports: Seq[String])
       val importStats: List[Stat] = q"""import io.circe._
           import io.circe.generic.semiauto._
           import io.circe.syntax._
-          """.stats ++ formats.headOption.map(_ =>
-        q"import $packageObjectRef.Formats._"
-      ) ++ imports.map(pkg => s"import $pkg".parse[Stat].get)
+          """.stats ++ formats.headOption.map(_ => q"import $packageObjectRef.Formats._") ++ imports
+        .map(pkg => s"import $pkg".parse[Stat].get)
 
       val jsonTypeHint = discriminatorValue(objectType).map(discriminatorValue => {
         q"""
