@@ -5,7 +5,7 @@ val tapirVersion = "1.1.0"
 
 lazy val root = (project in file("."))
   .settings(
-    scalaVersion := "2.13.8",
+    scalaVersion := "2.13.15",
     name := "scraml-ct-api-circe-test",
     version := "0.1",
     ramlFile := Some(file("reference/api-specs/api/api.raml")),

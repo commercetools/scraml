@@ -1,5 +1,5 @@
 lazy val javas = List(
-  JavaSpec(JavaSpec.Distribution.Adopt, "15.0.2+7")
+  JavaSpec.temurin("21")
 )
 
 inThisBuild(
@@ -46,17 +46,17 @@ inThisBuild(
   )
 )
 
-val circeVersion = "0.14.6"
+val circeVersion = "0.14.10"
 
 lazy val root = (project in file("."))
   .enablePlugins(SbtPlugin, ParadoxSitePlugin, GhpagesPlugin)
   .settings(
     name                                          := "sbt-scraml",
-    libraryDependencies += "com.commercetools.rmf" % "raml-model"       % "0.2.0-20240119124459",
-    libraryDependencies += "org.scalameta"        %% "scalameta"        % "4.4.35",
-    libraryDependencies += "org.scalameta"        %% "scalafmt-dynamic" % "3.7.17",
-    libraryDependencies += "org.typelevel"        %% "cats-effect"      % "3.5.3",
-    libraryDependencies += "org.scalatest"        %% "scalatest"        % "3.2.17" % Test,
+    libraryDependencies += "com.commercetools.rmf" % "raml-model"       % "0.2.0-20240722205528",
+    libraryDependencies += "org.scalameta"        %% "scalameta"        % "4.12.6",
+    libraryDependencies += "org.scalameta"        %% "scalafmt-dynamic" % "3.8.5",
+    libraryDependencies += "org.typelevel"        %% "cats-effect"      % "3.5.7",
+    libraryDependencies += "org.scalatest"        %% "scalatest"        % "3.2.19" % Test,
     libraryDependencies ++= Seq(
       "io.circe" %% "circe-core",
       "io.circe" %% "circe-generic",
@@ -69,7 +69,7 @@ lazy val root = (project in file("."))
     },
     scriptedLaunchOpts := {
       scriptedLaunchOpts.value ++
-        Seq("-Xmx2048M", "-Dplugin.version=" + version.value)
+        Seq("-Xmx4G", "-Dplugin.version=" + version.value)
     },
     scriptedBufferLog               := false,
     git.remoteRepo                  := "git@github.com:commercetools/scraml.git",

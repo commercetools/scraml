@@ -1,6 +1,6 @@
 lazy val root = (project in file("."))
   .settings(
-    scalaVersion := "2.13.8",
+    scalaVersion := "2.13.15",
     name := "scraml-cats-test",
     version := "0.1",
     ramlFile := Some(file("api/simple.raml")),

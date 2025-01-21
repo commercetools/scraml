@@ -4,7 +4,7 @@ val tapirVersion = "1.10.7"
 
 lazy val root = (project in file("."))
   .settings(
-    scalaVersion := "2.13.14",
+    scalaVersion := "2.13.15",
     name := "scraml-tapir",
     version := "0.1",
     defaultTypes := scraml.DefaultTypes(

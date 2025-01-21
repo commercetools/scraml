@@ -3,11 +3,13 @@ package scraml
 import cats.effect.IO
 import cats.implicits.toTraverseOps
 import io.vrap.rmf.raml.model.modules.Api
-import io.vrap.rmf.raml.model.types._
+import io.vrap.rmf.raml.model.types.*
 import org.scalafmt.interfaces.Scalafmt
+
 import java.io.File
 import java.time.LocalDateTime
-import scala.meta._
+import scala.meta.*
+import scala.meta.Type.{ArgClause, ParamClause}
 
 sealed trait GeneratedSource {
   def name: String
@@ -89,7 +91,7 @@ object DefaultModelGen extends ModelGen {
         decltpe = Some(
           Type.Apply(
             Type.Name("Some"),
-            typeRef.map(_.scalaType).toList
+            ArgClause(typeRef.map(_.scalaType).toList)
           )
         ),
         rhs = q"Some($derivedName)"
@@ -123,43 +125,53 @@ object DefaultModelGen extends ModelGen {
     Defn.Class(
       mods = List(Mod.Final(), Mod.Case()),
       name = Type.Name(context.objectType.getName),
-      tparams = Nil,
+      tparamClause = ParamClause(Nil),
       ctor = Ctor.Primary(
         mods = Nil,
         name = Name.Anonymous(),
-        paramss = additionalProperties
+        paramClauses = additionalProperties
           .map(_.declareOwnerProperty())
           .fold(List(typeParamsToUse))(extra => List(typeParamsToUse) ::: List(List(extra)))
       ),
       templ = Template(
-        early = Nil,
+        earlyClause = None,
         inits = initFromTypeOpt(context.scalaBaseType.map(_.scalaType)) ++ initFromTypeOpt(
           context.extendType
         ),
-        self = Self(
-          name = Name.Anonymous(),
-          decltpe = None
+        body = Template.Body(
+          selfOpt = Some(
+            Self(
+              name = Name.Anonymous(),
+              decltpe = None
+            )
+          ),
+          stats = propertyOverrides
         ),
-        stats = propertyOverrides
+        derives = Nil
       )
     )
   }
 
   private def initFromTypeOpt(aType: Option[Type]): List[Init] =
-    aType.map(ref => List(Init(ref, Name(""), Nil))).getOrElse(Nil)
+    aType.map(ref => List(Init(ref, Name(""), Seq.empty))).getOrElse(Nil)
 
   private def companionObjectSource(typeName: String, stats: List[Stat] = Nil): Defn.Object = {
     Defn.Object(
       List(),
       Term.Name(typeName),
       Template(
-        early = Nil,
+        earlyClause = None,
         inits = Nil,
-        self = Self(
-          name = Name.Anonymous(),
-          decltpe = None
+        body = Template.Body(
+          selfOpt = Some(
+            Self(
+              name = Name.Anonymous(),
+              decltpe = None
+            )
+          ),
+          stats = stats
         ),
-        stats = stats
+        derives = Nil
       )
     )
   }
@@ -169,12 +181,19 @@ object DefaultModelGen extends ModelGen {
       mods = List(Mod.Case()),
       Term.Name(context.objectType.getName),
       Template(
-        early = Nil,
+        earlyClause = None,
         inits = initFromTypeOpt(context.scalaBaseType.map(_.scalaType)) ++ initFromTypeOpt(
           context.extendType
         ),
-        Self(Name(""), None),
-        stats = Nil,
+        body = Template.Body(
+          selfOpt = Some(
+            Self(
+              name = Name(""),
+              decltpe = None
+            )
+          ),
+          stats = Nil
+        ),
         derives = Nil
       )
     )
@@ -187,11 +206,10 @@ object DefaultModelGen extends ModelGen {
         .scalaTypeRef(property.getType, !property.getRequired)
         .map { scalaType =>
           Decl.Def(
-            Nil,
-            Term.Name(property.getName),
-            tparams = Nil,
-            paramss = Nil,
-            scalaType.scalaType
+            mods = Nil,
+            name = Term.Name(property.getName),
+            paramClauseGroups = Nil,
+            decltpe = scalaType.scalaType
           )
         }
     }.toList
@@ -204,15 +222,22 @@ object DefaultModelGen extends ModelGen {
     Defn.Trait(
       mods = sealedModOpt.toList,
       name = Type.Name(objectType.getName),
-      tparams = Nil,
-      ctor = Ctor.Primary(Nil, Name(""), Nil),
+      tparamClause = Type.ParamClause(Nil),
+      ctor = Ctor.Primary(Nil, Name(""), Seq.empty),
       templ = Template(
-        early = Nil,
+        earlyClause = None,
         inits = initFromTypeOpt(context.scalaBaseType.map(_.scalaType)) ++ initFromTypeOpt(
           context.extendType
         ),
-        self = Self(Name(""), None),
-        stats = defs,
+        body = Template.Body(
+          selfOpt = Some(
+            Self(
+              name = Name(""),
+              decltpe = None
+            )
+          ),
+          stats = defs
+        ),
         derives = Nil
       )
     )
@@ -229,10 +254,10 @@ object DefaultModelGen extends ModelGen {
       new IllegalStateException("enum type should have package name")
     )
     enumInstanceNames = stringType.getEnum.asScala.map(_.getValue.toString)
-    extendedType      = Init(Type.Name(stringType.getName), Name(""), Nil)
+    extendedType      = Init(Type.Name(stringType.getName), Name(""), Seq.empty)
     enumInstances: List[Stat] = enumInstanceNames.map { instanceName =>
       q"""
-         case object ${Term.Name(instanceName)} extends $extendedType
+         case object ${Term.Name(instanceName.toUpperCase())} extends $extendedType
        """
     }.toList
 
@@ -382,7 +407,7 @@ object DefaultModelGen extends ModelGen {
           packageFile.getParentFile.mkdirs()
           packageFile
         }
-        packageStatement = Pkg(packageTerm(s"${params.basePackage}"), Nil).toString()
+        packageStatement = Pkg(packageTerm(s"${params.basePackage}"), Pkg.Body(Nil)).toString()
         fileWithPackage <- FileUtil.writeToFile(file, s"$packageStatement\n\n")
         files <- generatedPackage.sources
           .map(appendSource(fileWithPackage, _, params.formatConfig, scalafmt))

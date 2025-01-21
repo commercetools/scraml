@@ -5,7 +5,7 @@ val refinedVersion = "0.9.27"
 
 lazy val root = (project in file("."))
   .settings(
-    scalaVersion := "2.13.8",
+    scalaVersion := "2.13.15",
     name := "scraml-refined-test",
     version := "0.1",
     ramlFile := Some(file("api/refined.raml")),

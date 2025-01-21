@@ -62,10 +62,10 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers with SourceCodeForm
                   |  implicit lazy val decoder: Decoder[NoDiscriminatorBase] = new Decoder[NoDiscriminatorBase] { override def apply(c: HCursor): Result[NoDiscriminatorBase] = NoDiscriminatorSub2.decoder.tryDecode(c).fold(_ => NoDiscriminatorSub1.decoder.tryDecode(c), Right(_)) }
                   |  implicit lazy val encoder: Encoder[NoDiscriminatorBase] = new Encoder[NoDiscriminatorBase] {
                   |    override def apply(nodiscriminatorbase: NoDiscriminatorBase): Json = nodiscriminatorbase match {
-                  |      case nodiscriminatorsub1: NoDiscriminatorSub1 =>
-                  |        NoDiscriminatorSub1.encoder(nodiscriminatorsub1)
-                  |      case nodiscriminatorsub2: NoDiscriminatorSub2 =>
-                  |        NoDiscriminatorSub2.encoder(nodiscriminatorsub2)
+                  |      case x: NoDiscriminatorSub1 =>
+                  |        NoDiscriminatorSub1.encoder(x)
+                  |      case x: NoDiscriminatorSub2 =>
+                  |        NoDiscriminatorSub2.encoder(x)
                   |    }
                   |  }
                   |}""".stripMargin.stripTrailingSpaces)
@@ -92,10 +92,10 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers with SourceCodeForm
                                                                       |  }
                                                                       |  implicit lazy val encoder: Encoder[BaseType] = new Encoder[BaseType] {
                                                                       |    override def apply(basetype: BaseType): Json = basetype match {
-                                                                      |      case datatype: DataType =>
-                                                                      |        DataType.encoder(datatype)
-                                                                      |      case grandchildtype: GrandchildType =>
-                                                                      |        GrandchildType.encoder(grandchildtype)
+                                                                      |      case x: DataType =>
+                                                                      |        DataType.encoder(x)
+                                                                      |      case x: GrandchildType =>
+                                                                      |        GrandchildType.encoder(x)
                                                                       |    }
                                                                       |  }
                                                                       |}""".stripMargin.stripTrailingSpaces
@@ -140,8 +140,8 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers with SourceCodeForm
                                                                        |  }
                                                                        |  implicit lazy val encoder: Encoder[EmptyBase] = new Encoder[EmptyBase] {
                                                                        |    override def apply(emptybase: EmptyBase): Json = emptybase match {
-                                                                       |      case noprops: NoProps.type =>
-                                                                       |        NoProps.encoder(noprops)
+                                                                       |      case x: NoProps.type =>
+                                                                       |        NoProps.encoder(x)
                                                                        |    }
                                                                        |  }
                                                                        |}""".stripMargin.stripTrailingSpaces
@@ -184,10 +184,10 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers with SourceCodeForm
                                                                           |  }
                                                                           |  implicit lazy val encoder: Encoder[NoSealedBase] = new Encoder[NoSealedBase] {
                                                                           |    override def apply(nosealedbase: NoSealedBase): Json = nosealedbase match {
-                                                                          |      case maplike: MapLike =>
-                                                                          |        MapLike.encoder(maplike)
-                                                                          |      case othersub: OtherSub =>
-                                                                          |        OtherSub.encoder(othersub)
+                                                                          |      case x: MapLike =>
+                                                                          |        MapLike.encoder(x)
+                                                                          |      case x: OtherSub =>
+                                                                          |        OtherSub.encoder(x)
                                                                           |    }
                                                                           |  }
                                                                           |}""".stripMargin.stripTrailingSpaces
@@ -220,21 +220,29 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers with SourceCodeForm
             s"""object SomeEnum {
                                                                       |  case object A extends SomeEnum
                                                                       |  case object B extends SomeEnum
+                                                                      |  case object ENUM extends SomeEnum
+                                                                      |  case object TYPE extends SomeEnum
                                                                       |  case class Unknown(value: String) extends SomeEnum
                                                                       |  import io.circe._
-                                                                      |  implicit lazy val encoder: Encoder[SomeEnum] = Encoder[String].contramap({
+                                                                      |  implicit lazy val encoder: Encoder[SomeEnum] = Encoder[String].contramap {
                                                                       |    case A => "A"
                                                                       |    case B => "B"
+                                                                      |    case ENUM => "enum"
+                                                                      |    case TYPE => "type"
                                                                       |    case Unknown(value) => value
-                                                                      |  })
-                                                                      |  implicit lazy val decoder: Decoder[SomeEnum] = Decoder[String].emap({
+                                                                      |  }
+                                                                      |  implicit lazy val decoder: Decoder[SomeEnum] = Decoder[String].emap {
                                                                       |    case "A" =>
                                                                       |      Right(A)
                                                                       |    case "B" =>
                                                                       |      Right(B)
+                                                                      |    case "enum" =>
+                                                                      |      Right(ENUM)
+                                                                      |    case "type" =>
+                                                                      |      Right(TYPE)
                                                                       |    case other =>
                                                                       |      Right(Unknown(other))
-                                                                      |  })
+                                                                      |  }
                                                                       |}""".stripMargin.stripTrailingSpaces
           )
         )
@@ -291,8 +299,8 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers with SourceCodeForm
                   |  }
                   |  implicit lazy val encoder: Encoder[IntermediateType] = new Encoder[IntermediateType] {
                   |    override def apply(intermediatetype: IntermediateType): Json = intermediatetype match {
-                  |      case grandchildtype: GrandchildType =>
-                  |        GrandchildType.encoder(grandchildtype)
+                  |      case x: GrandchildType =>
+                  |        GrandchildType.encoder(x)
                   |    }
                   |  }
                   |}""".stripMargin.stripTrailingSpaces)
@@ -360,8 +368,8 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers with SourceCodeForm
               |  implicit lazy val decoder: Decoder[ParentWithOption] = new Decoder[ParentWithOption] { override def apply(c: HCursor): Result[ParentWithOption] = DerivedWithRequired.decoder.tryDecode(c) }
               |  implicit lazy val encoder: Encoder[ParentWithOption] = new Encoder[ParentWithOption] {
               |    override def apply(parentwithoption: ParentWithOption): Json = parentwithoption match {
-              |      case derivedwithrequired: DerivedWithRequired =>
-              |        DerivedWithRequired.encoder(derivedwithrequired)
+              |      case x: DerivedWithRequired =>
+              |        DerivedWithRequired.encoder(x)
               |    }
               |  }
               |}""".stripMargin.stripTrailingSpaces
@@ -407,12 +415,12 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers with SourceCodeForm
                  |  }
                  |  implicit lazy val encoder: Encoder[KeyBaseDiscriminator] = new Encoder[KeyBaseDiscriminator] {
                  |    override def apply(keybasediscriminator: KeyBaseDiscriminator): Json = keybasediscriminator match {
-                 |      case keybaseprefixint: KeyBasePrefixInt =>
-                 |        KeyBasePrefixInt.encoder(keybaseprefixint)
-                 |      case keybaseprefixstring: KeyBasePrefixString =>
-                 |        KeyBasePrefixString.encoder(keybaseprefixstring)
-                 |      case keybasewildcard: KeyBaseWildcard =>
-                 |        KeyBaseWildcard.encoder(keybasewildcard)
+                 |      case x: KeyBasePrefixInt =>
+                 |        KeyBasePrefixInt.encoder(x)
+                 |      case x: KeyBasePrefixString =>
+                 |        KeyBasePrefixString.encoder(x)
+                 |      case x: KeyBaseWildcard =>
+                 |        KeyBaseWildcard.encoder(x)
                  |    }
                  |  }
                  |}""".stripMargin)
@@ -491,10 +499,10 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers with SourceCodeForm
                   |  implicit lazy val decoder: Decoder[NoDiscriminatorBase] = new Decoder[NoDiscriminatorBase] { override def apply(c: HCursor): Result[NoDiscriminatorBase] = NoDiscriminatorSub2.decoder.tryDecode(c).fold(_ => NoDiscriminatorSub1.decoder.tryDecode(c), Right(_)) }
                   |  implicit lazy val encoder: Encoder[NoDiscriminatorBase] = new Encoder[NoDiscriminatorBase] {
                   |    override def apply(nodiscriminatorbase: NoDiscriminatorBase): Json = nodiscriminatorbase match {
-                  |      case nodiscriminatorsub1: NoDiscriminatorSub1 =>
-                  |        NoDiscriminatorSub1.encoder(nodiscriminatorsub1)
-                  |      case nodiscriminatorsub2: NoDiscriminatorSub2 =>
-                  |        NoDiscriminatorSub2.encoder(nodiscriminatorsub2)
+                  |      case x: NoDiscriminatorSub1 =>
+                  |        NoDiscriminatorSub1.encoder(x)
+                  |      case x: NoDiscriminatorSub2 =>
+                  |        NoDiscriminatorSub2.encoder(x)
                   |    }
                   |  }
                   |}""".stripMargin.stripTrailingSpaces)
@@ -520,10 +528,10 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers with SourceCodeForm
                |  }
                |  implicit lazy val encoder: Encoder[BaseType] = new Encoder[BaseType] {
                |    override def apply(basetype: BaseType): Json = basetype match {
-               |      case datatype: DataType =>
-               |        DataType.encoder(datatype)
-               |      case grandchildtype: GrandchildType =>
-               |        GrandchildType.encoder(grandchildtype)
+               |      case x: DataType =>
+               |        DataType.encoder(x)
+               |      case x: GrandchildType =>
+               |        GrandchildType.encoder(x)
                |    }
                |  }
                |}""".stripMargin.stripTrailingSpaces)
@@ -564,12 +572,12 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers with SourceCodeForm
                  |      final def apply(c: HCursor): Decoder.Result[Option[AdditionalProperties]] = {
                  |        val allKeys = c.keys.fold(Set.empty[String])(_.toSet)
                  |        Right(Option(allKeys.filterNot(propertyNames.contains)).filterNot(_.isEmpty).map {
-                 |          _.foldLeft(scala.collection.immutable.Map.newBuilder[String, Json])({
+                 |          _.foldLeft(scala.collection.immutable.Map.newBuilder[String, Json]) {
                  |            case (accum, key) =>
                  |              c.downField(key).focus.fold(accum) {
                  |                v => accum += key -> v
                  |              }
-                 |          })
+                 |          }
                  |        }.map(b => AdditionalProperties(b.result())))
                  |      }
                  |    }
@@ -619,8 +627,8 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers with SourceCodeForm
                   |  }
                   |  implicit lazy val encoder: Encoder[EmptyBase] = new Encoder[EmptyBase] {
                   |    override def apply(emptybase: EmptyBase): Json = emptybase match {
-                  |      case noprops: NoProps =>
-                  |        NoProps.encoder(noprops)
+                  |      case x: NoProps =>
+                  |        NoProps.encoder(x)
                   |    }
                   |  }
                   |}""".stripMargin.stripTrailingSpaces)
@@ -658,12 +666,12 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers with SourceCodeForm
               |      final def apply(c: HCursor): Decoder.Result[Option[AdditionalProperties]] = {
               |        val allKeys = c.keys.fold(Set.empty[String])(_.toSet)
               |        Right(Option(allKeys.filterNot(propertyNames.contains)).filterNot(_.isEmpty).map {
-              |          _.foldLeft(scala.collection.immutable.Map.newBuilder[String, Json])({
+              |          _.foldLeft(scala.collection.immutable.Map.newBuilder[String, Json]) {
               |            case (accum, key) =>
               |              c.downField(key).focus.fold(accum) {
               |                v => accum += key -> v
               |              }
-              |          })
+              |          }
               |        }.map(b => AdditionalProperties(b.result())))
               |      }
               |    }
@@ -709,10 +717,10 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers with SourceCodeForm
                |  }
                |  implicit lazy val encoder: Encoder[NoSealedBase] = new Encoder[NoSealedBase] {
                |    override def apply(nosealedbase: NoSealedBase): Json = nosealedbase match {
-               |      case maplike: MapLike =>
-               |        MapLike.encoder(maplike)
-               |      case othersub: OtherSub =>
-               |        OtherSub.encoder(othersub)
+               |      case x: MapLike =>
+               |        MapLike.encoder(x)
+               |      case x: OtherSub =>
+               |        OtherSub.encoder(x)
                |    }
                |  }
                |}""".stripMargin.stripTrailingSpaces
@@ -745,19 +753,27 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers with SourceCodeForm
             """object SomeEnum {
               |  case object A extends SomeEnum
               |  case object B extends SomeEnum
+              |  case object ENUM extends SomeEnum
+              |  case object TYPE extends SomeEnum
               |  import io.circe._
-              |  implicit lazy val encoder: Encoder[SomeEnum] = Encoder[String].contramap({
+              |  implicit lazy val encoder: Encoder[SomeEnum] = Encoder[String].contramap {
               |    case A => "A"
               |    case B => "B"
-              |  })
-              |  implicit lazy val decoder: Decoder[SomeEnum] = Decoder[String].emap({
+              |    case ENUM => "enum"
+              |    case TYPE => "type"
+              |  }
+              |  implicit lazy val decoder: Decoder[SomeEnum] = Decoder[String].emap {
               |    case "A" =>
               |      Right(A)
               |    case "B" =>
               |      Right(B)
+              |    case "enum" =>
+              |      Right(ENUM)
+              |    case "type" =>
+              |      Right(TYPE)
               |    case other =>
               |      Left(s"invalid enum value: $other")
-              |  })
+              |  }
               |}""".stripMargin.stripTrailingSpaces
           )
         )
@@ -794,12 +810,12 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers with SourceCodeForm
               |      final def apply(c: HCursor): Decoder.Result[Option[AdditionalProperties]] = {
               |        val allKeys = c.keys.fold(Set.empty[String])(_.toSet)
               |        Right(Option(allKeys.filterNot(propertyNames.contains)).filterNot(_.isEmpty).map {
-              |          _.foldLeft(scala.collection.immutable.Map.newBuilder[String, Json])({
+              |          _.foldLeft(scala.collection.immutable.Map.newBuilder[String, Json]) {
               |            case (accum, key) =>
               |              c.downField(key).focus.fold(accum) {
               |                v => accum += key -> v
               |              }
-              |          })
+              |          }
               |        }.map(b => AdditionalProperties(b.result())))
               |      }
               |    }
@@ -863,8 +879,8 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers with SourceCodeForm
                   |  }
                   |  implicit lazy val encoder: Encoder[IntermediateType] = new Encoder[IntermediateType] {
                   |    override def apply(intermediatetype: IntermediateType): Json = intermediatetype match {
-                  |      case grandchildtype: GrandchildType =>
-                  |        GrandchildType.encoder(grandchildtype)
+                  |      case x: GrandchildType =>
+                  |        GrandchildType.encoder(x)
                   |    }
                   |  }
                   |}""".stripMargin.stripTrailingSpaces)
@@ -901,12 +917,12 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers with SourceCodeForm
               |      final def apply(c: HCursor): Decoder.Result[Option[AdditionalProperties]] = {
               |        val allKeys = c.keys.fold(Set.empty[String])(_.toSet)
               |        Right(Option(allKeys.filterNot(propertyNames.contains)).filterNot(_.isEmpty).map {
-              |          _.foldLeft(scala.collection.immutable.Map.newBuilder[String, Json])({
+              |          _.foldLeft(scala.collection.immutable.Map.newBuilder[String, Json]) {
               |            case (accum, key) =>
               |              c.downField(key).focus.fold(accum) {
               |                v => accum += key -> v
               |              }
-              |          })
+              |          }
               |        }.map(b => AdditionalProperties(b.result())))
               |      }
               |    }
@@ -981,12 +997,12 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers with SourceCodeForm
                |      final def apply(c: HCursor): Decoder.Result[Option[AdditionalProperties]] = {
                |        val allKeys = c.keys.fold(Set.empty[String])(_.toSet)
                |        Right(Option(allKeys.filterNot(propertyNames.contains)).filterNot(_.isEmpty).map {
-               |          _.foldLeft(scala.collection.immutable.Map.newBuilder[String, Json])({
+               |          _.foldLeft(scala.collection.immutable.Map.newBuilder[String, Json]) {
                |            case (accum, key) =>
                |              c.downField(key).focus.fold(accum) {
                |                v => accum += key -> v
                |              }
-               |          })
+               |          }
                |        }.map(b => AdditionalProperties(b.result())))
                |      }
                |    }

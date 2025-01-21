@@ -329,10 +329,17 @@ final class TapirSupport(endpointsObjectName: String) extends LibrarySupport {
                 mods = Nil,
                 Term.Name(baseName),
                 Template(
-                  early = Nil,
+                  earlyClause = None,
                   inits = Nil,
-                  Self(Name(""), None),
-                  stats = resources.flatMap(_.paramTypeDef) ++ resources.map(_.endpointValueDef),
+                  body = Template.Body(
+                    selfOpt = Some(
+                      Self(
+                        name = Name(""),
+                        decltpe = None
+                      )
+                    ),
+                    stats = resources.flatMap(_.paramTypeDef) ++ resources.map(_.endpointValueDef)
+                  ),
                   derives = Nil
                 )
               )
@@ -343,10 +350,17 @@ final class TapirSupport(endpointsObjectName: String) extends LibrarySupport {
         mods = Nil,
         Term.Name(endpointsObjectName),
         Template(
-          early = Nil,
+          earlyClause = None,
           inits = Nil,
-          Self(Name(""), None),
-          stats = endpointsGrouped,
+          body = Template.Body(
+            selfOpt = Some(
+              Self(
+                name = Name(""),
+                decltpe = None
+              )
+            ),
+            stats = endpointsGrouped
+          ),
           derives = Nil
         )
       )
@@ -389,7 +403,7 @@ final class TapirSupport(endpointsObjectName: String) extends LibrarySupport {
           Case(
             Lit.String(enum.getValue.toString),
             None,
-            q"sttp.tapir.DecodeResult.Value(${Term.Name(enum.getValue.toString)})"
+            q"sttp.tapir.DecodeResult.Value(${Term.Name(enum.getValue.toString.toUpperCase())})"
           )
         }
           ++
@@ -399,7 +413,8 @@ final class TapirSupport(endpointsObjectName: String) extends LibrarySupport {
                   Case(
                     Pat.Var(Term.Name("other")),
                     None,
-                    q"sttp.tapir.DecodeResult.Value(${Term.Apply(Term.Name(name), List(Term.Name("other")))})"
+                    q"sttp.tapir.DecodeResult.Value(${Term
+                      .Apply(Term.Name(name), Term.ArgClause(List(Term.Name("other"))))})"
                   )
                 )
               case None =>
@@ -425,13 +440,13 @@ final class TapirSupport(endpointsObjectName: String) extends LibrarySupport {
         ${Term.PartialFunction(
         enumNames.map { enum =>
           Case(
-            Term.Name(enum),
+            Term.Name(enum.toUpperCase),
             None,
             Lit.String(enum)
           )
         } ++ params.generateDefaultEnumVariant.map(name =>
           Case(
-            Pat.Extract(Term.Name(name), List(Pat.Var(Term.Name("value")))),
+            Pat.Extract(Term.Name(name), Pat.ArgClause(List(Pat.Var(Term.Name("value"))))),
             None,
             Term.Name("value")
           )

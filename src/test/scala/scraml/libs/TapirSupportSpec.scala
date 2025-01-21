@@ -103,30 +103,44 @@ final class TapirSupportSpec
           """object SomeEnum {
             |  case object A extends SomeEnum
             |  case object B extends SomeEnum
+            |  case object ENUM extends SomeEnum
+            |  case object TYPE extends SomeEnum
             |  import io.circe._
-            |  implicit lazy val encoder: Encoder[SomeEnum] = Encoder[String].contramap({
+            |  implicit lazy val encoder: Encoder[SomeEnum] = Encoder[String].contramap {
             |    case A => "A"
             |    case B => "B"
-            |  })
-            |  implicit lazy val decoder: Decoder[SomeEnum] = Decoder[String].emap({
+            |    case ENUM => "enum"
+            |    case TYPE => "type"
+            |  }
+            |  implicit lazy val decoder: Decoder[SomeEnum] = Decoder[String].emap {
             |    case "A" =>
             |      Right(A)
             |    case "B" =>
             |      Right(B)
+            |    case "enum" =>
+            |      Right(ENUM)
+            |    case "type" =>
+            |      Right(TYPE)
             |    case other =>
             |      Left(s"invalid enum value: $other")
-            |  })
-            |  implicit lazy val tapirCodec: sttp.tapir.Codec.PlainCodec[SomeEnum] = sttp.tapir.Codec.string.mapDecode[SomeEnum]({
+            |  }
+            |  implicit lazy val tapirCodec: sttp.tapir.Codec.PlainCodec[SomeEnum] = sttp.tapir.Codec.string.mapDecode[SomeEnum] {
             |    case "A" =>
             |      sttp.tapir.DecodeResult.Value(A)
             |    case "B" =>
             |      sttp.tapir.DecodeResult.Value(B)
+            |    case "enum" =>
+            |      sttp.tapir.DecodeResult.Value(ENUM)
+            |    case "type" =>
+            |      sttp.tapir.DecodeResult.Value(TYPE)
             |    case other =>
-            |      sttp.tapir.DecodeResult.InvalidValue(sttp.tapir.ValidationError[String](sttp.tapir.Validator.enumeration(List("A", "B")), other) :: Nil)
-            |  })({
+            |      sttp.tapir.DecodeResult.InvalidValue(sttp.tapir.ValidationError[String](sttp.tapir.Validator.enumeration(List("A", "B", "enum", "type")), other) :: Nil)
+            |  } {
             |    case A => "A"
             |    case B => "B"
-            |  })
+            |    case ENUM => "enum"
+            |    case TYPE => "type"
+            |  }
             |}""".stripMargin
         )
       )
@@ -153,33 +167,47 @@ final class TapirSupportSpec
           """object SomeEnum {
             |  case object A extends SomeEnum
             |  case object B extends SomeEnum
+            |  case object ENUM extends SomeEnum
+            |  case object TYPE extends SomeEnum
             |  case class Unknown(value: String) extends SomeEnum
             |  import io.circe._
-            |  implicit lazy val encoder: Encoder[SomeEnum] = Encoder[String].contramap({
+            |  implicit lazy val encoder: Encoder[SomeEnum] = Encoder[String].contramap {
             |    case A => "A"
             |    case B => "B"
+            |    case ENUM => "enum"
+            |    case TYPE => "type"
             |    case Unknown(value) => value
-            |  })
-            |  implicit lazy val decoder: Decoder[SomeEnum] = Decoder[String].emap({
+            |  }
+            |  implicit lazy val decoder: Decoder[SomeEnum] = Decoder[String].emap {
             |    case "A" =>
             |      Right(A)
             |    case "B" =>
             |      Right(B)
+            |    case "enum" =>
+            |      Right(ENUM)
+            |    case "type" =>
+            |      Right(TYPE)
             |    case other =>
             |      Right(Unknown(other))
-            |  })
-            |  implicit lazy val tapirCodec: sttp.tapir.Codec.PlainCodec[SomeEnum] = sttp.tapir.Codec.string.mapDecode[SomeEnum]({
+            |  }
+            |  implicit lazy val tapirCodec: sttp.tapir.Codec.PlainCodec[SomeEnum] = sttp.tapir.Codec.string.mapDecode[SomeEnum] {
             |    case "A" =>
             |      sttp.tapir.DecodeResult.Value(A)
             |    case "B" =>
             |      sttp.tapir.DecodeResult.Value(B)
+            |    case "enum" =>
+            |      sttp.tapir.DecodeResult.Value(ENUM)
+            |    case "type" =>
+            |      sttp.tapir.DecodeResult.Value(TYPE)
             |    case other =>
             |      sttp.tapir.DecodeResult.Value(Unknown(other))
-            |  })({
+            |  } {
             |    case A => "A"
             |    case B => "B"
+            |    case ENUM => "enum"
+            |    case TYPE => "type"
             |    case Unknown(value) => value
-            |  })
+            |  }
             |}""".stripMargin
         )
       )
