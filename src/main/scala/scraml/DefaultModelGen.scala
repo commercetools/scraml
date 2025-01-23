@@ -257,7 +257,7 @@ object DefaultModelGen extends ModelGen {
     extendedType      = Init(Type.Name(stringType.getName), Name(""), Seq.empty)
     enumInstances: List[Stat] = enumInstanceNames.map { instanceName =>
       q"""
-         case object ${Term.Name(instanceName.toUpperCase())} extends $extendedType
+         case object ${Term.Name(instanceName)} extends $extendedType
        """
     }.toList
 
@@ -379,11 +379,19 @@ object DefaultModelGen extends ModelGen {
       file: File,
       source: GeneratedSource,
       formatConfig: Option[File],
+      dialect: Dialect,
       formatter: Scalafmt
   ): IO[GeneratedFile] = {
-    val sourceString =
-      s"${source.comment.map(_ + "\n").getOrElse("")}${source.source
-        .toString()}\n${source.companion.map(_.toString() + "\n").getOrElse("")}\n"
+
+    // We're using printSyntaxFor to ensure generating valid syntax for different Scala versions
+    val sourceString = {
+      s"""
+       |${source.comment.map(_ + "\n").getOrElse("")}
+       |${source.source.printSyntaxFor(dialect)}
+       |${source.companion.map(_.printSyntaxFor(dialect) + "\n").getOrElse("")}
+       |""".stripMargin
+    }
+
     val formattedSource = formatConfig match {
       case Some(configFile) if configFile.exists() =>
         formatter.format(configFile.toPath, file.toPath, sourceString)
@@ -407,10 +415,11 @@ object DefaultModelGen extends ModelGen {
           packageFile.getParentFile.mkdirs()
           packageFile
         }
-        packageStatement = Pkg(packageTerm(s"${params.basePackage}"), Pkg.Body(Nil)).toString()
+        packageStatement = Pkg(packageTerm(s"${params.basePackage}"), Pkg.Body(Nil))
+          .printSyntaxFor(params.dialect)
         fileWithPackage <- FileUtil.writeToFile(file, s"$packageStatement\n\n")
         files <- generatedPackage.sources
-          .map(appendSource(fileWithPackage, _, params.formatConfig, scalafmt))
+          .map(appendSource(fileWithPackage, _, params.formatConfig, params.dialect, scalafmt))
           .sequence
       } yield files
     }

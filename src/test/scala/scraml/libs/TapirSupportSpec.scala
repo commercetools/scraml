@@ -67,8 +67,8 @@ final class TapirSupportSpec
         |    }
         |  }
         |  private implicit val queryOptionalCollectionCodec: Codec[List[String], Option[scala.collection.immutable.List[String]], TextPlain] = new Codec[List[String], Option[scala.collection.immutable.List[String]], TextPlain] {
-        |    override def rawDecode(l: List[String]): DecodeResult[Option[scala.collection.immutable.List[String]]] = DecodeResult.Value(Some(l.to[scala.collection.immutable.List]))
-        |    override def encode(h: Option[scala.collection.immutable.List[String]]): List[String] = h.map(_.to[List]).getOrElse(Nil)
+        |    override def rawDecode(l: List[String]): DecodeResult[Option[scala.collection.immutable.List[String]]] = DecodeResult.Value(Some(l.to(scala.collection.immutable.List)))
+        |    override def encode(h: Option[scala.collection.immutable.List[String]]): List[String] = h.map(_.to(List)).getOrElse(Nil)
         |    override lazy val schema: Schema[Option[scala.collection.immutable.List[String]]] = Schema.binary
         |    override lazy val format: TextPlain = TextPlain()
         |  }
@@ -103,14 +103,14 @@ final class TapirSupportSpec
           """object SomeEnum {
             |  case object A extends SomeEnum
             |  case object B extends SomeEnum
-            |  case object ENUM extends SomeEnum
-            |  case object TYPE extends SomeEnum
+            |  case object enum extends SomeEnum
+            |  case object `type` extends SomeEnum
             |  import io.circe._
             |  implicit lazy val encoder: Encoder[SomeEnum] = Encoder[String].contramap {
             |    case A => "A"
             |    case B => "B"
-            |    case ENUM => "enum"
-            |    case TYPE => "type"
+            |    case `enum` => "enum"
+            |    case `type` => "type"
             |  }
             |  implicit lazy val decoder: Decoder[SomeEnum] = Decoder[String].emap {
             |    case "A" =>
@@ -118,9 +118,9 @@ final class TapirSupportSpec
             |    case "B" =>
             |      Right(B)
             |    case "enum" =>
-            |      Right(ENUM)
+            |      Right(enum)
             |    case "type" =>
-            |      Right(TYPE)
+            |      Right(`type`)
             |    case other =>
             |      Left(s"invalid enum value: $other")
             |  }
@@ -130,16 +130,16 @@ final class TapirSupportSpec
             |    case "B" =>
             |      sttp.tapir.DecodeResult.Value(B)
             |    case "enum" =>
-            |      sttp.tapir.DecodeResult.Value(ENUM)
+            |      sttp.tapir.DecodeResult.Value(enum)
             |    case "type" =>
-            |      sttp.tapir.DecodeResult.Value(TYPE)
+            |      sttp.tapir.DecodeResult.Value(`type`)
             |    case other =>
             |      sttp.tapir.DecodeResult.InvalidValue(sttp.tapir.ValidationError[String](sttp.tapir.Validator.enumeration(List("A", "B", "enum", "type")), other) :: Nil)
             |  } {
             |    case A => "A"
             |    case B => "B"
-            |    case ENUM => "enum"
-            |    case TYPE => "type"
+            |    case `enum` => "enum"
+            |    case `type` => "type"
             |  }
             |}""".stripMargin
         )
@@ -167,15 +167,15 @@ final class TapirSupportSpec
           """object SomeEnum {
             |  case object A extends SomeEnum
             |  case object B extends SomeEnum
-            |  case object ENUM extends SomeEnum
-            |  case object TYPE extends SomeEnum
+            |  case object enum extends SomeEnum
+            |  case object `type` extends SomeEnum
             |  case class Unknown(value: String) extends SomeEnum
             |  import io.circe._
             |  implicit lazy val encoder: Encoder[SomeEnum] = Encoder[String].contramap {
             |    case A => "A"
             |    case B => "B"
-            |    case ENUM => "enum"
-            |    case TYPE => "type"
+            |    case `enum` => "enum"
+            |    case `type` => "type"
             |    case Unknown(value) => value
             |  }
             |  implicit lazy val decoder: Decoder[SomeEnum] = Decoder[String].emap {
@@ -184,9 +184,9 @@ final class TapirSupportSpec
             |    case "B" =>
             |      Right(B)
             |    case "enum" =>
-            |      Right(ENUM)
+            |      Right(enum)
             |    case "type" =>
-            |      Right(TYPE)
+            |      Right(`type`)
             |    case other =>
             |      Right(Unknown(other))
             |  }
@@ -196,16 +196,16 @@ final class TapirSupportSpec
             |    case "B" =>
             |      sttp.tapir.DecodeResult.Value(B)
             |    case "enum" =>
-            |      sttp.tapir.DecodeResult.Value(ENUM)
+            |      sttp.tapir.DecodeResult.Value(enum)
             |    case "type" =>
-            |      sttp.tapir.DecodeResult.Value(TYPE)
+            |      sttp.tapir.DecodeResult.Value(`type`)
             |    case other =>
             |      sttp.tapir.DecodeResult.Value(Unknown(other))
             |  } {
             |    case A => "A"
             |    case B => "B"
-            |    case ENUM => "enum"
-            |    case TYPE => "type"
+            |    case `enum` => "enum"
+            |    case `type` => "type"
             |    case Unknown(value) => value
             |  }
             |}""".stripMargin
@@ -267,8 +267,8 @@ final class TapirSupportSpec
           |    }
           |  }
           |  private implicit val queryOptionalCollectionCodec: Codec[List[String], Option[scala.collection.immutable.List[String]], TextPlain] = new Codec[List[String], Option[scala.collection.immutable.List[String]], TextPlain] {
-          |    override def rawDecode(l: List[String]): DecodeResult[Option[scala.collection.immutable.List[String]]] = DecodeResult.Value(Some(l.to[scala.collection.immutable.List]))
-          |    override def encode(h: Option[scala.collection.immutable.List[String]]): List[String] = h.map(_.to[List]).getOrElse(Nil)
+          |    override def rawDecode(l: List[String]): DecodeResult[Option[scala.collection.immutable.List[String]]] = DecodeResult.Value(Some(l.to(scala.collection.immutable.List)))
+          |    override def encode(h: Option[scala.collection.immutable.List[String]]): List[String] = h.map(_.to(List)).getOrElse(Nil)
           |    override lazy val schema: Schema[Option[scala.collection.immutable.List[String]]] = Schema.binary
           |    override lazy val format: TextPlain = TextPlain()
           |  }

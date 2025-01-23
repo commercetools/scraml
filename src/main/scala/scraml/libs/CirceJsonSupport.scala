@@ -648,7 +648,7 @@ class CirceJsonSupport(formats: Map[String, String], imports: Seq[String])
           propertyType match {
             case Some(stringEnum: StringType) if isEnumType(stringEnum) =>
               val enumType     = Term.Name(stringEnum.getName)
-              val enumInstance = Term.Name(stringEnum.getDefault.getValue.toString.toUpperCase)
+              val enumInstance = Term.Name(stringEnum.getDefault.getValue.toString)
 
               if (isRequired)
                 Option(q"$enumType.$enumInstance")
@@ -1080,7 +1080,7 @@ class CirceJsonSupport(formats: Map[String, String], imports: Seq[String])
                     None,
                     Term.Apply(
                       Term.Name("Right"),
-                      Term.ArgClause(List(Term.Name(instance.getValue.toString.toUpperCase)))
+                      Term.ArgClause(List(Term.Name(instance.getValue.toString)))
                     )
                   )
                 )
@@ -1141,7 +1141,7 @@ class CirceJsonSupport(formats: Map[String, String], imports: Seq[String])
               enumType.getEnum.asScala
                 .map(instance =>
                   Case(
-                    Term.Name(instance.getValue.toString.toUpperCase),
+                    Term.Name(instance.getValue.toString),
                     None,
                     Lit.String(instance.getValue.toString)
                   )
@@ -1171,6 +1171,6 @@ class CirceJsonSupport(formats: Map[String, String], imports: Seq[String])
         $enumDecode
        """.stats
 
-    DefnWithCompanion(enumTrait, companion.map(appendObjectStats(_, stats)))
+    DefnWithCompanion(enumTrait, companion.map(appendObjectStats(_, stats)(params.dialect)))
   }
 }

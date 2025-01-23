@@ -43,7 +43,7 @@ final case class ModelGenParams(
     fieldMatchPolicy: FieldMatchPolicy,
     defaultTypes: DefaultTypes,
     librarySupport: Set[LibrarySupport],
-    scalaVersion: Option[(Long, Long)] = Some((2, 12)),
+    scalaVersion: Option[(Long, Long)] = Some((2, 13)),
     formatConfig: Option[File] = None,
     generateDateCreated: Boolean = false,
     logger: Option[ManagedLogger] = None,
@@ -54,6 +54,12 @@ final case class ModelGenParams(
     generateDefaultEnumVariant: Option[String] = None
 ) {
   lazy val allLibraries: List[LibrarySupport] = librarySupport.toList.sorted
+  def dialect: Dialect = scalaVersion match {
+    case Some((2, 12)) => dialects.Scala212
+    case Some((2, 13)) => dialects.Scala213
+    case Some((3, _))  => dialects.Scala3
+    case _          => dialects.Scala213
+  }
 }
 
 final case class GeneratedModel(sourceFiles: Seq[GeneratedFile], packageObject: GeneratedFile) {
@@ -434,8 +440,21 @@ object LibrarySupport {
       lib.modifyEnum(enumType, params)(acc.defn, acc.companion)
     }
 
-  def appendObjectStats(defn: Defn.Object, stats: List[Stat]): Defn.Object =
-    defn.copy(templ = defn.templ.copy(stats = defn.templ.body.stats ++ stats))
+  def appendObjectStats(defn: Defn.Object, stats: List[Stat])(implicit dialect: Dialect): Defn.Object = {
+    // copy on Defn.Object and on Template.Body loses dialect information, so we're building them manually,
+    // even though we currently don't rely on dialects while building the tree
+    Defn.Object(
+      mods = defn.mods,
+      name = defn.name,
+      templ = defn.templ.copy(
+        earlyClause = defn.templ.earlyClause,
+        inits = defn.templ.inits,
+        body = Template.Body(selfOpt = None, stats = defn.templ.body.stats ++ stats),
+        derives = defn.templ.derives
+      )
+    )
+  }
+
   def appendPkgObjectStats(packageObject: Pkg.Object, stats: List[Stat]): Pkg.Object =
     packageObject.copy(templ =
       packageObject.templ.copy(stats = packageObject.templ.body.stats ++ stats)
@@ -471,7 +490,7 @@ object ModelGen {
     def addDefaultEnum(property: StringType): TypeRefDetails = {
       Option(property.getDefault).fold(this) { instance =>
         val enumType     = Term.Name(property.getName)
-        val enumInstance = Term.Name(instance.getValue.toString.toUpperCase)
+        val enumInstance = Term.Name(instance.getValue.toString)
 
         copy(defaultValue = Option(q"$enumType.$enumInstance"))
       }
