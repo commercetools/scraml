@@ -1,10 +1,11 @@
-val circeVersion = "0.14.7"
-val refinedVersion = "0.11.1"
-val tapirVersion = "1.10.7"
+val circeVersion = "0.14.10"
+val refinedVersion = "0.11.3"
+val tapirVersion = "1.11.9"
 
 lazy val root = (project in file("."))
   .settings(
-    scalaVersion := "2.13.15",
+    scalaVersion := "2.13.16",
+    crossScalaVersions ++= Seq("3.3.4"),
     name := "scraml-tapir",
     version := "0.1",
     defaultTypes := scraml.DefaultTypes(
@@ -31,7 +32,6 @@ lazy val root = (project in file("."))
       )
     ),
     Compile / sourceGenerators += runScraml,
-    libraryDependencies += "com.chuusai" %% "shapeless" % "2.3.7",
     libraryDependencies ++= Seq(
       "eu.timepit" %% "refined",
       "eu.timepit" %% "refined-cats"
@@ -40,8 +40,8 @@ lazy val root = (project in file("."))
         "io.circe" %% "circe-core",
         "io.circe" %% "circe-generic",
         "io.circe" %% "circe-parser",
-        "io.circe" %% "circe-refined"
     ).map(_ % circeVersion),
+    libraryDependencies += "io.circe" %% "circe-refined" % "0.15.1",
     libraryDependencies ++= Seq(
       "com.softwaremill.sttp.tapir" %% "tapir-core",
       "com.softwaremill.sttp.tapir" %% "tapir-json-circe"

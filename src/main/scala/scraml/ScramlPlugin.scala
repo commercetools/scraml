@@ -82,7 +82,7 @@ object ScramlPlugin extends AutoPlugin {
             CrossVersion.partialVersion(scalaVersion.value),
             s.log
           )
-
+          s.log.info(s"generating API model targeting Scala ${scalaVersion.value}")
           val generated = ModelGenRunner.run(DefaultModelGen)(params).unsafeRunSync()
 
           s.log.info(s"generated API model for ${definition.raml} in $targetDir")

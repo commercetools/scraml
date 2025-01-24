@@ -45,8 +45,8 @@ class SphereJsonSupportSpec extends AnyFlatSpec with Matchers {
         someEnum.source.companion.map(_.toString()) should be(Some(s"""object SomeEnum {
             |  case object A extends SomeEnum
             |  case object B extends SomeEnum
-            |  case object ENUM extends SomeEnum
-            |  case object TYPE extends SomeEnum
+            |  case object enum extends SomeEnum
+            |  case object `type` extends SomeEnum
             |  import io.sphere.json.ToJSON
             |  import io.sphere.json.FromJSON
             |  import io.sphere.json.JSONParseError
@@ -61,9 +61,9 @@ class SphereJsonSupportSpec extends AnyFlatSpec with Matchers {
             |    case "B" =>
             |      B.valid
             |    case "enum" =>
-            |      ENUM.valid
+            |      enum.valid
             |    case "type" =>
-            |      TYPE.valid
+            |      `type`.valid
             |    case other =>
             |      JSONParseError(s"not a instance of required enum: $$other").invalidNel
             |  }

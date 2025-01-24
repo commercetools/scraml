@@ -1,11 +1,12 @@
-val circeVersion = "0.14.2"
+val circeVersion = "0.14.10"
 val monocleVersion = "3.1.0"
-val refinedVersion = "0.9.27"
-val tapirVersion = "1.1.0"
+val refinedVersion = "0.11.3"
+val tapirVersion = "1.11.9"
 
 lazy val root = (project in file("."))
   .settings(
-    scalaVersion := "2.13.15",
+    scalaVersion := "2.13.16",
+    crossScalaVersions ++= Seq("3.3.4"),
     name := "scraml-ct-api-circe-test",
     version := "0.1",
     ramlFile := Some(file("reference/api-specs/api/api.raml")),
@@ -24,7 +25,6 @@ lazy val root = (project in file("."))
       scraml.libs.RefinedSupport
     ),
     Compile / sourceGenerators += runScraml,
-    libraryDependencies += "com.chuusai" %% "shapeless" % "2.3.7",
     libraryDependencies ++= Seq(
       "eu.timepit" %% "refined",
       "eu.timepit" %% "refined-cats"
@@ -32,9 +32,9 @@ lazy val root = (project in file("."))
     libraryDependencies ++= Seq(
         "io.circe" %% "circe-core",
         "io.circe" %% "circe-generic",
-        "io.circe" %% "circe-parser",
-        "io.circe" %% "circe-refined"
+        "io.circe" %% "circe-parser"
     ).map(_ % circeVersion),
+    libraryDependencies += "io.circe" %% "circe-refined" % "0.15.1",
     libraryDependencies ++= Seq(
       "dev.optics" %% "monocle-core",
       "dev.optics" %% "monocle-macro"

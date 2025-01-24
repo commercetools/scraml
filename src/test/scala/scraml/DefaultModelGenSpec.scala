@@ -69,12 +69,20 @@ class DefaultModelGenSpec extends AnyFlatSpec with Matchers {
         )
 
         enumType.source.source.toString() should be("sealed trait SomeEnum")
-        enumType.source.companion.map(_.toString()) should be(Some(s"""object SomeEnum {
+        enumType.source.companion.map(_.syntax) should be(Some(s"""object SomeEnum {
              |  case object A extends SomeEnum
              |  case object B extends SomeEnum
-             |  case object ENUM extends SomeEnum
-             |  case object TYPE extends SomeEnum
+             |  case object enum extends SomeEnum
+             |  case object `type` extends SomeEnum
              |}""".stripMargin))
+        enumType.source.companion.map(_.printSyntaxFor(scala.meta.dialects.Scala3)) should be(
+          Some(s"""object SomeEnum {
+             |  case object A extends SomeEnum
+             |  case object B extends SomeEnum
+             |  case object `enum` extends SomeEnum
+             |  case object `type` extends SomeEnum
+             |}""".stripMargin)
+        )
 
         packageObject.source.source.toString should be("package object scraml")
 

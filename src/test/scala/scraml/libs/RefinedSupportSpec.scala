@@ -75,22 +75,21 @@ class RefinedSupportSpec extends AnyWordSpec with Matchers with SourceCodeFormat
             |  import eu.timepit.refined.collection._
             |  import eu.timepit.refined.numeric._
             |  import eu.timepit.refined.string._
-            |  import shapeless.Witness
-            |  type IdType = Refined[String, And[MinSize[Witness.`1`.T], And[MaxSize[Witness.`10`.T], MatchesRegex[Witness.`"^[A-z0-9-.]+$"`.T]]]]
+            |  type IdType = Refined[String, And[MinSize[1], And[MaxSize[10], MatchesRegex["^[A-z0-9-.]+$"]]]]
             |  object IdType {
             |    import eu.timepit.refined.api._
-            |    type ResultType = Refined[String, And[MinSize[Witness.`1`.T], And[MaxSize[Witness.`10`.T], MatchesRegex[Witness.`"^[A-z0-9-.]+$"`.T]]]]
+            |    type ResultType = Refined[String, And[MinSize[1], And[MaxSize[10], MatchesRegex["^[A-z0-9-.]+$"]]]]
             |    private val rt = RefinedType.apply[ResultType]
             |    def apply(candidate: String): Either[IllegalArgumentException, ResultType] = from(candidate)
             |    def from(candidate: String): Either[IllegalArgumentException, ResultType] = rt.refine(candidate).left.map(msg => new IllegalArgumentException(msg))
             |    def unapply(candidate: String): Option[ResultType] = from(candidate).toOption
             |    def unsafeFrom(candidate: String): ResultType = rt.unsafeRefine(candidate)
             |  }
-            |  type OptionalCustomArrayTypePropItemPredicate = GreaterEqual[Witness.`0.0`.T]
-            |  type OptionalCustomArrayTypePropType = Option[Refined[Set[scala.math.BigDecimal], And[MinSize[Witness.`1`.T], And[MaxSize[Witness.`100`.T], Forall[OptionalCustomArrayTypePropItemPredicate]]]]]
+            |  type OptionalCustomArrayTypePropItemPredicate = GreaterEqual[0]
+            |  type OptionalCustomArrayTypePropType = Option[Refined[Set[scala.math.BigDecimal], And[MinSize[1], And[MaxSize[100], Forall[OptionalCustomArrayTypePropItemPredicate]]]]]
             |  object OptionalCustomArrayTypePropType {
             |    import eu.timepit.refined.api._
-            |    type ResultType = Refined[Set[scala.math.BigDecimal], And[MinSize[Witness.`1`.T], And[MaxSize[Witness.`100`.T], Forall[OptionalCustomArrayTypePropItemPredicate]]]]
+            |    type ResultType = Refined[Set[scala.math.BigDecimal], And[MinSize[1], And[MaxSize[100], Forall[OptionalCustomArrayTypePropItemPredicate]]]]
             |    private val rt = RefinedType.apply[ResultType]
             |    lazy val default: Option[ResultType] = None
             |    def apply(candidate: Set[scala.math.BigDecimal]): Either[IllegalArgumentException, Option[ResultType]] = from(Option(candidate))
@@ -104,10 +103,10 @@ class RefinedSupportSpec extends AnyWordSpec with Matchers with SourceCodeFormat
             |    def unapply(candidate: Option[Set[scala.math.BigDecimal]]): Option[ResultType] = from(candidate).fold(_ => None, a => a)
             |    def unsafeFrom(candidate: Option[Set[scala.math.BigDecimal]]): Option[ResultType] = candidate.map(rt.unsafeRefine)
             |  }
-            |  type BarType = Option[Refined[String, MatchesRegex[Witness.`"^[A-z]+$"`.T]]]
+            |  type BarType = Option[Refined[String, MatchesRegex["^[A-z]+$"]]]
             |  object BarType {
             |    import eu.timepit.refined.api._
-            |    type ResultType = Refined[String, MatchesRegex[Witness.`"^[A-z]+$"`.T]]
+            |    type ResultType = Refined[String, MatchesRegex["^[A-z]+$"]]
             |    private val rt = RefinedType.apply[ResultType]
             |    lazy val default: Option[ResultType] = unsafeFrom(None)
             |    def apply(candidate: String): Either[IllegalArgumentException, Option[ResultType]] = from(Option(candidate))
@@ -121,38 +120,38 @@ class RefinedSupportSpec extends AnyWordSpec with Matchers with SourceCodeFormat
             |    def unapply(candidate: Option[String]): Option[ResultType] = from(candidate).fold(_ => None, a => a)
             |    def unsafeFrom(candidate: Option[String]): Option[ResultType] = candidate.map(rt.unsafeRefine)
             |  }
-            |  type NumberPropType = Refined[Float, Interval.Closed[Witness.`0`.T, Witness.`99.99999`.T]]
+            |  type NumberPropType = Refined[Float, Interval.Closed[0, 99.99999d]]
             |  object NumberPropType {
             |    import eu.timepit.refined.api._
-            |    type ResultType = Refined[Float, Interval.Closed[Witness.`0`.T, Witness.`99.99999`.T]]
+            |    type ResultType = Refined[Float, Interval.Closed[0, 99.99999d]]
             |    private val rt = RefinedType.apply[ResultType]
             |    def apply(candidate: Float): Either[IllegalArgumentException, ResultType] = from(candidate)
             |    def from(candidate: Float): Either[IllegalArgumentException, ResultType] = rt.refine(candidate).left.map(msg => new IllegalArgumentException(msg))
             |    def unapply(candidate: Float): Option[ResultType] = from(candidate).toOption
             |    def unsafeFrom(candidate: Float): ResultType = rt.unsafeRefine(candidate)
             |  }
-            |  type CustomNumberPropType = Refined[scala.math.BigDecimal, LessEqual[Witness.`99.99999`.T]]
+            |  type CustomNumberPropType = Refined[scala.math.BigDecimal, LessEqual[99.99999d]]
             |  object CustomNumberPropType {
             |    import eu.timepit.refined.api._
-            |    type ResultType = Refined[scala.math.BigDecimal, LessEqual[Witness.`99.99999`.T]]
+            |    type ResultType = Refined[scala.math.BigDecimal, LessEqual[99.99999d]]
             |    private val rt = RefinedType.apply[ResultType]
             |    def apply(candidate: scala.math.BigDecimal): Either[IllegalArgumentException, ResultType] = from(candidate)
             |    def from(candidate: scala.math.BigDecimal): Either[IllegalArgumentException, ResultType] = rt.refine(candidate).left.map(msg => new IllegalArgumentException(msg))
             |    def unapply(candidate: scala.math.BigDecimal): Option[ResultType] = from(candidate).toOption
             |    def unsafeFrom(candidate: scala.math.BigDecimal): ResultType = rt.unsafeRefine(candidate)
             |  }
-            |  type CustomArrayTypePropItemPredicate = Interval.Closed[Witness.`1.23`.T, Witness.`4.56`.T]
-            |  type CustomArrayTypePropType = Refined[Vector[scala.math.BigDecimal], And[MaxSize[Witness.`100`.T], Forall[CustomArrayTypePropItemPredicate]]]
+            |  type CustomArrayTypePropItemPredicate = Interval.Closed[1.23d, 4.56d]
+            |  type CustomArrayTypePropType = Refined[Vector[scala.math.BigDecimal], And[MaxSize[100], Forall[CustomArrayTypePropItemPredicate]]]
             |  object CustomArrayTypePropType {
             |    import eu.timepit.refined.api._
-            |    type ResultType = Refined[Vector[scala.math.BigDecimal], And[MaxSize[Witness.`100`.T], Forall[CustomArrayTypePropItemPredicate]]]
+            |    type ResultType = Refined[Vector[scala.math.BigDecimal], And[MaxSize[100], Forall[CustomArrayTypePropItemPredicate]]]
             |    private val rt = RefinedType.apply[ResultType]
             |    def apply(candidate: Vector[scala.math.BigDecimal]): Either[IllegalArgumentException, ResultType] = from(candidate)
             |    def from(candidate: Vector[scala.math.BigDecimal]): Either[IllegalArgumentException, ResultType] = rt.refine(candidate).left.map(msg => new IllegalArgumentException(msg))
             |    def unapply(candidate: Vector[scala.math.BigDecimal]): Option[ResultType] = from(candidate).toOption
             |    def unsafeFrom(candidate: Vector[scala.math.BigDecimal]): ResultType = rt.unsafeRefine(candidate)
             |  }
-            |  type OptionalStringArrayItemPredicate = And[MinSize[Witness.`2`.T], And[MaxSize[Witness.`42`.T], MatchesRegex[Witness.`"^[A-z0-9]+$"`.T]]]
+            |  type OptionalStringArrayItemPredicate = And[MinSize[2], And[MaxSize[42], MatchesRegex["^[A-z0-9]+$"]]]
             |  type OptionalStringArrayType = Option[Refined[scala.collection.immutable.List[String], Forall[OptionalStringArrayItemPredicate]]]
             |  object OptionalStringArrayType {
             |    import eu.timepit.refined.api._
@@ -243,10 +242,9 @@ class RefinedSupportSpec extends AnyWordSpec with Matchers with SourceCodeFormat
             |  import eu.timepit.refined.collection._
             |  import eu.timepit.refined.numeric._
             |  import eu.timepit.refined.string._
-            |  import shapeless.Witness
-            |  type IdType = Refined[String, And[MinSize[Witness.`1`.T], And[MaxSize[Witness.`10`.T], MatchesRegex[Witness.`"^[A-z0-9-.]+$"`.T]]]]
-            |  type OptionalCustomArrayTypePropItemPredicate = GreaterEqual[Witness.`0.0`.T]
-            |  type OptionalCustomArrayTypePropType = Option[Refined[Set[scala.math.BigDecimal], And[MinSize[Witness.`1`.T], And[MaxSize[Witness.`100`.T], Forall[OptionalCustomArrayTypePropItemPredicate]]]]]
+            |  type IdType = Refined[String, And[MinSize[1], And[MaxSize[10], MatchesRegex["^[A-z0-9-.]+$"]]]]
+            |  type OptionalCustomArrayTypePropItemPredicate = GreaterEqual[0]
+            |  type OptionalCustomArrayTypePropType = Option[Refined[Set[scala.math.BigDecimal], And[MinSize[1], And[MaxSize[100], Forall[OptionalCustomArrayTypePropItemPredicate]]]]]
             |}""".stripMargin.stripTrailingSpaces
         )
       )
@@ -318,22 +316,21 @@ class RefinedSupportSpec extends AnyWordSpec with Matchers with SourceCodeFormat
             |  import eu.timepit.refined.collection._
             |  import eu.timepit.refined.numeric._
             |  import eu.timepit.refined.string._
-            |  import shapeless.Witness
-            |  type IdType = Refined[String, And[MinSize[Witness.`1`.T], And[MaxSize[Witness.`10`.T], MatchesRegex[Witness.`"^[A-z0-9-.]+$"`.T]]]]
+            |  type IdType = Refined[String, And[MinSize[1], And[MaxSize[10], MatchesRegex["^[A-z0-9-.]+$"]]]]
             |  object IdType {
             |    import eu.timepit.refined.api._
-            |    type ResultType = Refined[String, And[MinSize[Witness.`1`.T], And[MaxSize[Witness.`10`.T], MatchesRegex[Witness.`"^[A-z0-9-.]+$"`.T]]]]
+            |    type ResultType = Refined[String, And[MinSize[1], And[MaxSize[10], MatchesRegex["^[A-z0-9-.]+$"]]]]
             |    private val rt = RefinedType.apply[ResultType]
             |    def apply(candidate: String): Either[IllegalArgumentException, ResultType] = from(candidate)
             |    def from(candidate: String): Either[IllegalArgumentException, ResultType] = rt.refine(candidate).left.map(msg => new IllegalArgumentException(msg))
             |    def unapply(candidate: String): Option[ResultType] = from(candidate).toOption
             |    def unsafeFrom(candidate: String): ResultType = rt.unsafeRefine(candidate)
             |  }
-            |  type OptionalCustomArrayTypePropItemPredicate = GreaterEqual[Witness.`0.0`.T]
-            |  type OptionalCustomArrayTypePropType = Option[Refined[Set[scala.math.BigDecimal], And[MinSize[Witness.`1`.T], And[MaxSize[Witness.`100`.T], Forall[OptionalCustomArrayTypePropItemPredicate]]]]]
+            |  type OptionalCustomArrayTypePropItemPredicate = GreaterEqual[0]
+            |  type OptionalCustomArrayTypePropType = Option[Refined[Set[scala.math.BigDecimal], And[MinSize[1], And[MaxSize[100], Forall[OptionalCustomArrayTypePropItemPredicate]]]]]
             |  object OptionalCustomArrayTypePropType {
             |    import eu.timepit.refined.api._
-            |    type ResultType = Refined[Set[scala.math.BigDecimal], And[MinSize[Witness.`1`.T], And[MaxSize[Witness.`100`.T], Forall[OptionalCustomArrayTypePropItemPredicate]]]]
+            |    type ResultType = Refined[Set[scala.math.BigDecimal], And[MinSize[1], And[MaxSize[100], Forall[OptionalCustomArrayTypePropItemPredicate]]]]
             |    private val rt = RefinedType.apply[ResultType]
             |    lazy val default: Option[ResultType] = None
             |    def apply(candidate: Set[scala.math.BigDecimal]): Either[IllegalArgumentException, Option[ResultType]] = from(Option(candidate))
@@ -347,10 +344,10 @@ class RefinedSupportSpec extends AnyWordSpec with Matchers with SourceCodeFormat
             |    def unapply(candidate: Option[Set[scala.math.BigDecimal]]): Option[ResultType] = from(candidate).fold(_ => None, a => a)
             |    def unsafeFrom(candidate: Option[Set[scala.math.BigDecimal]]): Option[ResultType] = candidate.map(rt.unsafeRefine)
             |  }
-            |  type BarType = Option[Refined[String, MatchesRegex[Witness.`"^[A-z]+$"`.T]]]
+            |  type BarType = Option[Refined[String, MatchesRegex["^[A-z]+$"]]]
             |  object BarType {
             |    import eu.timepit.refined.api._
-            |    type ResultType = Refined[String, MatchesRegex[Witness.`"^[A-z]+$"`.T]]
+            |    type ResultType = Refined[String, MatchesRegex["^[A-z]+$"]]
             |    private val rt = RefinedType.apply[ResultType]
             |    lazy val default: Option[ResultType] = unsafeFrom(None)
             |    def apply(candidate: String): Either[IllegalArgumentException, Option[ResultType]] = from(Option(candidate))
@@ -364,38 +361,38 @@ class RefinedSupportSpec extends AnyWordSpec with Matchers with SourceCodeFormat
             |    def unapply(candidate: Option[String]): Option[ResultType] = from(candidate).fold(_ => None, a => a)
             |    def unsafeFrom(candidate: Option[String]): Option[ResultType] = candidate.map(rt.unsafeRefine)
             |  }
-            |  type NumberPropType = Refined[Float, Interval.Closed[Witness.`0`.T, Witness.`99.99999`.T]]
+            |  type NumberPropType = Refined[Float, Interval.Closed[0, 99.99999d]]
             |  object NumberPropType {
             |    import eu.timepit.refined.api._
-            |    type ResultType = Refined[Float, Interval.Closed[Witness.`0`.T, Witness.`99.99999`.T]]
+            |    type ResultType = Refined[Float, Interval.Closed[0, 99.99999d]]
             |    private val rt = RefinedType.apply[ResultType]
             |    def apply(candidate: Float): Either[IllegalArgumentException, ResultType] = from(candidate)
             |    def from(candidate: Float): Either[IllegalArgumentException, ResultType] = rt.refine(candidate).left.map(msg => new IllegalArgumentException(msg))
             |    def unapply(candidate: Float): Option[ResultType] = from(candidate).toOption
             |    def unsafeFrom(candidate: Float): ResultType = rt.unsafeRefine(candidate)
             |  }
-            |  type CustomNumberPropType = Refined[scala.math.BigDecimal, LessEqual[Witness.`99.99999`.T]]
+            |  type CustomNumberPropType = Refined[scala.math.BigDecimal, LessEqual[99.99999d]]
             |  object CustomNumberPropType {
             |    import eu.timepit.refined.api._
-            |    type ResultType = Refined[scala.math.BigDecimal, LessEqual[Witness.`99.99999`.T]]
+            |    type ResultType = Refined[scala.math.BigDecimal, LessEqual[99.99999d]]
             |    private val rt = RefinedType.apply[ResultType]
             |    def apply(candidate: scala.math.BigDecimal): Either[IllegalArgumentException, ResultType] = from(candidate)
             |    def from(candidate: scala.math.BigDecimal): Either[IllegalArgumentException, ResultType] = rt.refine(candidate).left.map(msg => new IllegalArgumentException(msg))
             |    def unapply(candidate: scala.math.BigDecimal): Option[ResultType] = from(candidate).toOption
             |    def unsafeFrom(candidate: scala.math.BigDecimal): ResultType = rt.unsafeRefine(candidate)
             |  }
-            |  type CustomArrayTypePropItemPredicate = Interval.Closed[Witness.`1.23`.T, Witness.`4.56`.T]
-            |  type CustomArrayTypePropType = Refined[Vector[scala.math.BigDecimal], And[MaxSize[Witness.`100`.T], Forall[CustomArrayTypePropItemPredicate]]]
+            |  type CustomArrayTypePropItemPredicate = Interval.Closed[1.23d, 4.56d]
+            |  type CustomArrayTypePropType = Refined[Vector[scala.math.BigDecimal], And[MaxSize[100], Forall[CustomArrayTypePropItemPredicate]]]
             |  object CustomArrayTypePropType {
             |    import eu.timepit.refined.api._
-            |    type ResultType = Refined[Vector[scala.math.BigDecimal], And[MaxSize[Witness.`100`.T], Forall[CustomArrayTypePropItemPredicate]]]
+            |    type ResultType = Refined[Vector[scala.math.BigDecimal], And[MaxSize[100], Forall[CustomArrayTypePropItemPredicate]]]
             |    private val rt = RefinedType.apply[ResultType]
             |    def apply(candidate: Vector[scala.math.BigDecimal]): Either[IllegalArgumentException, ResultType] = from(candidate)
             |    def from(candidate: Vector[scala.math.BigDecimal]): Either[IllegalArgumentException, ResultType] = rt.refine(candidate).left.map(msg => new IllegalArgumentException(msg))
             |    def unapply(candidate: Vector[scala.math.BigDecimal]): Option[ResultType] = from(candidate).toOption
             |    def unsafeFrom(candidate: Vector[scala.math.BigDecimal]): ResultType = rt.unsafeRefine(candidate)
             |  }
-            |  type OptionalStringArrayItemPredicate = And[MinSize[Witness.`2`.T], And[MaxSize[Witness.`42`.T], MatchesRegex[Witness.`"^[A-z0-9]+$"`.T]]]
+            |  type OptionalStringArrayItemPredicate = And[MinSize[2], And[MaxSize[42], MatchesRegex["^[A-z0-9]+$"]]]
             |  type OptionalStringArrayType = Option[Refined[scala.collection.immutable.List[String], Forall[OptionalStringArrayItemPredicate]]]
             |  object OptionalStringArrayType {
             |    import eu.timepit.refined.api._
@@ -554,22 +551,21 @@ class RefinedSupportSpec extends AnyWordSpec with Matchers with SourceCodeFormat
             |  import eu.timepit.refined.collection._
             |  import eu.timepit.refined.numeric._
             |  import eu.timepit.refined.string._
-            |  import shapeless.Witness
-            |  type IdType = Refined[String, And[MinSize[Witness.`1`.T], And[MaxSize[Witness.`10`.T], MatchesRegex[Witness.`"^[A-z0-9-.]+$"`.T]]]]
+            |  type IdType = Refined[String, And[MinSize[1], And[MaxSize[10], MatchesRegex["^[A-z0-9-.]+$"]]]]
             |  object IdType {
             |    import eu.timepit.refined.api._
-            |    type ResultType = Refined[String, And[MinSize[Witness.`1`.T], And[MaxSize[Witness.`10`.T], MatchesRegex[Witness.`"^[A-z0-9-.]+$"`.T]]]]
+            |    type ResultType = Refined[String, And[MinSize[1], And[MaxSize[10], MatchesRegex["^[A-z0-9-.]+$"]]]]
             |    private val rt = RefinedType.apply[ResultType]
             |    def apply(candidate: String): Either[IllegalArgumentException, ResultType] = from(candidate)
             |    def from(candidate: String): Either[IllegalArgumentException, ResultType] = rt.refine(candidate).left.map(msg => new IllegalArgumentException(msg))
             |    def unapply(candidate: String): Option[ResultType] = from(candidate).toOption
             |    def unsafeFrom(candidate: String): ResultType = rt.unsafeRefine(candidate)
             |  }
-            |  type OptionalCustomArrayTypePropItemPredicate = GreaterEqual[Witness.`0.0`.T]
-            |  type OptionalCustomArrayTypePropType = Option[Refined[Set[scala.math.BigDecimal], And[MinSize[Witness.`1`.T], And[MaxSize[Witness.`100`.T], Forall[OptionalCustomArrayTypePropItemPredicate]]]]]
+            |  type OptionalCustomArrayTypePropItemPredicate = GreaterEqual[0]
+            |  type OptionalCustomArrayTypePropType = Option[Refined[Set[scala.math.BigDecimal], And[MinSize[1], And[MaxSize[100], Forall[OptionalCustomArrayTypePropItemPredicate]]]]]
             |  object OptionalCustomArrayTypePropType {
             |    import eu.timepit.refined.api._
-            |    type ResultType = Refined[Set[scala.math.BigDecimal], And[MinSize[Witness.`1`.T], And[MaxSize[Witness.`100`.T], Forall[OptionalCustomArrayTypePropItemPredicate]]]]
+            |    type ResultType = Refined[Set[scala.math.BigDecimal], And[MinSize[1], And[MaxSize[100], Forall[OptionalCustomArrayTypePropItemPredicate]]]]
             |    private val rt = RefinedType.apply[ResultType]
             |    lazy val default: Option[ResultType] = None
             |    def apply(candidate: Set[scala.math.BigDecimal]): Either[IllegalArgumentException, Option[ResultType]] = from(Option(candidate))
@@ -583,10 +579,10 @@ class RefinedSupportSpec extends AnyWordSpec with Matchers with SourceCodeFormat
             |    def unapply(candidate: Option[Set[scala.math.BigDecimal]]): Option[ResultType] = from(candidate).fold(_ => None, a => a)
             |    def unsafeFrom(candidate: Option[Set[scala.math.BigDecimal]]): Option[ResultType] = candidate.map(rt.unsafeRefine)
             |  }
-            |  type BarType = Option[Refined[String, MatchesRegex[Witness.`"^[A-z]+$"`.T]]]
+            |  type BarType = Option[Refined[String, MatchesRegex["^[A-z]+$"]]]
             |  object BarType {
             |    import eu.timepit.refined.api._
-            |    type ResultType = Refined[String, MatchesRegex[Witness.`"^[A-z]+$"`.T]]
+            |    type ResultType = Refined[String, MatchesRegex["^[A-z]+$"]]
             |    private val rt = RefinedType.apply[ResultType]
             |    lazy val default: Option[ResultType] = unsafeFrom(None)
             |    def apply(candidate: String): Either[IllegalArgumentException, Option[ResultType]] = from(Option(candidate))
@@ -600,38 +596,38 @@ class RefinedSupportSpec extends AnyWordSpec with Matchers with SourceCodeFormat
             |    def unapply(candidate: Option[String]): Option[ResultType] = from(candidate).fold(_ => None, a => a)
             |    def unsafeFrom(candidate: Option[String]): Option[ResultType] = candidate.map(rt.unsafeRefine)
             |  }
-            |  type NumberPropType = Refined[Float, Interval.Closed[Witness.`0`.T, Witness.`99.99999`.T]]
+            |  type NumberPropType = Refined[Float, Interval.Closed[0, 99.99999d]]
             |  object NumberPropType {
             |    import eu.timepit.refined.api._
-            |    type ResultType = Refined[Float, Interval.Closed[Witness.`0`.T, Witness.`99.99999`.T]]
+            |    type ResultType = Refined[Float, Interval.Closed[0, 99.99999d]]
             |    private val rt = RefinedType.apply[ResultType]
             |    def apply(candidate: Float): Either[IllegalArgumentException, ResultType] = from(candidate)
             |    def from(candidate: Float): Either[IllegalArgumentException, ResultType] = rt.refine(candidate).left.map(msg => new IllegalArgumentException(msg))
             |    def unapply(candidate: Float): Option[ResultType] = from(candidate).toOption
             |    def unsafeFrom(candidate: Float): ResultType = rt.unsafeRefine(candidate)
             |  }
-            |  type CustomNumberPropType = Refined[scala.math.BigDecimal, LessEqual[Witness.`99.99999`.T]]
+            |  type CustomNumberPropType = Refined[scala.math.BigDecimal, LessEqual[99.99999d]]
             |  object CustomNumberPropType {
             |    import eu.timepit.refined.api._
-            |    type ResultType = Refined[scala.math.BigDecimal, LessEqual[Witness.`99.99999`.T]]
+            |    type ResultType = Refined[scala.math.BigDecimal, LessEqual[99.99999d]]
             |    private val rt = RefinedType.apply[ResultType]
             |    def apply(candidate: scala.math.BigDecimal): Either[IllegalArgumentException, ResultType] = from(candidate)
             |    def from(candidate: scala.math.BigDecimal): Either[IllegalArgumentException, ResultType] = rt.refine(candidate).left.map(msg => new IllegalArgumentException(msg))
             |    def unapply(candidate: scala.math.BigDecimal): Option[ResultType] = from(candidate).toOption
             |    def unsafeFrom(candidate: scala.math.BigDecimal): ResultType = rt.unsafeRefine(candidate)
             |  }
-            |  type CustomArrayTypePropItemPredicate = Interval.Closed[Witness.`1.23`.T, Witness.`4.56`.T]
-            |  type CustomArrayTypePropType = Refined[Vector[scala.math.BigDecimal], And[MaxSize[Witness.`100`.T], Forall[CustomArrayTypePropItemPredicate]]]
+            |  type CustomArrayTypePropItemPredicate = Interval.Closed[1.23d, 4.56d]
+            |  type CustomArrayTypePropType = Refined[Vector[scala.math.BigDecimal], And[MaxSize[100], Forall[CustomArrayTypePropItemPredicate]]]
             |  object CustomArrayTypePropType {
             |    import eu.timepit.refined.api._
-            |    type ResultType = Refined[Vector[scala.math.BigDecimal], And[MaxSize[Witness.`100`.T], Forall[CustomArrayTypePropItemPredicate]]]
+            |    type ResultType = Refined[Vector[scala.math.BigDecimal], And[MaxSize[100], Forall[CustomArrayTypePropItemPredicate]]]
             |    private val rt = RefinedType.apply[ResultType]
             |    def apply(candidate: Vector[scala.math.BigDecimal]): Either[IllegalArgumentException, ResultType] = from(candidate)
             |    def from(candidate: Vector[scala.math.BigDecimal]): Either[IllegalArgumentException, ResultType] = rt.refine(candidate).left.map(msg => new IllegalArgumentException(msg))
             |    def unapply(candidate: Vector[scala.math.BigDecimal]): Option[ResultType] = from(candidate).toOption
             |    def unsafeFrom(candidate: Vector[scala.math.BigDecimal]): ResultType = rt.unsafeRefine(candidate)
             |  }
-            |  type OptionalStringArrayItemPredicate = And[MinSize[Witness.`2`.T], And[MaxSize[Witness.`42`.T], MatchesRegex[Witness.`"^[A-z0-9]+$"`.T]]]
+            |  type OptionalStringArrayItemPredicate = And[MinSize[2], And[MaxSize[42], MatchesRegex["^[A-z0-9]+$"]]]
             |  type OptionalStringArrayType = Option[Refined[scala.collection.immutable.List[String], Forall[OptionalStringArrayItemPredicate]]]
             |  object OptionalStringArrayType {
             |    import eu.timepit.refined.api._
@@ -733,11 +729,10 @@ class RefinedSupportSpec extends AnyWordSpec with Matchers with SourceCodeFormat
             |  import eu.timepit.refined.collection._
             |  import eu.timepit.refined.numeric._
             |  import eu.timepit.refined.string._
-            |  import shapeless.Witness
-            |  type IdType = Refined[String, MatchesRegex[Witness.`"^[A-z]+$"`.T]]
+            |  type IdType = Refined[String, MatchesRegex["^[A-z]+$"]]
             |  object IdType {
             |    import eu.timepit.refined.api._
-            |    type ResultType = Refined[String, MatchesRegex[Witness.`"^[A-z]+$"`.T]]
+            |    type ResultType = Refined[String, MatchesRegex["^[A-z]+$"]]
             |    private val rt = RefinedType.apply[ResultType]
             |    def apply(candidate: String): Either[IllegalArgumentException, ResultType] = from(candidate)
             |    def from(candidate: String): Either[IllegalArgumentException, ResultType] = rt.refine(candidate).left.map(msg => new IllegalArgumentException(msg))
@@ -812,8 +807,7 @@ class RefinedSupportSpec extends AnyWordSpec with Matchers with SourceCodeFormat
             |  import eu.timepit.refined.collection._
             |  import eu.timepit.refined.numeric._
             |  import eu.timepit.refined.string._
-            |  import shapeless.Witness
-            |  type IdType = Option[Refined[String, And[MaxSize[Witness.`128`.T], MatchesRegex[Witness.`"^[A-z0-9]+$"`.T]]]]
+            |  type IdType = Option[Refined[String, And[MaxSize[128], MatchesRegex["^[A-z0-9]+$"]]]]
             |}""".stripMargin.stripTrailingSpaces
         )
       )
@@ -844,11 +838,10 @@ class RefinedSupportSpec extends AnyWordSpec with Matchers with SourceCodeFormat
             |  import eu.timepit.refined.collection._
             |  import eu.timepit.refined.numeric._
             |  import eu.timepit.refined.string._
-            |  import shapeless.Witness
-            |  type IdType = Refined[String, And[MaxSize[Witness.`128`.T], MatchesRegex[Witness.`"^[A-z0-9]+$"`.T]]]
+            |  type IdType = Refined[String, And[MaxSize[128], MatchesRegex["^[A-z0-9]+$"]]]
             |  object IdType {
             |    import eu.timepit.refined.api._
-            |    type ResultType = Refined[String, And[MaxSize[Witness.`128`.T], MatchesRegex[Witness.`"^[A-z0-9]+$"`.T]]]
+            |    type ResultType = Refined[String, And[MaxSize[128], MatchesRegex["^[A-z0-9]+$"]]]
             |    private val rt = RefinedType.apply[ResultType]
             |    def apply(candidate: String): Either[IllegalArgumentException, ResultType] = from(candidate)
             |    def from(candidate: String): Either[IllegalArgumentException, ResultType] = rt.refine(candidate).left.map(msg => new IllegalArgumentException(msg))
@@ -939,42 +932,41 @@ class RefinedSupportSpec extends AnyWordSpec with Matchers with SourceCodeFormat
             |  import eu.timepit.refined.collection._
             |  import eu.timepit.refined.numeric._
             |  import eu.timepit.refined.string._
-            |  import shapeless.Witness
-            |  type IdType = Refined[String, And[MinSize[Witness.`8`.T], And[MaxSize[Witness.`64`.T], MatchesRegex[Witness.`"^[A-z0-9-]*$"`.T]]]]
+            |  type IdType = Refined[String, And[MinSize[8], And[MaxSize[64], MatchesRegex["^[A-z0-9-]*$"]]]]
             |  object IdType {
             |    import eu.timepit.refined.api._
-            |    type ResultType = Refined[String, And[MinSize[Witness.`8`.T], And[MaxSize[Witness.`64`.T], MatchesRegex[Witness.`"^[A-z0-9-]*$"`.T]]]]
+            |    type ResultType = Refined[String, And[MinSize[8], And[MaxSize[64], MatchesRegex["^[A-z0-9-]*$"]]]]
             |    private val rt = RefinedType.apply[ResultType]
             |    def apply(candidate: String): Either[IllegalArgumentException, ResultType] = from(candidate)
             |    def from(candidate: String): Either[IllegalArgumentException, ResultType] = rt.refine(candidate).left.map(msg => new IllegalArgumentException(msg))
             |    def unapply(candidate: String): Option[ResultType] = from(candidate).toOption
             |    def unsafeFrom(candidate: String): ResultType = rt.unsafeRefine(candidate)
             |  }
-            |  type CountType = Refined[Int, GreaterEqual[Witness.`0`.T]]
+            |  type CountType = Refined[Int, GreaterEqual[0]]
             |  object CountType {
             |    import eu.timepit.refined.api._
-            |    type ResultType = Refined[Int, GreaterEqual[Witness.`0`.T]]
+            |    type ResultType = Refined[Int, GreaterEqual[0]]
             |    private val rt = RefinedType.apply[ResultType]
             |    def apply(candidate: Int): Either[IllegalArgumentException, ResultType] = from(candidate)
             |    def from(candidate: Int): Either[IllegalArgumentException, ResultType] = rt.refine(candidate).left.map(msg => new IllegalArgumentException(msg))
             |    def unapply(candidate: Int): Option[ResultType] = from(candidate).toOption
             |    def unsafeFrom(candidate: Int): ResultType = rt.unsafeRefine(candidate)
             |  }
-            |  type AtMost100Type = Refined[Float, LessEqual[Witness.`100.0`.T]]
+            |  type AtMost100Type = Refined[Float, LessEqual[100]]
             |  object AtMost100Type {
             |    import eu.timepit.refined.api._
-            |    type ResultType = Refined[Float, LessEqual[Witness.`100.0`.T]]
+            |    type ResultType = Refined[Float, LessEqual[100]]
             |    private val rt = RefinedType.apply[ResultType]
             |    def apply(candidate: Float): Either[IllegalArgumentException, ResultType] = from(candidate)
             |    def from(candidate: Float): Either[IllegalArgumentException, ResultType] = rt.refine(candidate).left.map(msg => new IllegalArgumentException(msg))
             |    def unapply(candidate: Float): Option[ResultType] = from(candidate).toOption
             |    def unsafeFrom(candidate: Float): ResultType = rt.unsafeRefine(candidate)
             |  }
-            |  type StringArrayItemPredicate = And[MinSize[Witness.`2`.T], And[MaxSize[Witness.`99`.T], MatchesRegex[Witness.`"^[A-z0-9]+$"`.T]]]
-            |  type StringArrayType = Refined[scala.collection.immutable.List[String], And[MinSize[Witness.`1`.T], And[MaxSize[Witness.`5`.T], Forall[StringArrayItemPredicate]]]]
+            |  type StringArrayItemPredicate = And[MinSize[2], And[MaxSize[99], MatchesRegex["^[A-z0-9]+$"]]]
+            |  type StringArrayType = Refined[scala.collection.immutable.List[String], And[MinSize[1], And[MaxSize[5], Forall[StringArrayItemPredicate]]]]
             |  object StringArrayType {
             |    import eu.timepit.refined.api._
-            |    type ResultType = Refined[scala.collection.immutable.List[String], And[MinSize[Witness.`1`.T], And[MaxSize[Witness.`5`.T], Forall[StringArrayItemPredicate]]]]
+            |    type ResultType = Refined[scala.collection.immutable.List[String], And[MinSize[1], And[MaxSize[5], Forall[StringArrayItemPredicate]]]]
             |    private val rt = RefinedType.apply[ResultType]
             |    def apply(candidate: scala.collection.immutable.List[String]): Either[IllegalArgumentException, ResultType] = from(candidate)
             |    def from(candidate: scala.collection.immutable.List[String]): Either[IllegalArgumentException, ResultType] = rt.refine(candidate).left.map(msg => new IllegalArgumentException(msg))
@@ -1074,42 +1066,41 @@ class RefinedSupportSpec extends AnyWordSpec with Matchers with SourceCodeFormat
             |  import eu.timepit.refined.collection._
             |  import eu.timepit.refined.numeric._
             |  import eu.timepit.refined.string._
-            |  import shapeless.Witness
-            |  type IdType = Refined[String, And[MinSize[Witness.`8`.T], And[MaxSize[Witness.`64`.T], MatchesRegex[Witness.`"^[A-z0-9-]*$"`.T]]]]
+            |  type IdType = Refined[String, And[MinSize[8], And[MaxSize[64], MatchesRegex["^[A-z0-9-]*$"]]]]
             |  object IdType {
             |    import eu.timepit.refined.api._
-            |    type ResultType = Refined[String, And[MinSize[Witness.`8`.T], And[MaxSize[Witness.`64`.T], MatchesRegex[Witness.`"^[A-z0-9-]*$"`.T]]]]
+            |    type ResultType = Refined[String, And[MinSize[8], And[MaxSize[64], MatchesRegex["^[A-z0-9-]*$"]]]]
             |    private val rt = RefinedType.apply[ResultType]
             |    def apply(candidate: String): Either[IllegalArgumentException, ResultType] = from(candidate)
             |    def from(candidate: String): Either[IllegalArgumentException, ResultType] = rt.refine(candidate).left.map(msg => new IllegalArgumentException(msg))
             |    def unapply(candidate: String): Option[ResultType] = from(candidate).toOption
             |    def unsafeFrom(candidate: String): ResultType = rt.unsafeRefine(candidate)
             |  }
-            |  type CountType = Refined[Int, GreaterEqual[Witness.`0`.T]]
+            |  type CountType = Refined[Int, GreaterEqual[0]]
             |  object CountType {
             |    import eu.timepit.refined.api._
-            |    type ResultType = Refined[Int, GreaterEqual[Witness.`0`.T]]
+            |    type ResultType = Refined[Int, GreaterEqual[0]]
             |    private val rt = RefinedType.apply[ResultType]
             |    def apply(candidate: Int): Either[IllegalArgumentException, ResultType] = from(candidate)
             |    def from(candidate: Int): Either[IllegalArgumentException, ResultType] = rt.refine(candidate).left.map(msg => new IllegalArgumentException(msg))
             |    def unapply(candidate: Int): Option[ResultType] = from(candidate).toOption
             |    def unsafeFrom(candidate: Int): ResultType = rt.unsafeRefine(candidate)
             |  }
-            |  type AtMost100Type = Refined[Float, LessEqual[Witness.`100.0`.T]]
+            |  type AtMost100Type = Refined[Float, LessEqual[100]]
             |  object AtMost100Type {
             |    import eu.timepit.refined.api._
-            |    type ResultType = Refined[Float, LessEqual[Witness.`100.0`.T]]
+            |    type ResultType = Refined[Float, LessEqual[100]]
             |    private val rt = RefinedType.apply[ResultType]
             |    def apply(candidate: Float): Either[IllegalArgumentException, ResultType] = from(candidate)
             |    def from(candidate: Float): Either[IllegalArgumentException, ResultType] = rt.refine(candidate).left.map(msg => new IllegalArgumentException(msg))
             |    def unapply(candidate: Float): Option[ResultType] = from(candidate).toOption
             |    def unsafeFrom(candidate: Float): ResultType = rt.unsafeRefine(candidate)
             |  }
-            |  type StringArrayItemPredicate = And[MinSize[Witness.`2`.T], And[MaxSize[Witness.`99`.T], MatchesRegex[Witness.`"^[A-z0-9]+$"`.T]]]
-            |  type StringArrayType = Refined[scala.collection.immutable.List[String], And[MinSize[Witness.`1`.T], And[MaxSize[Witness.`5`.T], Forall[StringArrayItemPredicate]]]]
+            |  type StringArrayItemPredicate = And[MinSize[2], And[MaxSize[99], MatchesRegex["^[A-z0-9]+$"]]]
+            |  type StringArrayType = Refined[scala.collection.immutable.List[String], And[MinSize[1], And[MaxSize[5], Forall[StringArrayItemPredicate]]]]
             |  object StringArrayType {
             |    import eu.timepit.refined.api._
-            |    type ResultType = Refined[scala.collection.immutable.List[String], And[MinSize[Witness.`1`.T], And[MaxSize[Witness.`5`.T], Forall[StringArrayItemPredicate]]]]
+            |    type ResultType = Refined[scala.collection.immutable.List[String], And[MinSize[1], And[MaxSize[5], Forall[StringArrayItemPredicate]]]]
             |    private val rt = RefinedType.apply[ResultType]
             |    def apply(candidate: scala.collection.immutable.List[String]): Either[IllegalArgumentException, ResultType] = from(candidate)
             |    def from(candidate: scala.collection.immutable.List[String]): Either[IllegalArgumentException, ResultType] = rt.refine(candidate).left.map(msg => new IllegalArgumentException(msg))
@@ -1202,11 +1193,10 @@ class RefinedSupportSpec extends AnyWordSpec with Matchers with SourceCodeFormat
             |  import eu.timepit.refined.collection._
             |  import eu.timepit.refined.numeric._
             |  import eu.timepit.refined.string._
-            |  import shapeless.Witness
-            |  type MessageType = Refined[String, And[MinSize[Witness.`4`.T], And[MaxSize[Witness.`64`.T], MatchesRegex[Witness.`"^[A-z0-9 ]*$"`.T]]]]
+            |  type MessageType = Refined[String, And[MinSize[4], And[MaxSize[64], MatchesRegex["^[A-z0-9 ]*$"]]]]
             |  object MessageType {
             |    import eu.timepit.refined.api._
-            |    type ResultType = Refined[String, And[MinSize[Witness.`4`.T], And[MaxSize[Witness.`64`.T], MatchesRegex[Witness.`"^[A-z0-9 ]*$"`.T]]]]
+            |    type ResultType = Refined[String, And[MinSize[4], And[MaxSize[64], MatchesRegex["^[A-z0-9 ]*$"]]]]
             |    private val rt = RefinedType.apply[ResultType]
             |    lazy val default: ResultType = unsafeFrom("this is a default message")
             |    def apply(candidate: String): Either[IllegalArgumentException, ResultType] = from(candidate)
@@ -1214,10 +1204,10 @@ class RefinedSupportSpec extends AnyWordSpec with Matchers with SourceCodeFormat
             |    def unapply(candidate: String): Option[ResultType] = from(candidate).toOption
             |    def unsafeFrom(candidate: String): ResultType = rt.unsafeRefine(candidate)
             |  }
-            |  type LimitType = Option[Refined[Int, Interval.Closed[Witness.`0`.T, Witness.`20`.T]]]
+            |  type LimitType = Option[Refined[Int, Interval.Closed[0, 20]]]
             |  object LimitType {
             |    import eu.timepit.refined.api._
-            |    type ResultType = Refined[Int, Interval.Closed[Witness.`0`.T, Witness.`20`.T]]
+            |    type ResultType = Refined[Int, Interval.Closed[0, 20]]
             |    private val rt = RefinedType.apply[ResultType]
             |    lazy val default: Option[ResultType] = unsafeFrom(Some(2))
             |    def apply(candidate: Int): Either[IllegalArgumentException, Option[ResultType]] = from(Option(candidate))
@@ -1231,10 +1221,10 @@ class RefinedSupportSpec extends AnyWordSpec with Matchers with SourceCodeFormat
             |    def unapply(candidate: Option[Int]): Option[ResultType] = from(candidate).fold(_ => None, a => a)
             |    def unsafeFrom(candidate: Option[Int]): Option[ResultType] = candidate.map(rt.unsafeRefine)
             |  }
-            |  type LongIntegerType = Refined[scala.math.BigInt, LessEqual[Witness.`2147483647`.T]]
+            |  type LongIntegerType = Refined[scala.math.BigInt, LessEqual[2147483647]]
             |  object LongIntegerType {
             |    import eu.timepit.refined.api._
-            |    type ResultType = Refined[scala.math.BigInt, LessEqual[Witness.`2147483647`.T]]
+            |    type ResultType = Refined[scala.math.BigInt, LessEqual[2147483647]]
             |    private val rt = RefinedType.apply[ResultType]
             |    lazy val default: ResultType = unsafeFrom(-9223372036854775808L)
             |    def apply(candidate: scala.math.BigInt): Either[IllegalArgumentException, ResultType] = from(candidate)
@@ -1242,10 +1232,10 @@ class RefinedSupportSpec extends AnyWordSpec with Matchers with SourceCodeFormat
             |    def unapply(candidate: scala.math.BigInt): Option[ResultType] = from(candidate).toOption
             |    def unsafeFrom(candidate: scala.math.BigInt): ResultType = rt.unsafeRefine(candidate)
             |  }
-            |  type LongNumberType = Option[Refined[scala.math.BigInt, LessEqual[Witness.`2147483647`.T]]]
+            |  type LongNumberType = Option[Refined[scala.math.BigInt, LessEqual[2147483647]]]
             |  object LongNumberType {
             |    import eu.timepit.refined.api._
-            |    type ResultType = Refined[scala.math.BigInt, LessEqual[Witness.`2147483647`.T]]
+            |    type ResultType = Refined[scala.math.BigInt, LessEqual[2147483647]]
             |    private val rt = RefinedType.apply[ResultType]
             |    lazy val default: Option[ResultType] = unsafeFrom(Some(-9223372036854775808L))
             |    def apply(candidate: scala.math.BigInt): Either[IllegalArgumentException, Option[ResultType]] = from(Option(candidate))

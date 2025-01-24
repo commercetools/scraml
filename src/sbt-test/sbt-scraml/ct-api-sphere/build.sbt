@@ -1,8 +1,8 @@
-val circeVersion = "0.14.1"
+val circeVersion = "0.14.10"
 
 lazy val root = (project in file("."))
   .settings(
-    scalaVersion := "2.13.15",
+    scalaVersion := "2.13.16",
     name := "scraml-ct-api-sphere-test",
     version := "0.1",
     ramlFile := Some(file("reference/api-specs/api/api.raml")),
