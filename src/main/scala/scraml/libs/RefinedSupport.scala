@@ -165,15 +165,20 @@ object RefinedSupport extends LibrarySupport {
         min: Option[BigDecimal],
         max: Option[BigDecimal]
     ): List[Type.Apply] = {
+      def toLiteral(number: BigDecimal): Lit = number match {
+        case n if n.isValidInt => Lit.Int(number.toInt)
+        case n if n.isValidLong => Lit.Long(number.toInt)
+        case n => Lit.Double(n.toDouble)
+      }
       (min, max) match {
         case (Some(lower), Some(upper)) if upper < lower =>
           throw new RuntimeException("invalid min/max number bounds detected")
         case (Some(lower), Some(upper)) =>
-          predicateType("Interval.Closed", lower, upper) :: Nil
+          predicateType("Interval.Closed", toLiteral(lower), toLiteral(upper)) :: Nil
         case (Some(lower), None) =>
-          predicateType("GreaterEqual", lower) :: Nil
+          predicateType("GreaterEqual", toLiteral(lower)) :: Nil
         case (None, Some(upper)) =>
-          predicateType("LessEqual", upper) :: Nil
+          predicateType("LessEqual", toLiteral(upper)) :: Nil
         case _ =>
           Nil
       }
@@ -184,13 +189,13 @@ object RefinedSupport extends LibrarySupport {
         case (Some(lower), Some(upper)) if upper < lower =>
           throw new RuntimeException("invalid min/max string bounds detected")
         case (Some(lower), Some(upper)) =>
-          predicateType("MinSize", lower) ::
-            predicateType("MaxSize", upper) ::
+          predicateType("MinSize", Lit.Int(lower.toInt)) ::
+            predicateType("MaxSize", Lit.Int(upper.toInt)) ::
             Nil
         case (None, Some(upper)) =>
-          predicateType("MaxSize", upper) :: Nil
+          predicateType("MaxSize", Lit.Int(upper.toInt)) :: Nil
         case (Some(lower), None) =>
-          predicateType("MinSize", lower) :: Nil
+          predicateType("MinSize", Lit.Int(lower.toInt)) :: Nil
         case _ =>
           Nil
       }
@@ -198,21 +203,13 @@ object RefinedSupport extends LibrarySupport {
 
     protected def pattern(regex: Option[RegExp]): List[Type.Apply] =
       regex.toList.map { re =>
-        predicateType("MatchesRegex", "\"" + re.toString + "\"")
+        predicateType("MatchesRegex", Lit.String(re.toString))
       }
 
-    protected def predicateType(name: String, constants: AnyRef*): Type.Apply =
+    protected def predicateType(name: String, constants: Lit*): Type.Apply =
       Type.Apply(
         MetaUtil.typeFromName(name),
-        Type.ArgClause(constants.toList.map { constant =>
-          Type.Select(
-            Term.Select(
-              Term.Name("Witness"),
-              Term.Name(constant.toString)
-            ),
-            Type.Name("T")
-          )
-        })
+        Type.ArgClause(constants.toList)
       )
 
     protected def propertyDefinition(
@@ -996,14 +993,13 @@ object RefinedSupport extends LibrarySupport {
     }
   }
 
-  private def preface(implicit context: ModelGenContext) =
+  private def preface(implicit context: ModelGenContext): List[Stat] =
     q"""
         import eu.timepit.refined.api.Refined
         import eu.timepit.refined.boolean.And
         import eu.timepit.refined.collection._
         import eu.timepit.refined.numeric._
         import eu.timepit.refined.string._
-        import shapeless.Witness
 
        """.stats
 
