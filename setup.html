@@ -32,7 +32,7 @@
 <span class="home-icon">⌂</span>SCRAML
 </a>
 <div class="version-number">
-0.16.0
+0.17.0
 </div>
 </div>
 <div class="nav-toc">
@@ -73,7 +73,7 @@ C16.952,7,17,6.553,17,6c0-0.553-0.048-1-0.6-1H3.6C3.048,5,3,5.447,3,6C3,6.553,3.
 <span class="home-icon">⌂</span>SCRAML
 </a>
 <div class="version-number">
-0.16.0
+0.17.0
 </div>
 </div>
 <div class="nav-toc">
@@ -110,13 +110,15 @@ C16.952,7,17,6.553,17,6c0-0.553-0.048-1-0.6-1H3.6C3.048,5,3,5.447,3,6C3,6.553,3.
 <h1><a href="#setup" name="setup" class="anchor"><span class="anchor-link"></span></a>Setup</h1>
 <h2><a href="#add-the-dependency-to-your-build" name="add-the-dependency-to-your-build" class="anchor"><span class="anchor-link"></span></a>Add the dependency to your build</h2>
 <p><code>project/plugins.sbt</code>:</p>
-<pre class="prettyprint"><code class="language-scala"> addSbtPlugin(&quot;com.commercetools&quot; % &quot;sbt-scraml&quot; % &quot;0.16.0&quot;)
+<pre class="prettyprint"><code class="language-scala"> addSbtPlugin(&quot;com.commercetools&quot; % &quot;sbt-scraml&quot; % &quot;0.17.0&quot;)
 </code></pre>
 <h2><a href="#configure-your-build" name="configure-your-build" class="anchor"><span class="anchor-link"></span></a>Configure your build</h2>
 <p>For projects which have one <a href="https://raml.org/">RAML API specification</a> root document, each SCRAML setting can be specified individually, with <code>ramlFile</code> being the only required setting for <code>runScraml</code>.</p>
 <p><code>build.sbt</code>:</p>
-<pre class="prettyprint"><button class="snippet-button copy-snippet" title="Copy snippet to clipboard">copy</button><a class="snippet-button go-to-source" href="https://github.com/commercetools/scraml/tree/v0.16.0/src/sbt-test/sbt-scraml/simple/build.sbt" target="_blank" title="Go to snippet source">source</a><code class="language-sbt">lazy val root = (project in file(&quot;.&quot;))
+<pre class="prettyprint"><button class="snippet-button copy-snippet" title="Copy snippet to clipboard">copy</button><a class="snippet-button go-to-source" href="https://github.com/commercetools/scraml/tree/v0.17.0/src/sbt-test/sbt-scraml/simple/build.sbt" target="_blank" title="Go to snippet source">source</a><code class="language-sbt">lazy val root = (project in file(&quot;.&quot;))
   .settings(
+    scalaVersion := &quot;2.13.16&quot;,
+    crossScalaVersions ++= Seq(&quot;3.3.4&quot;),
     name := &quot;scraml-simple-test&quot;,
     version := &quot;0.1&quot;,
     ramlFile := Some(file(&quot;api/simple.raml&quot;)),
@@ -125,9 +127,10 @@ C16.952,7,17,6.553,17,6c0-0.553-0.048-1-0.6-1H3.6C3.048,5,3,5.447,3,6C3,6.553,3.
   )</code></pre>
 <p>Projects which have two or more <a href="https://raml.org/">RAML API specification</a> root documents must use the <code>ramlDefinitions</code> setting and <strong>not</strong> <code>ramlFile</code>. If both are set, <code>ramlFile</code> will take precedence and <code>ramlDefinitions</code> will be ignored.</p>
 <p><code>build.sbt</code>:</p>
-<pre class="prettyprint"><button class="snippet-button copy-snippet" title="Copy snippet to clipboard">copy</button><a class="snippet-button go-to-source" href="https://github.com/commercetools/scraml/tree/v0.16.0/src/sbt-test/sbt-scraml/two-specifications/build.sbt" target="_blank" title="Go to snippet source">source</a><code class="language-sbt">lazy val root = (project in file(&quot;.&quot;))
+<pre class="prettyprint"><button class="snippet-button copy-snippet" title="Copy snippet to clipboard">copy</button><a class="snippet-button go-to-source" href="https://github.com/commercetools/scraml/tree/v0.17.0/src/sbt-test/sbt-scraml/two-specifications/build.sbt" target="_blank" title="Go to snippet source">source</a><code class="language-sbt">lazy val root = (project in file(&quot;.&quot;))
   .settings(
-    scalaVersion := &quot;2.13.8&quot;,
+    scalaVersion := &quot;2.13.16&quot;,
+    crossScalaVersions ++= Seq(&quot;3.3.4&quot;),
     name := &quot;scraml-two-specifications&quot;,
     version := &quot;0.1&quot;,
     librarySupport := Set(
@@ -204,14 +207,15 @@ C16.952,7,17,6.553,17,6c0-0.553-0.048-1-0.6-1H3.6C3.048,5,3,5.447,3,6C3,6.553,3.
 <h3><a href="#matchinorder" name="matchinorder" class="anchor"><span class="anchor-link"></span></a>MatchInOrder</h3>
 <p>The <code>MatchInOrder</code> policy is a model of the composite pattern and allows a project to specify in which order each policy will be applied. In order for policies specified after others to be considered, <code>Exact</code>, <code>IgnoreExtra</code>, and <code>KeepExtra</code> have an <code>excluding: Set[String]</code> constructor argument (defaulting to <code>Set.empty</code>). If a <a href="https://github.com/raml-org/raml-spec/blob/master/versions/raml-10/raml-10.md/#object-type">RAML Object Type</a> has a <code>displayName</code> which matches a policy&rsquo;s <code>excluding</code> configuration, that policy will not be applied and the next one will be attempted. If no policy matches, the <code>Default</code> policy is used.</p>
 <p><code>build.sbt</code>:</p>
-<pre class="prettyprint"><button class="snippet-button copy-snippet" title="Copy snippet to clipboard">copy</button><a class="snippet-button go-to-source" href="https://github.com/commercetools/scraml/tree/v0.16.0/src/sbt-test/sbt-scraml/refined/build.sbt" target="_blank" title="Go to snippet source">source</a><code class="language-sbt">import scraml.FieldMatchPolicy._
+<pre class="prettyprint"><button class="snippet-button copy-snippet" title="Copy snippet to clipboard">copy</button><a class="snippet-button go-to-source" href="https://github.com/commercetools/scraml/tree/v0.17.0/src/sbt-test/sbt-scraml/refined/build.sbt" target="_blank" title="Go to snippet source">source</a><code class="language-sbt">import scraml.FieldMatchPolicy._
 
-val circeVersion = &quot;0.14.1&quot;
-val refinedVersion = &quot;0.9.27&quot;
+val circeVersion = &quot;0.14.10&quot;
+val refinedVersion = &quot;0.11.3&quot;
 
 lazy val root = (project in file(&quot;.&quot;))
   .settings(
-    scalaVersion := &quot;2.13.8&quot;,
+    scalaVersion := &quot;2.13.16&quot;,
+    crossScalaVersions ++= Seq(&quot;3.3.4&quot;),
     name := &quot;scraml-refined-test&quot;,
     version := &quot;0.1&quot;,
     ramlFile := Some(file(&quot;api/refined.raml&quot;)),
@@ -247,15 +251,10 @@ lazy val root = (project in file(&quot;.&quot;))
     librarySupport := Set(
       scraml.libs.CatsEqSupport,
       scraml.libs.CatsShowSupport,
-      scraml.libs.CirceJsonSupport(
-        formats = Map(
-          &quot;localDateTime&quot; -&gt; &quot;io.circe.Decoder.decodeLocalDateTime&quot;
-        )
-      ),
+      scraml.libs.CirceJsonSupport(imports = Seq(&quot;io.circe.Decoder.decodeLocalDateTime&quot;)),
       scraml.libs.RefinedSupport
     ),
     Compile / sourceGenerators += runScraml,
-    libraryDependencies += &quot;com.chuusai&quot; %% &quot;shapeless&quot; % &quot;2.3.7&quot;,
     libraryDependencies ++= Seq(
       &quot;eu.timepit&quot; %% &quot;refined&quot;,
       &quot;eu.timepit&quot; %% &quot;refined-cats&quot;
@@ -263,13 +262,13 @@ lazy val root = (project in file(&quot;.&quot;))
     libraryDependencies ++= Seq(
         &quot;io.circe&quot; %% &quot;circe-core&quot;,
         &quot;io.circe&quot; %% &quot;circe-generic&quot;,
-        &quot;io.circe&quot; %% &quot;circe-parser&quot;,
-        &quot;io.circe&quot; %% &quot;circe-refined&quot;
-    ).map(_ % circeVersion)
+        &quot;io.circe&quot; %% &quot;circe-parser&quot;
+    ).map(_ % circeVersion),
+    libraryDependencies += &quot;io.circe&quot; %% &quot;circe-refined&quot; % &quot;0.15.1&quot;,
   )
 </code></pre>
 <div class="source-github">
-The source code for this page can be found <a href="https://github.com/commercetools/scraml/tree/v0.16.0/src/main/paradox/setup.md">here</a>.
+The source code for this page can be found <a href="https://github.com/commercetools/scraml/tree/v0.17.0/src/main/paradox/setup.md">here</a>.
 </div>
 
 <div class="nav-next">
@@ -329,7 +328,7 @@ The source code for this page can be found <a href="https://github.com/commercet
 
 <!--
 <div class="copyright">
-<span class="text">&copy; 2024</span>
+<span class="text">&copy; 2025</span>
 <a href="https://www.example.com" class="logo">logo</a>
 </div>
 -->
@@ -354,7 +353,7 @@ The source code for this page can be found <a href="https://github.com/commercet
 <script type="text/javascript" src="lib/prettify/prettify.js"></script>
 <script type="text/javascript" src="lib/prettify/lang-scala.js"></script>
 <script type="text/javascript">jQuery(function(){window.prettyPrint && prettyPrint()});</script>
-<script type="text/javascript">jQuery(function(jq){initOldVersionWarnings(jq, '0.16.0', 'https://github.com/commercetools/scraml')});</script>
+<script type="text/javascript">jQuery(function(jq){initOldVersionWarnings(jq, '0.17.0', 'https://github.com/commercetools/scraml')});</script>
 
 
 </html>
