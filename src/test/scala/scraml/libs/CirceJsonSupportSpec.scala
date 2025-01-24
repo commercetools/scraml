@@ -249,7 +249,9 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers with SourceCodeForm
           )
         )
 
-        someEnum.source.companion.map(_.printSyntaxFor(dialects.Scala3).stripTrailingSpaces) should be(
+        someEnum.source.companion.map(
+          _.printSyntaxFor(dialects.Scala3).stripTrailingSpaces
+        ) should be(
           Some(
             s"""object SomeEnum {
                |  case object A extends SomeEnum
@@ -494,7 +496,7 @@ class CirceJsonSupportSpec extends AnyFlatSpec with Matchers with SourceCodeForm
       librarySupport = Set(
         CirceJsonSupport(imports = Seq("io.circe.Decoder.decodeLocalDateTime"))
       ),
-      scalaVersion = None,
+      scalaVersion = None
     )
 
     val generated = ModelGenRunner.run(DefaultModelGen)(params).unsafeRunSync()

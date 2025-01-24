@@ -166,9 +166,9 @@ object RefinedSupport extends LibrarySupport {
         max: Option[BigDecimal]
     ): List[Type.Apply] = {
       def toLiteral(number: BigDecimal): Lit = number match {
-        case n if n.isValidInt => Lit.Int(number.toInt)
+        case n if n.isValidInt  => Lit.Int(number.toInt)
         case n if n.isValidLong => Lit.Long(number.toInt)
-        case n => Lit.Double(n.toDouble)
+        case n                  => Lit.Double(n.toDouble)
       }
       (min, max) match {
         case (Some(lower), Some(upper)) if upper < lower =>

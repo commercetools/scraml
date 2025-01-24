@@ -58,7 +58,7 @@ final case class ModelGenParams(
     case Some((2, 12)) => dialects.Scala212
     case Some((2, 13)) => dialects.Scala213
     case Some((3, _))  => dialects.Scala3
-    case _          => dialects.Scala213
+    case _             => dialects.Scala213
   }
 }
 
@@ -440,7 +440,9 @@ object LibrarySupport {
       lib.modifyEnum(enumType, params)(acc.defn, acc.companion)
     }
 
-  def appendObjectStats(defn: Defn.Object, stats: List[Stat])(implicit dialect: Dialect): Defn.Object = {
+  def appendObjectStats(defn: Defn.Object, stats: List[Stat])(implicit
+      dialect: Dialect
+  ): Defn.Object = {
     // copy on Defn.Object and on Template.Body loses dialect information, so we're building them manually,
     // even though we currently don't rely on dialects while building the tree
     Defn.Object(
