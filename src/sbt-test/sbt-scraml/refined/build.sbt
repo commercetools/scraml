@@ -1,11 +1,12 @@
 import scraml.FieldMatchPolicy._
 
-val circeVersion = "0.14.1"
-val refinedVersion = "0.9.27"
+val circeVersion = "0.14.10"
+val refinedVersion = "0.11.3"
 
 lazy val root = (project in file("."))
   .settings(
-    scalaVersion := "2.13.15",
+    scalaVersion := "2.13.16",
+    crossScalaVersions ++= Seq("3.3.4"),
     name := "scraml-refined-test",
     version := "0.1",
     ramlFile := Some(file("api/refined.raml")),
@@ -41,15 +42,10 @@ lazy val root = (project in file("."))
     librarySupport := Set(
       scraml.libs.CatsEqSupport,
       scraml.libs.CatsShowSupport,
-      scraml.libs.CirceJsonSupport(
-        formats = Map(
-          "localDateTime" -> "io.circe.Decoder.decodeLocalDateTime"
-        )
-      ),
+      scraml.libs.CirceJsonSupport(imports = Seq("io.circe.Decoder.decodeLocalDateTime")),
       scraml.libs.RefinedSupport
     ),
     Compile / sourceGenerators += runScraml,
-    libraryDependencies += "com.chuusai" %% "shapeless" % "2.3.7",
     libraryDependencies ++= Seq(
       "eu.timepit" %% "refined",
       "eu.timepit" %% "refined-cats"
@@ -57,8 +53,8 @@ lazy val root = (project in file("."))
     libraryDependencies ++= Seq(
         "io.circe" %% "circe-core",
         "io.circe" %% "circe-generic",
-        "io.circe" %% "circe-parser",
-        "io.circe" %% "circe-refined"
-    ).map(_ % circeVersion)
+        "io.circe" %% "circe-parser"
+    ).map(_ % circeVersion),
+    libraryDependencies += "io.circe" %% "circe-refined" % "0.15.1",
   )
 

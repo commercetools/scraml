@@ -1,6 +1,6 @@
 scalaVersion := "3.3.4"
 
-val circeVersion = "0.14.7"
+val circeVersion = "0.14.10"
 val tapirVersion = "1.11.9"
 
 lazy val examples = (project in file("."))
