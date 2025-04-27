@@ -27,7 +27,10 @@ object ScramlPlugin extends AutoPlugin {
 
     val runScraml = taskKey[Seq[File]]("generate Scala from RAML definitions")
     val defaultEnumVariant = settingKey[Option[String]](
-      "value to used as default enum variant type name (fallback during encode/decode)"
+      "value to use as default enum variant type name (fallback during encode/decode)"
+    )
+    val beanProperties = settingKey[BeanProperties](
+      "override defaults for how Java Bean properties are defined"
     )
   }
 
@@ -41,7 +44,8 @@ object ScramlPlugin extends AutoPlugin {
     librarySupport       := Set.empty,
     formatConfig         := None,
     scramlTargetDir      := None,
-    defaultEnumVariant   := None
+    defaultEnumVariant   := None,
+    beanProperties       := BeanProperties()
   )
 
   /// Here, the runScraml task is defined but not automatically added to
@@ -63,7 +67,8 @@ object ScramlPlugin extends AutoPlugin {
               librarySupport.value,
               None,
               formatConfig.value,
-              defaultEnumVariant = defaultEnumVariant.value
+              defaultEnumVariant = defaultEnumVariant.value,
+              beanProperties = beanProperties.value
             ) :: Nil
           }
           .getOrElse(ramlDefinitions.value)

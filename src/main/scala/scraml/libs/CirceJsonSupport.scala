@@ -1171,6 +1171,6 @@ class CirceJsonSupport(formats: Map[String, String], imports: Seq[String])
         $enumDecode
        """.stats
 
-    DefnWithCompanion(enumTrait, companion.map(appendObjectStats(_, stats)(params.dialect)))
+    DefnWithCompanion(enumTrait, companion.map(appendObjectStats(_, stats)))
   }
 }
