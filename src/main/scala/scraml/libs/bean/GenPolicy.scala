@@ -24,6 +24,8 @@ final case class ContainerPolicy(
     private val containerTransformer: Ior[GenSignature.Container, GenPolicy],
     private val mapper: Option[GenPolicy] = None
 ) extends GenPolicy {
+  val hasMapping = mapper.isDefined
+
   override def body(instance: Term, underlying: Type): Term = {
     val mapped = mapper.fold(instance) { policy =>
       val placeholder = Term.Placeholder()

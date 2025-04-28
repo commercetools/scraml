@@ -165,7 +165,7 @@ final class Analyzer(private val companion: Option[Defn.Object]) {
 
   private def resolveTypeAlias(declaration: Type): Type =
     companionTypes.getOrElse(
-      declaration.syntax.replaceFirst("^.*\\.", ""),
+      declaration.syntax.split('.').last,
       declaration
     )
 }

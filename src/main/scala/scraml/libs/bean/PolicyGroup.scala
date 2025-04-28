@@ -12,7 +12,6 @@ final class PolicyGroup private ()(implicit
 ) {
   import Analyzer.Coordinate
   import GenPolicy.Default
-  import cats.syntax.eq._
   import cats.syntax.option._
   import cats.syntax.semigroup._
 
@@ -25,9 +24,7 @@ final class PolicyGroup private ()(implicit
           .orElse(scalars)
           .getOrElse(Default)
       }
-        .orElse {
-          whenArray(scalars, optionalIsParent = true)
-        }
+        .orElse(whenArray(scalars).filter(_.hasMapping))
         .orElse(scalars)
     }
       .orElse {
@@ -36,9 +33,7 @@ final class PolicyGroup private ()(implicit
             .orElse(scalars)
             .getOrElse(Default)
         }
-          .orElse {
-            whenArray(scalars)
-          }
+          .orElse(whenArray(scalars))
           .orElse(scalars)
       }
       .getOrElse(Default)
@@ -65,30 +60,30 @@ final class PolicyGroup private ()(implicit
         none[GenPolicy]
     }
 
-  private def whenArray(
-      mapper: Option[GenPolicy],
-      optionalIsParent: Boolean = false
-  )(implicit
+  private def whenArray(mapper: Option[GenPolicy])(implicit
       coordinate: Coordinate
-  ): Option[GenPolicy] =
+  ): Option[ContainerPolicy] =
     when[ArraySetting](coordinate.array) {
       case UseJavaCollectionTypes =>
         ContainerPolicy(
           containerTransformer = Ior.Right(JavaCollectionPolicy),
-          mapper
+          mapper = mapper
         ).some
 
-      case Unchanged if mapper.isDefined || optionalIsParent === false =>
+      case Unchanged =>
         ContainerPolicy(
           containerTransformer = Ior.Left(
             GenSignature.scalaCollection
           ),
-          mapper
+          mapper = mapper
         ).some
 
       case _ =>
-        none[GenPolicy]
+        none[ContainerPolicy]
     }
+      .collectFirst { case container: ContainerPolicy =>
+        container
+      }
 
   private def whenOptional(mapper: Option[GenPolicy])(implicit
       coordinate: Coordinate
@@ -99,7 +94,7 @@ final class PolicyGroup private ()(implicit
           containerTransformer = Ior.Left(
             GenSignature.scalaOptional |+| GenSignature.scalaCollection
           ),
-          mapper
+          mapper = mapper
         ).some
 
       case _ =>
@@ -108,12 +103,12 @@ final class PolicyGroup private ()(implicit
       .orElse {
         when[OptionalSetting](coordinate.optional) {
           case UseNullableReturnType =>
-            NullableOptionPolicy(mapper).some
+            NullableOptionPolicy(mapper = mapper).some
 
           case UseJavaOptionalType =>
             ContainerPolicy(
               containerTransformer = Ior.Right(JavaOptionalPolicy),
-              mapper
+              mapper = mapper
             ).some
 
           case Unchanged =>
@@ -121,7 +116,7 @@ final class PolicyGroup private ()(implicit
               containerTransformer = Ior.Left(
                 GenSignature.scalaOptional
               ),
-              mapper
+              mapper = mapper
             ).some
         }
       }
