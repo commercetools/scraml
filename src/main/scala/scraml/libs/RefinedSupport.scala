@@ -769,34 +769,33 @@ object RefinedSupport extends LibrarySupport {
       List[Stat](
         q"""
           def from( ..${classDef.ctor.paramClauses.map(_.values).toList.flatten.map { param =>
-          param.copy(
-            mods = Nil,
-            name = Name(propertyNameFrom(param.name))
-          )
-        }})
+            param.copy(
+              mods = Nil,
+              name = Name(propertyNameFrom(param.name))
+            )
+          }})
           : Either[IllegalArgumentException, ${classDef.name}] = {
             ..${generatePropertiesCode(classDef) {
-          case NamedProperty(param, _, declaredName) =>
-            val invocation = param match {
-              case RefinedPropertyType(typeName, _, _) =>
-                q"${Term.Name(typeName.value)}.from(${Term.Name(propertyNameFrom(param.name))})"
+            case NamedProperty(param, _, declaredName) =>
+              val invocation = param match {
+                case RefinedPropertyType(typeName, _, _) =>
+                  q"${Term.Name(typeName.value)}.from(${Term.Name(propertyNameFrom(param.name))})"
 
-              case unrefined =>
-                q"Right(${Term.Name(propertyNameFrom(unrefined.name))})"
-            }
+                case unrefined =>
+                  q"Right(${Term.Name(propertyNameFrom(unrefined.name))})"
+              }
 
-            List[Stat](
-              q"val ${Pat.Var(Term.Name("_" + declaredName))} = $invocation"
-            )
+              List[Stat](
+                q"val ${Pat.Var(Term.Name("_" + declaredName))} = $invocation"
+              )
 
-          case _ =>
-            List[Stat](
-              q"val _values = Right(values)"
-            )
-        }}
+            case _ =>
+              List[Stat](
+                q"val _values = Right(values)"
+              )
+          }}
 
-          ${
-          def genFlatmaps(
+          ${def genFlatmaps(
               terms: List[Term.Param],
               remaining: List[Term.Param],
               additionalProperties: Option[AdditionalProperties]
@@ -807,8 +806,8 @@ object RefinedSupport extends LibrarySupport {
                   Right(
                    ${Term.Name(context.objectType.getName)}()(
                     ..${additionalProperties.map { ap =>
-                  Term.Name(ap.propertyName)
-                }.toList}
+                    Term.Name(ap.propertyName)
+                  }.toList}
                    )
                  )
                  """
@@ -820,11 +819,11 @@ object RefinedSupport extends LibrarySupport {
                 q"""
                    $termName.map { $paramName: ${last.decltpe.get} =>
                    ${Term.Name(context.objectType.getName)}( ..${terms.map {
-                  case RefinedPropertyConstructorUse(term) =>
-                    term
-                  case p =>
-                    Term.Name(p.name.value)
-                }})
+                    case RefinedPropertyConstructorUse(term) =>
+                      term
+                    case p =>
+                      Term.Name(p.name.value)
+                  }})
                  }
                  """
 
@@ -835,13 +834,13 @@ object RefinedSupport extends LibrarySupport {
                 q"""
                    $termName.map { $paramName: ${last.decltpe.get} =>
                    ${Term.Name(context.objectType.getName)}( ..${terms.map {
-                  case RefinedPropertyConstructorUse(term) =>
-                    term
-                  case p =>
-                    Term.Name(p.name.value)
-                }})(..${additionalProperties.map { ap =>
-                  Term.Name(ap.propertyName)
-                }.toList}
+                    case RefinedPropertyConstructorUse(term) =>
+                      term
+                    case p =>
+                      Term.Name(p.name.value)
+                  }})(..${additionalProperties.map { ap =>
+                    Term.Name(ap.propertyName)
+                  }.toList}
                  )
                  }
                  """
@@ -881,8 +880,7 @@ object RefinedSupport extends LibrarySupport {
             primary.map(p => p.copy(name = Term.Name("_" + propertyNameFrom(p.name)))),
             primary,
             additional
-          )
-        }
+          )}
       }
        """
       )

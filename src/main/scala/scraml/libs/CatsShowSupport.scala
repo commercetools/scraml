@@ -28,38 +28,38 @@ object CatsShowSupport extends LibrarySupport {
     q"""
       import cats.Show
       implicit val ${Pat
-      .Var(Term.Name(classDef.name.value + "Show"))}: Show[${classDef.name}] = Show.show {
+        .Var(Term.Name(classDef.name.value + "Show"))}: Show[${classDef.name}] = Show.show {
         instance =>
           val buffer = new StringBuilder(${classDef.name.value})
           buffer.append(':')
           buffer.append('\n')
 
           ..${generatePropertiesCode(classDef) {
-      case NamedProperty(param, _, declaredName) =>
-        List(
-          q"""buffer.append('\t')""",
-          q"""buffer.append(${Lit.String(declaredName)})""",
-          q"""buffer.append(": ")""",
-          q"""buffer.append(instance.${Term.Name(param.name.value)})""",
-          q"""buffer.append('\n')"""
-        )
+        case NamedProperty(param, _, declaredName) =>
+          List(
+            q"""buffer.append('\t')""",
+            q"""buffer.append(${Lit.String(declaredName)})""",
+            q"""buffer.append(": ")""",
+            q"""buffer.append(instance.${Term.Name(param.name.value)})""",
+            q"""buffer.append('\n')"""
+          )
 
-      case _ =>
-        List.empty
-    }}
+        case _ =>
+          List.empty
+      }}
 
           ..${context.params.fieldMatchPolicy
-      .additionalProperties(context.objectType)(context)
-      .map { ap =>
-        List(
-          q"""buffer.append('\t')""",
-          q"""buffer.append(${ap.propertyName})""",
-          q"""buffer.append(": ")""",
-          q"""buffer.append(instance.${Term.Name(ap.propertyName)})""",
-          q"""buffer.append('\n')"""
-        )
-      }
-      .getOrElse(Nil)}
+        .additionalProperties(context.objectType)(context)
+        .map { ap =>
+          List(
+            q"""buffer.append('\t')""",
+            q"""buffer.append(${ap.propertyName})""",
+            q"""buffer.append(": ")""",
+            q"""buffer.append(instance.${Term.Name(ap.propertyName)})""",
+            q"""buffer.append('\n')"""
+          )
+        }
+        .getOrElse(Nil)}
           buffer.toString()
       }""".stats
 
@@ -67,21 +67,21 @@ object CatsShowSupport extends LibrarySupport {
     q"""
       import cats.Show
       implicit val ${Pat
-      .Var(Term.Name(traitDef.name.value + "Show"))}: Show[${traitDef.name}] = Show.show {
+        .Var(Term.Name(traitDef.name.value + "Show"))}: Show[${traitDef.name}] = Show.show {
         instance =>
           val buffer = new StringBuilder(${traitDef.name.value})
           buffer.append(':')
           buffer.append('\n')
 
           ..${generatePropertiesCode(traitDef) { p =>
-      List(
-        q"""buffer.append('\t')""",
-        q"""buffer.append(${p.name.value})""",
-        q"""buffer.append(": ")""",
-        q"""buffer.append(instance.${Term.Name(p.name.value)})""",
-        q"""buffer.append('\n')"""
-      )
-    }}
+        List(
+          q"""buffer.append('\t')""",
+          q"""buffer.append(${p.name.value})""",
+          q"""buffer.append(": ")""",
+          q"""buffer.append(instance.${Term.Name(p.name.value)})""",
+          q"""buffer.append('\n')"""
+        )
+      }}
 
           buffer.toString()
       }""".stats

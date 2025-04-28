@@ -52,19 +52,19 @@ protected[scraml] final case class AdditionalProperties(
         import scala.util.matching.Regex
         val propertyNames: Seq[String] = Seq(
           ..${fieldMatchPolicy.namedProperties(objectType).map { property =>
-      Lit.String(property.getName)
-    }}
+        Lit.String(property.getName)
+      }}
         )
         val allowedNames: Seq[Regex] = Seq(
           ..${fieldMatchPolicy.patternProperties(objectType).map { property =>
-      val pattern =
-        if (property.getName == "//")
-          Lit.String("\"^.*$\"")
-        else
-          Lit.String(property.getPattern.toString)
+        val pattern =
+          if (property.getName == "//")
+            Lit.String("\"^.*$\"")
+          else
+            Lit.String(property.getPattern.toString)
 
-      q"${pattern}.r"
-    }}
+        q"${pattern}.r"
+      }}
         )
       }
      """

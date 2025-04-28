@@ -16,8 +16,7 @@ object CatsEqSupport extends LibrarySupport {
       implicit val ${Pat.Var(Term.Name(classDef.name.value + "Eq"))}: Eq[${classDef.name}] =
         new Eq[${classDef.name}] {
           override def eqv(a: ${classDef.name}, b: ${classDef.name}): Boolean = {
-            ${
-      val checks = classDef match {
+            ${val checks = classDef match {
         case IsVersionedEntity() =>
           List[Term](q"a.id.equals(b.id)", q"a.version == b.version")
         case _ =>
@@ -40,8 +39,7 @@ object CatsEqSupport extends LibrarySupport {
           tail.foldLeft(head) { case (accum: Term, check: Term) =>
             q"""($accum) && ($check)"""
           }
-      }
-    }
+      }}
         }
       }
     """.stats

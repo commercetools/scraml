@@ -52,7 +52,7 @@ final case class ModelGenParams(
     // this allows for forward compatible enums which can always be parsed as long as they are represented as string
     // note: enabling this retroactively might need changes on the usage side of the generation code
     generateDefaultEnumVariant: Option[String] = None,
-    beanProperties: BeanProperties = BeanProperties(),
+    beanProperties: BeanProperties = BeanProperties()
 ) {
   lazy val allLibraries: List[LibrarySupport] = librarySupport.toList.sorted
   def dialect: Dialect = scalaVersion match {
