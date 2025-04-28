@@ -63,7 +63,18 @@ class PolicyGroupSpec extends AnyWordSpec with Diagrams with SourceCodeFormattin
         assert(code === expected)
       }
 
-      "support optional array types" in {
+      "support optional array AnyRef types" in {
+        val code = defineMethodFor(s"prop: Option[${defaultTypes.array}[String]]")
+
+        val expected =
+          s"""def getProp
+             |: Option[${defaultTypes.array}[String]]
+             | = prop""".stripMargin.stripAllNewlines
+
+        assert(code === expected)
+      }
+
+      "support optional array AnyVal types" in {
         val code = defineMethodFor(s"prop: Option[${defaultTypes.array}[Int]]")
 
         val expected =
@@ -236,7 +247,19 @@ class PolicyGroupSpec extends AnyWordSpec with Diagrams with SourceCodeFormattin
         assert(code === expected)
       }
 
-      "support optional array types" in {
+      "support optional array AnyRef types" in {
+        val code = defineMethodFor(s"prop: Option[${defaultTypes.array}[String]]")
+
+        val expected =
+          s"""def getProp
+             |: java.util.Optional[java.util.List[String]]
+             | = prop.map(_.asJava)
+             |.toJava""".stripMargin.stripAllNewlines
+
+        assert(code === expected)
+      }
+
+      "support optional array AnyVal types" in {
         val code = defineMethodFor(s"prop: Option[${defaultTypes.array}[Int]]")
 
         val expected =

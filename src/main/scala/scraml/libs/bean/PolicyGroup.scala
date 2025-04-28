@@ -24,7 +24,7 @@ final class PolicyGroup private ()(implicit
           .orElse(scalars)
           .getOrElse(Default)
       }
-        .orElse(whenArray(scalars).filter(_.hasMapping))
+        .orElse(whenArray(scalars).filter(_.hasTransformation))
         .orElse(scalars)
     }
       .orElse {
