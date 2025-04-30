@@ -5,6 +5,7 @@ import scala.meta._
 
 import cats.data.Ior
 import scraml.DefaultTypes
+import scraml.MetaUtil.typeFromName
 
 sealed trait GenPolicy extends GenSignature {
   def body(instance: Term, underlying: Type): Term
@@ -18,6 +19,29 @@ object GenPolicy {
         @unused defaultTypes: DefaultTypes
     ): Type = underlying
   }
+}
+
+object AnyValUseJavaLangPolicy extends GenPolicy {
+  private val translationTable = Map(
+    classOf[Boolean] -> "Boolean",
+    classOf[Byte]    -> "Byte",
+    classOf[Char]    -> "Character",
+    classOf[Short]   -> "Short",
+    classOf[Int]     -> "Integer",
+    classOf[Long]    -> "Long",
+    classOf[Float]   -> "Float",
+    classOf[Double]  -> "Double"
+  ).map { case (k, v) =>
+    k.getSimpleName.capitalize -> typeFromName(s"java.lang.$v")
+  }
+
+  override def body(instance: Term, underlying: Type): Term =
+    q"$instance.asInstanceOf[${translationTable(underlying.syntax.capitalize)}]"
+
+  override def signature(underlying: Type)(implicit
+      defaultTypes: DefaultTypes
+  ): Type =
+    translationTable(underlying.syntax.capitalize)
 }
 
 final case class ContainerPolicy(
@@ -49,29 +73,6 @@ final case class ContainerPolicy(
         (container, suffixer) => container.signature(suffixer.signature(mapped))
       )
   }
-}
-
-object AnyValUseJavaLangPolicy extends GenPolicy {
-  private val translationTable = Map(
-    classOf[Boolean] -> "Boolean",
-    classOf[Byte]    -> "Byte",
-    classOf[Char]    -> "Character",
-    classOf[Short]   -> "Short",
-    classOf[Int]     -> "Integer",
-    classOf[Long]    -> "Long",
-    classOf[Float]   -> "Float",
-    classOf[Double]  -> "Double"
-  ).map { case (k, v) =>
-    k.getSimpleName.capitalize -> s"java.lang.$v"
-  }
-
-  override def body(instance: Term, @unused underlying: Type): Term =
-    q"$instance.asInstanceOf[AnyRef]"
-
-  override def signature(underlying: Type)(implicit
-      defaultTypes: DefaultTypes
-  ): Type =
-    translationTable(underlying.syntax.capitalize).parse[Type].get
 }
 
 case object JavaCollectionPolicy extends GenPolicy {
@@ -133,7 +134,7 @@ object ScalaNumberUseJavaLangPolicy extends GenPolicy {
     classOf[BigInt].getName           -> "BigInteger",
     classOf[BigInt].getSimpleName     -> "BigInteger"
   ).map { case (k, v) =>
-    k -> s"java.math.$v"
+    k -> typeFromName(s"java.math.$v")
   }
 
   override def body(instance: Term, underlying: Type): Term =
@@ -145,5 +146,5 @@ object ScalaNumberUseJavaLangPolicy extends GenPolicy {
   override def signature(underlying: Type)(implicit
       defaultTypes: DefaultTypes
   ): Type =
-    translationTable(underlying.syntax).parse[Type].get
+    translationTable(underlying.syntax)
 }

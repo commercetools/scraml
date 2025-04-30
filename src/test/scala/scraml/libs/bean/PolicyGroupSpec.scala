@@ -109,9 +109,9 @@ class PolicyGroupSpec extends AnyWordSpec with Diagrams with SourceCodeFormattin
         assert(code === expected)
       }
 
-      "use the Default policy for AnyVal scalars" in {
+      "use the transformation policy for AnyVal scalars" in {
         val code     = defineMethodFor("prop: Long")
-        val expected = "def getProp: java.lang.Long = prop.asInstanceOf[AnyRef]"
+        val expected = "def getProp: java.lang.Long = prop.asInstanceOf[java.lang.Long]"
 
         assert(code === expected)
       }
@@ -121,7 +121,7 @@ class PolicyGroupSpec extends AnyWordSpec with Diagrams with SourceCodeFormattin
         val expected =
           """def getProp:
             | Option[java.lang.Integer]
-            | = prop.map(_.asInstanceOf[AnyRef])""".stripMargin.stripAllNewlines
+            | = prop.map(_.asInstanceOf[java.lang.Integer])""".stripMargin.stripAllNewlines
 
         assert(code === expected)
       }
@@ -131,14 +131,14 @@ class PolicyGroupSpec extends AnyWordSpec with Diagrams with SourceCodeFormattin
         val expected =
           s"""def getProp:
              | ${defaultTypes.array}[java.lang.Integer]
-             | = prop.map(_.asInstanceOf[AnyRef])""".stripMargin.stripAllNewlines
+             | = prop.map(_.asInstanceOf[java.lang.Integer])""".stripMargin.stripAllNewlines
 
         assert(code === expected)
       }
 
       "support refined scalar types" in {
         val code     = defineMethodFor("prop: Refined[Int, GreaterEqual[Witness.`0`.T]]")
-        val expected = "def getProp: java.lang.Integer = prop.value.asInstanceOf[AnyRef]"
+        val expected = "def getProp: java.lang.Integer = prop.value.asInstanceOf[java.lang.Integer]"
 
         assert(code === expected)
       }
@@ -151,7 +151,7 @@ class PolicyGroupSpec extends AnyWordSpec with Diagrams with SourceCodeFormattin
         val expected =
           s"""def getProp:
              | ${defaultTypes.array}[java.lang.Integer]
-             | = prop.value.map(_.asInstanceOf[AnyRef])""".stripMargin.stripAllNewlines
+             | = prop.value.map(_.asInstanceOf[java.lang.Integer])""".stripMargin.stripAllNewlines
 
         assert(code === expected)
       }
@@ -162,7 +162,7 @@ class PolicyGroupSpec extends AnyWordSpec with Diagrams with SourceCodeFormattin
         val expected =
           s"""def getProp
              |: Option[${defaultTypes.array}[java.lang.Integer]]
-             | = prop.map(_.map(_.asInstanceOf[AnyRef]))""".stripMargin.stripAllNewlines
+             | = prop.map(_.map(_.asInstanceOf[java.lang.Integer]))""".stripMargin.stripAllNewlines
 
         assert(code === expected)
       }
@@ -175,7 +175,7 @@ class PolicyGroupSpec extends AnyWordSpec with Diagrams with SourceCodeFormattin
         val expected =
           s"""def getProp
              |: Option[${defaultTypes.array}[java.lang.Integer]]
-             | = prop.map(_.value.map(_.asInstanceOf[AnyRef]))""".stripMargin.stripAllNewlines
+             | = prop.map(_.value.map(_.asInstanceOf[java.lang.Integer]))""".stripMargin.stripAllNewlines
 
         assert(code === expected)
       }
@@ -197,9 +197,9 @@ class PolicyGroupSpec extends AnyWordSpec with Diagrams with SourceCodeFormattin
         assert(code === expected)
       }
 
-      "use the Default policy for AnyVal scalars" in {
+      "use the transformation policy for AnyVal scalars" in {
         val code     = defineMethodFor("prop: Long")
-        val expected = "def getProp: java.lang.Long = prop.asInstanceOf[AnyRef]"
+        val expected = "def getProp: java.lang.Long = prop.asInstanceOf[java.lang.Long]"
 
         assert(code === expected)
       }
@@ -209,7 +209,7 @@ class PolicyGroupSpec extends AnyWordSpec with Diagrams with SourceCodeFormattin
         val expected =
           """def getProp:
             | java.util.Optional[java.lang.Integer]
-            | = prop.map(_.asInstanceOf[AnyRef])
+            | = prop.map(_.asInstanceOf[java.lang.Integer])
             |.toJava""".stripMargin.stripAllNewlines
 
         assert(code === expected)
@@ -220,15 +220,18 @@ class PolicyGroupSpec extends AnyWordSpec with Diagrams with SourceCodeFormattin
         val expected =
           s"""def getProp:
              | java.util.List[java.lang.Integer]
-             | = prop.map(_.asInstanceOf[AnyRef])
+             | = prop.map(_.asInstanceOf[java.lang.Integer])
              |.asJava""".stripMargin.stripAllNewlines
 
         assert(code === expected)
       }
 
       "support refined scalar types" in {
-        val code     = defineMethodFor("prop: Refined[Int, GreaterEqual[Witness.`0`.T]]")
-        val expected = "def getProp: java.lang.Integer = prop.value.asInstanceOf[AnyRef]"
+        val code = defineMethodFor("prop: Refined[Int, GreaterEqual[Witness.`0`.T]]")
+        val expected =
+          """def getProp
+            |: java.lang.Integer =
+            | prop.value.asInstanceOf[java.lang.Integer]""".stripMargin.stripAllNewlines
 
         assert(code === expected)
       }
@@ -241,7 +244,7 @@ class PolicyGroupSpec extends AnyWordSpec with Diagrams with SourceCodeFormattin
         val expected =
           s"""def getProp:
              | java.util.List[java.lang.Integer]
-             | = prop.value.map(_.asInstanceOf[AnyRef])
+             | = prop.value.map(_.asInstanceOf[java.lang.Integer])
              |.asJava""".stripMargin.stripAllNewlines
 
         assert(code === expected)
@@ -265,7 +268,7 @@ class PolicyGroupSpec extends AnyWordSpec with Diagrams with SourceCodeFormattin
         val expected =
           s"""def getProp
              |: java.util.Optional[java.util.List[java.lang.Integer]]
-             | = prop.map(_.map(_.asInstanceOf[AnyRef]).asJava)
+             | = prop.map(_.map(_.asInstanceOf[java.lang.Integer]).asJava)
              |.toJava""".stripMargin.stripAllNewlines
 
         assert(code === expected)
@@ -279,7 +282,7 @@ class PolicyGroupSpec extends AnyWordSpec with Diagrams with SourceCodeFormattin
         val expected =
           s"""def getProp
              |: java.util.Optional[java.util.List[java.lang.Integer]]
-             | = prop.map(_.value.map(_.asInstanceOf[AnyRef]).asJava)
+             | = prop.map(_.value.map(_.asInstanceOf[java.lang.Integer]).asJava)
              |.toJava""".stripMargin.stripAllNewlines
 
         assert(code === expected)

@@ -158,7 +158,7 @@ class BeanPropertiesSupportSpec extends AnyWordSpec with Matchers with SourceCod
             |  lazy val getOptionalCustomArrayTypeProp: java.util.Optional[Set[scala.math.BigDecimal]] = optionalCustomArrayTypeProp.map(_.value).toJava
             |  lazy val getFoo: java.util.Optional[String] = foo.toJava
             |  lazy val getBar: java.util.Optional[String] = bar.map(_.value).toJava
-            |  lazy val getNumberProp: java.lang.Float = numberProp.value.asInstanceOf[AnyRef]
+            |  lazy val getNumberProp: java.lang.Float = numberProp.value.asInstanceOf[java.lang.Float]
             |  lazy val getCustomNumberProp: java.math.BigDecimal = customNumberProp.value.bigDecimal
             |  lazy val getCustomArrayTypeProp: Vector[scala.math.BigDecimal] = customArrayTypeProp.value
             |  lazy val getOptionalStringArray: java.util.Optional[java.util.List[String]] = optionalStringArray.map(_.value.asJava).toJava
@@ -204,7 +204,7 @@ class BeanPropertiesSupportSpec extends AnyWordSpec with Matchers with SourceCod
             |  lazy val getOptionalCustomArrayTypeProp: Set[scala.math.BigDecimal] = optionalCustomArrayTypeProp.map(_.value).orNull
             |  lazy val getFoo: String = foo.orNull
             |  lazy val getBar: String = bar.map(_.value).orNull
-            |  lazy val getNumberProp: java.lang.Float = numberProp.value.asInstanceOf[AnyRef]
+            |  lazy val getNumberProp: java.lang.Float = numberProp.value.asInstanceOf[java.lang.Float]
             |  lazy val getCustomNumberProp: java.math.BigDecimal = customNumberProp.value.bigDecimal
             |  lazy val getCustomArrayTypeProp: Vector[scala.math.BigDecimal] = customArrayTypeProp.value
             |  lazy val getOptionalStringArray: java.util.List[String] = optionalStringArray.map(_.value.asJava).orNull

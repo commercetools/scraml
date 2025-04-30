@@ -29,7 +29,10 @@ class GenPolicySpec extends AnyWordSpec with Diagrams with SourceCodeFormatting 
           AnyValUseJavaLangPolicy
         )
 
-        val expected = "def getJavaChar: java.lang.Character = javaChar.asInstanceOf[AnyRef]"
+        val expected =
+          """def getJavaChar
+            |: java.lang.Character =
+            | javaChar.asInstanceOf[java.lang.Character]""".stripMargin.stripAllNewlines
 
         assert(code === expected)
       }
@@ -115,7 +118,7 @@ class GenPolicySpec extends AnyWordSpec with Diagrams with SourceCodeFormatting 
         val expected =
           """def getJavaFloats
             |: java.util.List[java.lang.Float] =
-            | javaFloats.map(_.asInstanceOf[AnyRef]).asJava
+            | javaFloats.map(_.asInstanceOf[java.lang.Float]).asJava
             |""".stripMargin.stripAllNewlines
 
         assert(code === expected)
@@ -159,7 +162,9 @@ class GenPolicySpec extends AnyWordSpec with Diagrams with SourceCodeFormatting 
         )
 
         val expected =
-          "def getJavaFloat: Option[java.lang.Float] = javaFloat.map(_.asInstanceOf[AnyRef])"
+          """def getJavaFloat
+            |: Option[java.lang.Float] =
+            | javaFloat.map(_.asInstanceOf[java.lang.Float])""".stripMargin.stripAllNewlines
 
         assert(code === expected)
       }
@@ -175,7 +180,7 @@ class GenPolicySpec extends AnyWordSpec with Diagrams with SourceCodeFormatting 
         val expected =
           """def getJavaFloat
             |: java.util.Optional[java.lang.Float] =
-            | javaFloat.map(_.asInstanceOf[AnyRef]).toJava
+            | javaFloat.map(_.asInstanceOf[java.lang.Float]).toJava
             |""".stripMargin.stripAllNewlines
 
         assert(code === expected)
@@ -193,7 +198,7 @@ class GenPolicySpec extends AnyWordSpec with Diagrams with SourceCodeFormatting 
         val expected =
           """def getInts
             |: java.lang.Integer =
-            | ints.map(_.asInstanceOf[AnyRef])
+            | ints.map(_.asInstanceOf[java.lang.Integer])
             |.orNull""".stripMargin.stripAllNewlines
 
         assert(code === expected)
@@ -213,7 +218,7 @@ class GenPolicySpec extends AnyWordSpec with Diagrams with SourceCodeFormatting 
         val expected =
           """def getAnInt
             |: java.lang.Integer =
-            | anInt.map(_.value.asInstanceOf[AnyRef])
+            | anInt.map(_.value.asInstanceOf[java.lang.Integer])
             |.orNull""".stripMargin.stripAllNewlines
 
         assert(code === expected)
@@ -229,7 +234,7 @@ class GenPolicySpec extends AnyWordSpec with Diagrams with SourceCodeFormatting 
         val expected =
           """def getJavaFloat
             |: java.lang.Float =
-            | javaFloat.map(_.asInstanceOf[AnyRef])
+            | javaFloat.map(_.asInstanceOf[java.lang.Float])
             |.orNull""".stripMargin.stripAllNewlines
 
         assert(code === expected)
@@ -264,7 +269,7 @@ class GenPolicySpec extends AnyWordSpec with Diagrams with SourceCodeFormatting 
         val expected =
           """def getJavaFloats
             |: java.util.List[java.lang.Float] =
-            | javaFloats.map(_.asInstanceOf[AnyRef]).asJava
+            | javaFloats.map(_.asInstanceOf[java.lang.Float]).asJava
             |""".stripMargin.stripAllNewlines
 
         assert(code === expected)
@@ -329,7 +334,7 @@ class GenPolicySpec extends AnyWordSpec with Diagrams with SourceCodeFormatting 
           s"""def getInts
              |: Option[${defaultTypes.array}[java.lang.Integer]] =
              | ints.map(
-             |_.value.map(_.asInstanceOf[AnyRef])
+             |_.value.map(_.asInstanceOf[java.lang.Integer])
              |)""".stripMargin.stripAllNewlines
 
         assert(code === expected)
@@ -351,7 +356,8 @@ class GenPolicySpec extends AnyWordSpec with Diagrams with SourceCodeFormatting 
         val expected =
           """def getJavaFloats
             |: java.util.Optional[java.util.List[java.lang.Float]] =
-            | javaFloats.map(_.map(_.asInstanceOf[AnyRef]).asJava).toJava
+            | javaFloats.map(_.map(_.asInstanceOf[java.lang.Float]).asJava)
+            |.toJava
             |""".stripMargin.stripAllNewlines
 
         assert(code === expected)
