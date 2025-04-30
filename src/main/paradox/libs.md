@@ -40,7 +40,7 @@ Usage of the generated `Endpoints.Greeting.getGreeting` type from the previous @
 
 Unlike the above library support components, the bean properties library support instructs `scraml` to emit JavaBeans method definitions and does not require use of an external library.  Instead, it can enable `scraml` generated types to have methods Java-based libraries often expect.
 
-@@snip [build.sbt](../../../src/sbt-test/sbt-scraml/ct-api-beans/build.sbt) {}
+@@snip [build.sbt](../../../src/sbt-test/sbt-scraml/bean-java-types/build.sbt) {}
 
 Including `scraml.libs.BeanPropertiesSupport` in the `librarySupport` definition enables bean property generation.  Further customization is specified in the optional `scraml.BeanProperties` value.
 

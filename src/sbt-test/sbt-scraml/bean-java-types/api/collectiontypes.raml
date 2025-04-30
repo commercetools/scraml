@@ -1,0 +1,21 @@
+#%RAML 1.0 DataType
+(package): DataTypes
+type: object
+displayName: CollectionTypes
+
+properties:
+  strings:
+    type: array
+    items: string
+  optionalRefinedStrings?:
+    type: array
+    items: string
+    maxItems: 20
+  optionalStrings?:
+    type: array
+    items: string
+  refinedStrings:
+    type: array
+    items: string
+    maxItems: 20
+

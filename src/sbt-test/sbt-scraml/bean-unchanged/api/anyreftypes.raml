@@ -1,0 +1,29 @@
+#%RAML 1.0 DataType
+(package): DataTypes
+type: object
+displayName: AnyRefTypes
+
+properties:
+  date:
+    type: date-only
+  dateTime:
+    type: datetime
+  string:
+    type: string
+  time:
+    type: time-only
+  optionalDate?:
+    type: date-only
+  optionalDateTime?:
+    type: datetime
+  optionalRefinedString?:
+    type: string
+    pattern: "^[A-za-z,. ]+$"
+  optionalString?:
+    type: string
+  optionalTime?:
+    type: time-only
+  refinedString:
+    type: string
+    pattern: "^[A-za-z,. ]+$"
+
