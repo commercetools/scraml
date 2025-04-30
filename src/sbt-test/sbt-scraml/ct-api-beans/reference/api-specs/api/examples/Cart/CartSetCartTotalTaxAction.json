@@ -1,7 +1,0 @@
-{
-  "action": "setCartTotalTax",
-  "externalTotalGross": {
-    "currencyCode": "EUR",
-    "centAmount": 10000
-  }
-}

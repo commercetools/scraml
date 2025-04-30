@@ -1,5 +1,0 @@
-{
-  "action": "setReturnPaymentState",
-  "returnItemId": "{{returnItemId}}",
-  "paymentState": "NotRefunded"
-}

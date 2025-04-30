@@ -1,7 +1,0 @@
-{
-  "action": "setShippingMethod",
-  "shippingMethod": {
-    "id": "{{shipping-method-id}}",
-    "typeId": "shipping-method"
-  }
-}

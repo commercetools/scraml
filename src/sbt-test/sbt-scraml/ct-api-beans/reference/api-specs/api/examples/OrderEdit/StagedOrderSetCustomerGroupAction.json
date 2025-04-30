@@ -1,7 +1,0 @@
-{
-  "action": "setCustomerGroup",
-  "customerGroup": {
-    "typeId": "customer-group",
-    "id": "{{customer-group-id}}"
-  }
-}

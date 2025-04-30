@@ -1,4 +1,0 @@
-{
-  "action": "setCustomerId",
-  "customerId": "{{customer-id}}"
-}

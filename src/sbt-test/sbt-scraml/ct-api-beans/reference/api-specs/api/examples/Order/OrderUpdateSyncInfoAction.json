@@ -1,7 +1,0 @@
-{
-  "action": "updateSyncInfo",
-  "channel": {
-    "typeId": "channel",
-    "id": "{{channel-id}}"
-  }
-}

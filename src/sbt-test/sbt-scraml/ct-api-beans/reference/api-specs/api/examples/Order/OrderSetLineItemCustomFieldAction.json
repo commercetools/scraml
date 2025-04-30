@@ -1,6 +1,0 @@
-{
-  "action": "setLineItemCustomField",
-  "lineItemId": "{{lineItemId}}",
-  "name": "ExamplaryStringTypeField",
-  "value": "TextString"
-}

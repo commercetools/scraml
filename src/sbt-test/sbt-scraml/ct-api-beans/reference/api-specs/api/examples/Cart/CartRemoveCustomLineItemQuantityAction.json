@@ -1,5 +1,0 @@
-{
-  "action": "changeCustomLineItemQuantity",
-  "customLineItemId": "{{customLineItemId}}",
-  "quantity": 1
-}

@@ -1,7 +1,0 @@
-{
-  "action": "changeParent",
-  "parent": {
-    "typeId": "category",
-    "id": "{{category-id}}"
-  }
-}

@@ -1,7 +1,0 @@
-{
-  "action": "setTaxCategory",
-  "taxCategory": {
-    "typeId": "tax-category",
-    "id": "{{tax-category-id}}"
-  }
-}

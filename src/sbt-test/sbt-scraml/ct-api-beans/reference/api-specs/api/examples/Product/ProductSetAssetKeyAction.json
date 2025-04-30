@@ -1,5 +1,0 @@
-{
-  "action": "setAssetKey",
-  "assetId": "{{assetId}}",
-  "assetKey": "assetKeyString"
-}

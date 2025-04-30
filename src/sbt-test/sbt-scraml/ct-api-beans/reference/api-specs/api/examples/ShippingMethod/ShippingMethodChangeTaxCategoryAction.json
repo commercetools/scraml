@@ -1,7 +1,0 @@
-{
-  "action": "changeTaxCategory",
-  "taxCategory": {
-    "id": "{{tax-category-id}}",
-    "typeId": "tax-category"
-  }
-}

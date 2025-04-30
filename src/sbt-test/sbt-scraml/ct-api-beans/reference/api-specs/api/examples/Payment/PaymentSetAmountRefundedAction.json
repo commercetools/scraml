@@ -1,7 +1,0 @@
-{
-    "action": "setAmountRefunded",
-    "amount": {
-        "currencyCode": "EUR",
-        "centAmount": 4000
-    }
-}

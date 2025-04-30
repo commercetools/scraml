@@ -1,6 +1,0 @@
-{
-  "action": "removeDistributionChannel",
-  "distributionChannels": {
-    "typeId":  "channel", "id": "12345"
-  }
-}

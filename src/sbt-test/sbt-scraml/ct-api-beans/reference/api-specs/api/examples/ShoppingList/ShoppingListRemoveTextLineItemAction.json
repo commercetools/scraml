@@ -1,5 +1,0 @@
-{
-  "action": "removeTextLineItem",
-  "textLineItemId": "{{lineItemId}}",
-  "quantity": 1
-}

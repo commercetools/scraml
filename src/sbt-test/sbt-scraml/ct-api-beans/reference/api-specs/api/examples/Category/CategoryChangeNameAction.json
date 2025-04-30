@@ -1,7 +1,0 @@
-{
-  "action": "changeName",
-  "name": {
-    "de": "neuer Category Name",
-    "en": "new category name"
-  }
-}

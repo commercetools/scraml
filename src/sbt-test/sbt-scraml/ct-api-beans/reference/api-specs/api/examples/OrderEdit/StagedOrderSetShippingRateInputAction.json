@@ -1,7 +1,0 @@
-{
-  "action": "setShippingRateInput",
-  "shippingRateInput": {
-    "type": "Classification",
-    "key": "key"
-  }
-}

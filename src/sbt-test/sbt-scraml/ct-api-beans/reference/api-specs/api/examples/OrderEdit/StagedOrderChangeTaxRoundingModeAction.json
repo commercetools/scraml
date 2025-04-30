@@ -1,4 +1,0 @@
-{
-  "action": "changeTaxRoundingMode",
-  "taxRoundingMode": "HalfUp"
-}

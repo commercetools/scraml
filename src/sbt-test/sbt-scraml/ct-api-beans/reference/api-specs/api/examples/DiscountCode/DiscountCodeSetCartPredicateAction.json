@@ -1,4 +1,0 @@
-{
-  "action": "setCartPredicate",
-  "cartPredicate": "lineItemCount(sku = \"mySKU\") > 1"
-}

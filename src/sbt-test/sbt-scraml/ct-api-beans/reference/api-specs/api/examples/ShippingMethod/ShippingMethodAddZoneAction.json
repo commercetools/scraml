@@ -1,7 +1,0 @@
-{
-  "action": "addZone",
-  "zone": {
-    "typeId": "zone",
-    "id": "{{zone-id}}"
-  }
-}

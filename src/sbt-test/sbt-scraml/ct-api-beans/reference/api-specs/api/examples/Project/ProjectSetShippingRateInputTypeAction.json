@@ -1,6 +1,0 @@
-{
-  "action": "setShippingRateInputType",
-  "shippingRateInputType":{
-    "type": "CartScore"
-  }
-}

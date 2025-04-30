@@ -1,6 +1,0 @@
-{
-  "action": "addSupplyChannel",
-  "supplyChannel": {
-    "typeId":  "channel", "id": "12345"
-  }
-}

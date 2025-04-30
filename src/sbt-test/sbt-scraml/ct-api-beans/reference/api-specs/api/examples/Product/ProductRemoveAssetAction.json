@@ -1,5 +1,0 @@
-{
-  "action": "removeAsset",
-  "variantId": 1,
-  "assetId": "{{assetId}}"
-}

@@ -1,4 +1,0 @@
-{
-  "action": "removeParcelFromDelivery",
-  "parcelId": "{{parcelId}}"
-}

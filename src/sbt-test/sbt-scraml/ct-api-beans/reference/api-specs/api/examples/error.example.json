@@ -1,7 +1,0 @@
-{
-  "statusCode": 409,
-  "message": "Version mismatch. Concurrent modification.",
-  "errors": [
-    { "code":"ConcurrentModification", "message": "Version mismatch. Concurrent modification." }
-  ]
-}

@@ -1,7 +1,0 @@
-{
-  "action": "setImageLabel",
-  "variantId": 2,
-  "imageUrl": "//image.png",
-  "label": "labelString",
-  "staged": true
-}

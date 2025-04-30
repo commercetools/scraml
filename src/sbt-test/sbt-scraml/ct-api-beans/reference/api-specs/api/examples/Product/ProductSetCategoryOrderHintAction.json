@@ -1,5 +1,0 @@
-{
-  "action": "setCategoryOrderHint",
-  "categoryId": "{{category-id}}",
-  "orderHint": "0.1"
-}

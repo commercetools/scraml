@@ -1,4 +1,0 @@
-{
-  "action": "addBillingAddressId",
-  "addressId": "{{addressId}}"
-}

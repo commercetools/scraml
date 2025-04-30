@@ -1,8 +1,0 @@
-{
-  "action": "setParcelMeasurements",
-  "parcelId": "{{parcelId}}",
-  "measurements": {
-    "heightInMillimeter": 11,
-    "widthInMillimeter": 11
-  }
-}

@@ -1,7 +1,0 @@
-{
-  "action": "changeName",
-  "name": {
-    "de": "Mein neuer Produkt Name",
-    "en": "My new product name"
-  }
-}

@@ -1,6 +1,0 @@
-{
-    "action": "setAddressCustomField",
-    "name": "ExamplaryStringTypeField",
-    "value": "TextString",
-    "addressId": "{{address-id}}"
-  }

@@ -1,9 +1,0 @@
-{
-  "action": "setStores",
-  "stores": [
-    {
-      "key": "{{store-key}}",
-      "typeId": "store"
-    }
-  ]
-}

@@ -1,7 +1,0 @@
-{
-  "action": "addInterfaceInteraction",
-  "type": {
-    "typeId": "type",
-    "id": "{{type-id}}"
-  }
-}

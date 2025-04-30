@@ -1,6 +1,0 @@
-{
-  "action": "addLineItem",
-  "productId": "{{product-id}}",
-  "variantId": 1,
-  "quantity": 2
-}

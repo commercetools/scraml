@@ -1,7 +1,0 @@
-{
-  "action": "removeDiscountCode",
-  "discountCode": {
-    "typeId": "discount-code",
-    "id": "{{discount-code-id}}"
-  }
-}

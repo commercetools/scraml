@@ -1,5 +1,0 @@
-{
-  "action": "changeTransactionState",
-  "transactionId": "{{transactionId}}",
-  "state": "Failure"
-}

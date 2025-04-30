@@ -1,6 +1,0 @@
-{
-  "action": "setCustomLineItemCustomField",
-  "customLineItemId": "{{customLineItemId}}",
-  "name": "ExamplaryStringTypeField",
-  "value": "TextString"
-}

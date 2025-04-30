@@ -1,7 +1,0 @@
-{
-  "action": "removePayment",
-  "payment": {
-    "typeId": "payment",
-    "id": "{{payment-id}}"
-  }
-}

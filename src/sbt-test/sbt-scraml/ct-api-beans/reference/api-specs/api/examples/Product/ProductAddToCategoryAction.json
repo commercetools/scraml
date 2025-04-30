@@ -1,7 +1,0 @@
-{
-  "action": "addToCategory",
-  "category": {
-    "typeId": "category",
-    "id": "{{category-id}}"
-  }
-}

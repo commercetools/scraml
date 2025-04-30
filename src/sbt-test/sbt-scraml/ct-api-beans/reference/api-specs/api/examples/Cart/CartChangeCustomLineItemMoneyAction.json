@@ -1,8 +1,0 @@
-{
-  "action": "changeCustomLineItemMoney",
-  "customLineItemId": "{{customLineItemId}}",
-  "money": {
-    "currencyCode": "EUR",
-    "centAmount":4200
-  }
-}

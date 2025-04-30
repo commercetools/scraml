@@ -1,7 +1,0 @@
-{
-  "action": "removeFromCategory",
-  "category": {
-    "typeId": "category",
-    "id": "{{category-id}}"
-  }
-}

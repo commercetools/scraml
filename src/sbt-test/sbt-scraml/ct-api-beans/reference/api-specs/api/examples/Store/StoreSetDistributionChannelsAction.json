@@ -1,6 +1,0 @@
-{
-  "action": "setDistributionChannels",
-  "distributionChannels": [
-    { "typeId":  "channel", "id": "12345" }
-  ]
-}
