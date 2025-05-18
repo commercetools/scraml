@@ -32,7 +32,7 @@
 <span class="home-icon">⌂</span>SCRAML
 </a>
 <div class="version-number">
-0.17.0
+0.18.0
 </div>
 </div>
 <div class="nav-toc">
@@ -73,7 +73,7 @@ C16.952,7,17,6.553,17,6c0-0.553-0.048-1-0.6-1H3.6C3.048,5,3,5.447,3,6C3,6.553,3.
 <span class="home-icon">⌂</span>SCRAML
 </a>
 <div class="version-number">
-0.17.0
+0.18.0
 </div>
 </div>
 <div class="nav-toc">
@@ -108,9 +108,9 @@ C16.952,7,17,6.553,17,6c0-0.553-0.048-1-0.6-1H3.6C3.048,5,3,5.447,3,6C3,6.553,3.
 <div class="page-content row">
 <div class="small-12 large-9 column" id="docs">
 <h1><a href="#library-support" name="library-support" class="anchor"><span class="anchor-link"></span></a>Library Support</h1>
-<p>SCRAML allows to generate supporting types for a number of libraries:</p>
+<p>SCRAML allows generating supporting types for a number of libraries:</p>
 <h2><a href="#cats" name="cats" class="anchor"><span class="anchor-link"></span></a>cats</h2>
-<pre class="prettyprint"><button class="snippet-button copy-snippet" title="Copy snippet to clipboard">copy</button><a class="snippet-button go-to-source" href="https://github.com/commercetools/scraml/tree/v0.17.0/src/sbt-test/sbt-scraml/cats/build.sbt" target="_blank" title="Go to snippet source">source</a><code class="language-sbt">lazy val root = (project in file(&quot;.&quot;))
+<pre class="prettyprint"><button class="snippet-button copy-snippet" title="Copy snippet to clipboard">copy</button><a class="snippet-button go-to-source" href="https://github.com/commercetools/scraml/tree/v0.18.0/src/sbt-test/sbt-scraml/cats/build.sbt" target="_blank" title="Go to snippet source">source</a><code class="language-sbt">lazy val root = (project in file(&quot;.&quot;))
   .settings(
     scalaVersion := &quot;2.13.16&quot;,
     crossScalaVersions ++= Seq(&quot;3.3.4&quot;),
@@ -129,7 +129,7 @@ C16.952,7,17,6.553,17,6c0-0.553-0.048-1-0.6-1H3.6C3.048,5,3,5.447,3,6C3,6.553,3.
     )
   )</code></pre>
 <h2><a href="#circe" name="circe" class="anchor"><span class="anchor-link"></span></a>circe</h2>
-<pre class="prettyprint"><button class="snippet-button copy-snippet" title="Copy snippet to clipboard">copy</button><a class="snippet-button go-to-source" href="https://github.com/commercetools/scraml/tree/v0.17.0/src/sbt-test/sbt-scraml/json/build.sbt" target="_blank" title="Go to snippet source">source</a><code class="language-sbt">val circeVersion = &quot;0.14.10&quot;
+<pre class="prettyprint"><button class="snippet-button copy-snippet" title="Copy snippet to clipboard">copy</button><a class="snippet-button go-to-source" href="https://github.com/commercetools/scraml/tree/v0.18.0/src/sbt-test/sbt-scraml/json/build.sbt" target="_blank" title="Go to snippet source">source</a><code class="language-sbt">val circeVersion = &quot;0.14.10&quot;
 
 lazy val root = (project in file(&quot;.&quot;))
   .settings(
@@ -156,7 +156,7 @@ lazy val root = (project in file(&quot;.&quot;))
     ).map(_ % circeVersion)
   )</code></pre>
 <h2><a href="#monocle" name="monocle" class="anchor"><span class="anchor-link"></span></a>monocle</h2>
-<pre class="prettyprint"><button class="snippet-button copy-snippet" title="Copy snippet to clipboard">copy</button><a class="snippet-button go-to-source" href="https://github.com/commercetools/scraml/tree/v0.17.0/src/sbt-test/sbt-scraml/cats/build.sbt" target="_blank" title="Go to snippet source">source</a><code class="language-sbt">lazy val root = (project in file(&quot;.&quot;))
+<pre class="prettyprint"><button class="snippet-button copy-snippet" title="Copy snippet to clipboard">copy</button><a class="snippet-button go-to-source" href="https://github.com/commercetools/scraml/tree/v0.18.0/src/sbt-test/sbt-scraml/cats/build.sbt" target="_blank" title="Go to snippet source">source</a><code class="language-sbt">lazy val root = (project in file(&quot;.&quot;))
   .settings(
     scalaVersion := &quot;2.13.16&quot;,
     crossScalaVersions ++= Seq(&quot;3.3.4&quot;),
@@ -175,7 +175,7 @@ lazy val root = (project in file(&quot;.&quot;))
     )
   )</code></pre>
 <h2><a href="#refined-with-cats-and-circe-" name="refined-with-cats-and-circe-" class="anchor"><span class="anchor-link"></span></a>refined (with cats and circe)</h2>
-<pre class="prettyprint"><button class="snippet-button copy-snippet" title="Copy snippet to clipboard">copy</button><a class="snippet-button go-to-source" href="https://github.com/commercetools/scraml/tree/v0.17.0/src/sbt-test/sbt-scraml/refined/build.sbt" target="_blank" title="Go to snippet source">source</a><code class="language-sbt">import scraml.FieldMatchPolicy._
+<pre class="prettyprint"><button class="snippet-button copy-snippet" title="Copy snippet to clipboard">copy</button><a class="snippet-button go-to-source" href="https://github.com/commercetools/scraml/tree/v0.18.0/src/sbt-test/sbt-scraml/refined/build.sbt" target="_blank" title="Go to snippet source">source</a><code class="language-sbt">import scraml.FieldMatchPolicy._
 
 val circeVersion = &quot;0.14.10&quot;
 val refinedVersion = &quot;0.11.3&quot;
@@ -236,7 +236,7 @@ lazy val root = (project in file(&quot;.&quot;))
   )
 </code></pre>
 <h2><a href="#sphere-json" name="sphere-json" class="anchor"><span class="anchor-link"></span></a>Sphere JSON</h2>
-<pre class="prettyprint"><button class="snippet-button copy-snippet" title="Copy snippet to clipboard">copy</button><a class="snippet-button go-to-source" href="https://github.com/commercetools/scraml/tree/v0.17.0/src/sbt-test/sbt-scraml/ct-api-sphere/build.sbt" target="_blank" title="Go to snippet source">source</a><code class="language-sbt">val circeVersion = &quot;0.14.10&quot;
+<pre class="prettyprint"><button class="snippet-button copy-snippet" title="Copy snippet to clipboard">copy</button><a class="snippet-button go-to-source" href="https://github.com/commercetools/scraml/tree/v0.18.0/src/sbt-test/sbt-scraml/ct-api-sphere/build.sbt" target="_blank" title="Go to snippet source">source</a><code class="language-sbt">val circeVersion = &quot;0.14.10&quot;
 
 lazy val root = (project in file(&quot;.&quot;))
   .settings(
@@ -251,9 +251,9 @@ lazy val root = (project in file(&quot;.&quot;))
   )
 </code></pre>
 <h2><a href="#tapir" name="tapir" class="anchor"><span class="anchor-link"></span></a>tapir</h2>
-<p>the <a href="https://github.com/softwaremill/tapir">tapir</a> support generating endpoint values:</p>
+<p>The <a href="https://github.com/softwaremill/tapir">tapir</a> support generating endpoint values:</p>
 <h3><a href="#example-tapir-build-sbt" name="example-tapir-build-sbt" class="anchor"><span class="anchor-link"></span></a>Example tapir build.sbt</h3>
-<pre class="prettyprint"><button class="snippet-button copy-snippet" title="Copy snippet to clipboard">copy</button><a class="snippet-button go-to-source" href="https://github.com/commercetools/scraml/tree/v0.17.0/examples/build.sbt" target="_blank" title="Go to snippet source">source</a><code class="language-sbt">scalaVersion := &quot;3.3.4&quot;
+<pre class="prettyprint"><button class="snippet-button copy-snippet" title="Copy snippet to clipboard">copy</button><a class="snippet-button go-to-source" href="https://github.com/commercetools/scraml/tree/v0.18.0/examples/build.sbt" target="_blank" title="Go to snippet source">source</a><code class="language-sbt">scalaVersion := &quot;3.3.4&quot;
 
 val circeVersion = &quot;0.14.10&quot;
 val tapirVersion = &quot;1.11.9&quot;
@@ -284,8 +284,8 @@ lazy val examples = (project in file(&quot;.&quot;))
     Compile / scalacOptions ++= Seq(&quot;-Xmax-inlines&quot;, &quot;128&quot;)
   )</code></pre>
 <h3><a href="#interpreting-tapir-endpoints" name="interpreting-tapir-endpoints" class="anchor"><span class="anchor-link"></span></a>Interpreting tapir endpoints</h3>
-<p>usage of the generated <code>Endpoints.Greeting.getGreeting</code> type from the previous <a href="api.html">api</a> example:</p>
-<pre class="prettyprint"><button class="snippet-button copy-snippet" title="Copy snippet to clipboard">copy</button><a class="snippet-button go-to-source" href="https://github.com/commercetools/scraml/tree/v0.17.0/examples/src/main/scala/examples/GreetingExample.scala" target="_blank" title="Go to snippet source">source</a><code class="language-scala">package examples
+<p>Usage of the generated <code>Endpoints.Greeting.getGreeting</code> type from the previous <a href="api.html">api</a> example:</p>
+<pre class="prettyprint"><button class="snippet-button copy-snippet" title="Copy snippet to clipboard">copy</button><a class="snippet-button go-to-source" href="https://github.com/commercetools/scraml/tree/v0.18.0/examples/src/main/scala/examples/GreetingExample.scala" target="_blank" title="Go to snippet source">source</a><code class="language-scala">package examples
 
 import org.apache.pekko.actor.ActorSystem
 import org.apache.pekko.http.scaladsl.Http
@@ -369,8 +369,124 @@ object GreetingApp extends IOApp {
         .guarantee(GreetingServer.httpSystem.terminate().toIO.void)
   } yield ExitCode.Success
 }</code></pre>
+<h2><a href="#bean-properties" name="bean-properties" class="anchor"><span class="anchor-link"></span></a>bean properties</h2>
+<p>Unlike the above library support components, the bean properties library support instructs <code>scraml</code> to emit JavaBeans method definitions and does not require use of an external library. Instead, it can enable <code>scraml</code> generated types to have methods Java-based libraries often expect.</p>
+<pre class="prettyprint"><button class="snippet-button copy-snippet" title="Copy snippet to clipboard">copy</button><a class="snippet-button go-to-source" href="https://github.com/commercetools/scraml/tree/v0.18.0/src/sbt-test/sbt-scraml/bean-java-types/build.sbt" target="_blank" title="Go to snippet source">source</a><code class="language-sbt">val refinedVersion = &quot;0.11.3&quot;
+
+lazy val root = (project in file(&quot;.&quot;))
+  .settings(
+    scalaVersion := &quot;2.13.16&quot;,
+    crossScalaVersions ++= Seq(&quot;3.3.4&quot;),
+    name := &quot;scraml-bean-java-types-test&quot;,
+    version := &quot;0.1&quot;,
+    ramlFile := Some(file(&quot;api/bean.raml&quot;)),
+    ramlFieldMatchPolicy := scraml.FieldMatchPolicy.Exact(),
+    librarySupport := Set(
+      scraml.libs.BeanPropertiesSupport,
+      scraml.libs.RefinedSupport
+      ),
+    beanProperties := scraml.BeanProperties(
+      anyVal = scraml.BeanProperties.UseJavaLangTypes,
+      array = scraml.BeanProperties.UseJavaCollectionTypes,
+      optional = scraml.BeanProperties.UseJavaOptionalType,
+      scalaNumber = scraml.BeanProperties.UseJavaLangTypes
+    ),
+    Compile / sourceGenerators += runScraml,
+    libraryDependencies ++= Seq(
+      &quot;eu.timepit&quot; %% &quot;refined&quot;,
+      &quot;eu.timepit&quot; %% &quot;refined-cats&quot;
+    ).map(_ % refinedVersion),
+  )
+</code></pre>
+<p>Including <code>scraml.libs.BeanPropertiesSupport</code> in the <code>librarySupport</code> definition enables bean property generation. Further customization is specified in the optional <code>scraml.BeanProperties</code> value.</p>
+<p>Each <code>scraml.BeanProperties</code> configuration option is detailed here.</p>
+<h3><a href="#anyval" name="anyval" class="anchor"><span class="anchor-link"></span></a>anyVal</h3>
+<p>The <code>anyVal</code> configuration setting determines what, if any, transformations are applied to Scala <code>AnyVal</code> types (such as <code>Int</code>, <code>Double</code>, etc.).</p>
+<h4><a href="#beanproperties-usejavalangtypes" name="beanproperties-usejavalangtypes" class="anchor"><span class="anchor-link"></span></a><code>BeanProperties.UseJavaLangTypes</code></h4>
+<p>When enabled, Scala <code>AnyVal</code> types are converted into their <code>java.lang</code> equivalent.</p>
+<table>
+  <thead>
+    <tr>
+      <th align="left">Scala Type </th>
+      <th align="left">Bean Definition Type </th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td align="left"><code>Byte</code> </td>
+      <td align="left"><code>java.lang.Byte</code> </td>
+    </tr>
+    <tr>
+      <td align="left"><code>Char</code> </td>
+      <td align="left"><code>java.lang.Character</code> </td>
+    </tr>
+    <tr>
+      <td align="left"><code>Double</code> </td>
+      <td align="left"><code>java.lang.Double</code> </td>
+    </tr>
+    <tr>
+      <td align="left"><code>Float</code> </td>
+      <td align="left"><code>java.lang.Float</code> </td>
+    </tr>
+    <tr>
+      <td align="left"><code>Int</code> </td>
+      <td align="left"><code>java.lang.Integer</code> </td>
+    </tr>
+    <tr>
+      <td align="left"><code>Long</code> </td>
+      <td align="left"><code>java.lang.Long</code> </td>
+    </tr>
+    <tr>
+      <td align="left"><code>Short</code> </td>
+      <td align="left"><code>java.lang.Short</code> </td>
+    </tr>
+  </tbody>
+</table>
+<h4><a href="#beanproperties-unchanged" name="beanproperties-unchanged" class="anchor"><span class="anchor-link"></span></a><code>BeanProperties.Unchanged</code></h4>
+<p>No transformations are applied to the Scala type.</p>
+<h3><a href="#array" name="array" class="anchor"><span class="anchor-link"></span></a>array</h3>
+<p>The <code>array</code> configuration setting determines what, if any, transformation is applied to the configured <code>DefaultTypes.array</code> type.</p>
+<h4><a href="#beanproperties-usejavacollectiontypes" name="beanproperties-usejavacollectiontypes" class="anchor"><span class="anchor-link"></span></a><code>BeanProperties.UseJavaCollectionTypes</code></h4>
+<p>When enabled, convert the <code>DefaultTypes.array</code> type to <code>java.lang.List</code>. Only <code>Seq</code>-based types are currently supported.</p>
+<h4><a href="#beanproperties-unchanged" name="beanproperties-unchanged" class="anchor"><span class="anchor-link"></span></a><code>BeanProperties.Unchanged</code></h4>
+<p>No transformations are applied to the Scala type.</p>
+<h3><a href="#evaluate" name="evaluate" class="anchor"><span class="anchor-link"></span></a>evaluate</h3>
+<p>The <code>evaluate</code> configuration setting determines whether <em>each</em> bean method will be evaluated every time it is invoked or only the first time.</p>
+<h4><a href="#beanproperties-everyinvocation" name="beanproperties-everyinvocation" class="anchor"><span class="anchor-link"></span></a><code>BeanProperties.EveryInvocation</code></h4>
+<p>Evaluate each time the property is used (<code>def</code>).</p>
+<h4><a href="#beanproperties-once" name="beanproperties-once" class="anchor"><span class="anchor-link"></span></a><code>BeanProperties.Once</code></h4>
+<p>Evaluate only the first time the property is used (<code>lazy val</code>).</p>
+<h3><a href="#optional" name="optional" class="anchor"><span class="anchor-link"></span></a>optional</h3>
+<p>The <code>optional</code> configuration setting determines what, if any, transformation is applied to <code>scala.Option</code> properties.</p>
+<h4><a href="#beanproperties-usejavaoptionaltype" name="beanproperties-usejavaoptionaltype" class="anchor"><span class="anchor-link"></span></a><code>BeanProperties.UseJavaOptionalType</code></h4>
+<p>When enabled, convert <code>scala.Option</code> to <code>java.lang.Optional</code>.</p>
+<h4><a href="#beanproperties-usenullablereturntype" name="beanproperties-usenullablereturntype" class="anchor"><span class="anchor-link"></span></a><code>BeanProperties.UseNullableReturnType</code></h4>
+<p>When enabled, convert <strong>all</strong> <code>scala.Option</code> properties to return the equivalent <code>AnyRef</code> representation. When the original property <code>isEmpty</code>, <code>null</code> is returned.</p>
+<p>NOTE: This option automatically enables <code>BeanProperties.UseJavaLangTypes</code> for <code>anyVal</code>.</p>
+<h4><a href="#beanproperties-unchanged" name="beanproperties-unchanged" class="anchor"><span class="anchor-link"></span></a><code>BeanProperties.Unchanged</code></h4>
+<p>No transformations are applied to the Scala type.</p>
+<h3><a href="#scalanumber" name="scalanumber" class="anchor"><span class="anchor-link"></span></a>scalaNumber</h3>
+<p>The <code>scalaNumber</code> configuration setting determines what, if any, transformation is applied to <code>scala.math</code> properties.</p>
+<table>
+  <thead>
+    <tr>
+      <th align="left">Scala Type </th>
+      <th align="left">Bean Definition Type </th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td align="left"><code>BigDecimal</code> </td>
+      <td align="left"><code>java.math.BigDecimal</code> </td>
+    </tr>
+    <tr>
+      <td align="left"><code>BigInt</code> </td>
+      <td align="left"><code>java.math.BigInt</code> </td>
+    </tr>
+  </tbody>
+</table>
 <div class="source-github">
-The source code for this page can be found <a href="https://github.com/commercetools/scraml/tree/v0.17.0/src/main/paradox/libs.md">here</a>.
+The source code for this page can be found <a href="https://github.com/commercetools/scraml/tree/v0.18.0/src/main/paradox/libs.md">here</a>.
 </div>
 
 <div class="nav-next">
@@ -391,6 +507,7 @@ The source code for this page can be found <a href="https://github.com/commercet
     <li><a href="libs.html#refined-with-cats-and-circe-" class="header">refined (with cats and circe)</a></li>
     <li><a href="libs.html#sphere-json" class="header">Sphere JSON</a></li>
     <li><a href="libs.html#tapir" class="header">tapir</a></li>
+    <li><a href="libs.html#bean-properties" class="header">bean properties</a></li>
   </ul></li>
 </ul>
 </div>
@@ -458,7 +575,7 @@ The source code for this page can be found <a href="https://github.com/commercet
 <script type="text/javascript" src="lib/prettify/prettify.js"></script>
 <script type="text/javascript" src="lib/prettify/lang-scala.js"></script>
 <script type="text/javascript">jQuery(function(){window.prettyPrint && prettyPrint()});</script>
-<script type="text/javascript">jQuery(function(jq){initOldVersionWarnings(jq, '0.17.0', 'https://github.com/commercetools/scraml')});</script>
+<script type="text/javascript">jQuery(function(jq){initOldVersionWarnings(jq, '0.18.0', 'https://github.com/commercetools/scraml')});</script>
 
 
 </html>
