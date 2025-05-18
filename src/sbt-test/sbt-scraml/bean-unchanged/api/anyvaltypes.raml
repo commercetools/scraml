@@ -1,0 +1,137 @@
+#%RAML 1.0 DataType
+(package): DataTypes
+type: object
+displayName: AnyValTypes
+
+properties:
+  boolean:
+    type: boolean
+  double:
+    type: number
+    format: double
+  float:
+    type: number
+    format: float
+  integer:
+    type: integer
+    format: int32
+  int8:
+    type: number
+    format: int8
+  int16:
+    type: number
+    format: int16
+  int32:
+    type: number
+    format: int32
+  int64:
+    type: number
+    format: int64
+  long:
+    type: number
+    format: long
+  optionalBoolean?:
+    type: boolean
+  optionalDouble?:
+    type: number
+    format: double
+  optionalFloat?:
+    type: number
+    format: float
+  optionalInteger?:
+    type: integer
+    format: int32
+  optionalInt8?:
+    type: number
+    format: int8
+  optionalInt16?:
+    type: number
+    format: int16
+  optionalInt32?:
+    type: number
+    format: int32
+  optionalInt64?:
+    type: number
+    format: int64
+  optionalLong?:
+    type: number
+    format: long
+  optionalRefinedDouble?:
+    type: number
+    format: double
+    minimum: 1.0
+    maximum: 100.0
+  optionalRefinedFloat?:
+    type: number
+    format: float
+    minimum: 0.0
+  optionalRefinedInteger?:
+    type: integer
+    format: int32
+    minimum: 1
+    maximum: 100
+  optionalRefinedInt8?:
+    type: number
+    format: int8
+    minimum: 1
+    maximum: 10
+  optionalRefinedInt16?:
+    type: number
+    format: int16
+    minimum: 1
+    maximum: 100
+  optionalRefinedInt32?:
+    type: number
+    format: int32
+    minimum: 1
+    maximum: 100
+  optionalRefinedInt64?:
+    type: number
+    format: int64
+    minimum: 1
+    maximum: 100
+  optionalRefinedLong?:
+    type: number
+    format: long
+    minimum: 1
+    maximum: 100
+  refinedDouble:
+    type: number
+    format: double
+    minimum: 1.0
+    maximum: 100.0
+  refinedFloat:
+    type: number
+    format: float
+    minimum: 0.0
+  refinedInteger:
+    type: integer
+    format: int32
+    minimum: 1
+    maximum: 100
+  refinedInt8:
+    type: number
+    format: int8
+    minimum: 1
+    maximum: 10
+  refinedInt16:
+    type: number
+    format: int16
+    minimum: 1
+    maximum: 100
+  refinedInt32:
+    type: number
+    format: int32
+    minimum: 1
+    maximum: 100
+  refinedInt64:
+    type: number
+    format: int64
+    minimum: 1
+    maximum: 100
+  refinedLong:
+    type: number
+    format: long
+    minimum: 1
+    maximum: 100
+

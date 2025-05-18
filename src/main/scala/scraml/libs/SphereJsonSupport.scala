@@ -28,8 +28,8 @@ object SphereJsonSupport extends LibrarySupport with JsonSupport {
           import io.sphere.json._
 
           implicit lazy val json: JSON[${Type.Name(objectType.getName)}] = deriveJSON[${Type.Name(
-        objectType.getName
-      )}]
+          objectType.getName
+        )}]
       """.stats
     } else List.empty
 
@@ -48,7 +48,7 @@ object SphereJsonSupport extends LibrarySupport with JsonSupport {
               Term.Select(Term.Select(Term.Name(typeName), Term.Name("json")), Term.Name("write")),
               Term.ArgClause(List(Term.Name(caseName)))
             )
-          ),
+          )
         }),
         mods = Nil
       )
@@ -72,13 +72,13 @@ object SphereJsonSupport extends LibrarySupport with JsonSupport {
                   import org.json4s._
 
                   implicit val json: JSON[${Type.Name(
-        context.objectType.getName
-      )}] = new JSON[${Type.Name(context.objectType.getName)}] {
+          context.objectType.getName
+        )}] = new JSON[${Type.Name(context.objectType.getName)}] {
                   override def read(jval: JsonAST.JValue): JValidation[${Type.Name(
-        context.objectType.getName
-      )}] = ${read.parse[Term].get}
+          context.objectType.getName
+        )}] = ${read.parse[Term].get}
                   override def write(value: ${Type
-        .Name(context.objectType.getName)}): JsonAST.JValue = $matchTypes
+          .Name(context.objectType.getName)}): JsonAST.JValue = $matchTypes
                 }""".stats
       jsonStats
     } else List.empty
@@ -154,7 +154,7 @@ object SphereJsonSupport extends LibrarySupport with JsonSupport {
 
     val toJson = q"""
       implicit lazy val toJson: ToJSON[${Type
-      .Name(enumType.getName())}] = ToJSON.stringWriter.contramap(_.toString)
+        .Name(enumType.getName())}] = ToJSON.stringWriter.contramap(_.toString)
     """
 
     val other = Case(
@@ -177,7 +177,7 @@ object SphereJsonSupport extends LibrarySupport with JsonSupport {
 
     val fromJson = q"""
     implicit lazy val fromJson: FromJSON[${Type
-      .Name(enumType.getName())}] = (jval: JsonAST.JValue) =>
+        .Name(enumType.getName())}] = (jval: JsonAST.JValue) =>
       FromJSON.stringReader
         .read(jval)
         .andThen($matchEnumInstances)

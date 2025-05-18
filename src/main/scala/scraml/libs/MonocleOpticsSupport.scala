@@ -31,15 +31,15 @@ object MonocleOpticsSupport extends LibrarySupport {
         import monocle.Getter
 
         ..${generatePropertiesCode(traitDef) { prop =>
-        val classType = traitDef.name
-        val propType  = prop.decltpe
-        val propName  = Term.Name(prop.name.value)
+          val classType = traitDef.name
+          val propType  = prop.decltpe
+          val propName  = Term.Name(prop.name.value)
 
-        List(q"""
+          List(q"""
                 val ${Pat.Var(propName)}: Getter[$classType, $propType] =
                   Getter[$classType, $propType](_.$propName)
                 """)
-      }}
+        }}
       }
       """,
       q"""object Optics extends Optics"""
@@ -56,15 +56,15 @@ object MonocleOpticsSupport extends LibrarySupport {
         import monocle.Lens
 
         ..${generatePropertiesCode(classDef) {
-        case NamedProperty(param, _, declaredName) =>
-          val propType  = param.decltpe.get
-          val propName  = Term.Name(declaredName)
-          val paramName = Term.Name(param.name.value)
+          case NamedProperty(param, _, declaredName) =>
+            val propType  = param.decltpe.get
+            val propName  = Term.Name(declaredName)
+            val paramName = Term.Name(param.name.value)
 
-          context.params.fieldMatchPolicy.additionalProperties(context.objectType) match {
-            case Some(descriptor) =>
-              List(
-                q"""
+            context.params.fieldMatchPolicy.additionalProperties(context.objectType) match {
+              case Some(descriptor) =>
+                List(
+                  q"""
                      val ${Pat.Var(propName)}: Lens[$classType, $propType] =
                        Lens[$classType, $propType](_.$paramName) {
                          a => s => s.copy($paramName = a)(
@@ -73,36 +73,36 @@ object MonocleOpticsSupport extends LibrarySupport {
                        }
 
                    """
-              )
+                )
 
-            case None =>
-              List(
-                q"""
+              case None =>
+                List(
+                  q"""
                      val ${Pat.Var(propName)}: Lens[$classType, $propType] =
                        Lens[$classType, $propType](_.$paramName) {
                          a => s => s.copy($paramName = a)
                        }
                   """
-              )
-          }
+                )
+            }
 
-        case _ =>
-          List.empty
-      }}
+          case _ =>
+            List.empty
+        }}
 
       ..${context.params.fieldMatchPolicy
-        .additionalProperties(context.objectType)
-        .map { ap =>
-          val propName = Term.Name(ap.propertyName)
+          .additionalProperties(context.objectType)
+          .map { ap =>
+            val propName = Term.Name(ap.propertyName)
 
-          q"""
+            q"""
                 val ${Pat.Var(propName)}: Lens[$classType, Option[${ap.propertyType}]] =
                   Lens[$classType, Option[${ap.propertyType}]](_.$propName) {
                     a => s => s.copy()($propName = a)
                   }
            """
-        }
-        .toList}
+          }
+          .toList}
       }
       """,
       q"""object Optics extends Optics"""

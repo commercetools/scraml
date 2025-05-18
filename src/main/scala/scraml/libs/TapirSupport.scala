@@ -399,30 +399,30 @@ final class TapirSupport(endpointsObjectName: String) extends LibrarySupport {
       implicit lazy val tapirCodec: sttp.tapir.Codec.PlainCodec[$enumTypeName] =
       sttp.tapir.Codec.string.mapDecode[$enumTypeName](
         ${Term.PartialFunction(
-        enumType.getEnum.asScala.toList.map { enum =>
-          Case(
-            Lit.String(enum.getValue.toString),
-            None,
-            q"sttp.tapir.DecodeResult.Value(${Term.Name(enum.getValue.toString)})"
-          )
-        }
-          ++
-            (params.generateDefaultEnumVariant match {
-              case Some(name) =>
-                List(
-                  Case(
-                    Pat.Var(Term.Name("other")),
-                    None,
-                    q"sttp.tapir.DecodeResult.Value(${Term
-                      .Apply(Term.Name(name), Term.ArgClause(List(Term.Name("other"))))})"
+          enumType.getEnum.asScala.toList.map { enum =>
+            Case(
+              Lit.String(enum.getValue.toString),
+              None,
+              q"sttp.tapir.DecodeResult.Value(${Term.Name(enum.getValue.toString)})"
+            )
+          }
+            ++
+              (params.generateDefaultEnumVariant match {
+                case Some(name) =>
+                  List(
+                    Case(
+                      Pat.Var(Term.Name("other")),
+                      None,
+                      q"sttp.tapir.DecodeResult.Value(${Term
+                          .Apply(Term.Name(name), Term.ArgClause(List(Term.Name("other"))))})"
+                    )
                   )
-                )
-              case None =>
-                List[Case](
-                  Case(
-                    Pat.Var(Term.Name("other")),
-                    None,
-                    q"""
+                case None =>
+                  List[Case](
+                    Case(
+                      Pat.Var(Term.Name("other")),
+                      None,
+                      q"""
                   sttp.tapir.DecodeResult.InvalidValue(
                     sttp.tapir.ValidationError[String](
                       sttp.tapir.Validator.enumeration(
@@ -432,26 +432,26 @@ final class TapirSupport(endpointsObjectName: String) extends LibrarySupport {
                     ) :: Nil
                   )
                  """
+                    )
                   )
-                )
-            })
-      )}
+              })
+        )}
       )(
         ${Term.PartialFunction(
-        enumNames.map { enum =>
-          Case(
-            Term.Name(enum),
-            None,
-            Lit.String(enum)
+          enumNames.map { enum =>
+            Case(
+              Term.Name(enum),
+              None,
+              Lit.String(enum)
+            )
+          } ++ params.generateDefaultEnumVariant.map(name =>
+            Case(
+              Pat.Extract(Term.Name(name), Pat.ArgClause(List(Pat.Var(Term.Name("value"))))),
+              None,
+              Term.Name("value")
+            )
           )
-        } ++ params.generateDefaultEnumVariant.map(name =>
-          Case(
-            Pat.Extract(Term.Name(name), Pat.ArgClause(List(Pat.Var(Term.Name("value"))))),
-            None,
-            Term.Name("value")
-          )
-        )
-      )}
+        )}
       )
        """ :: Nil
 

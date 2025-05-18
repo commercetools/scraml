@@ -51,7 +51,8 @@ final case class ModelGenParams(
     // if set the value of this option will be used as additional enum variant type name which will be used as fallback during encode/decode
     // this allows for forward compatible enums which can always be parsed as long as they are represented as string
     // note: enabling this retroactively might need changes on the usage side of the generation code
-    generateDefaultEnumVariant: Option[String] = None
+    generateDefaultEnumVariant: Option[String] = None,
+    beanProperties: BeanProperties = BeanProperties()
 ) {
   lazy val allLibraries: List[LibrarySupport] = librarySupport.toList.sorted
   def dialect: Dialect = scalaVersion match {
@@ -440,30 +441,26 @@ object LibrarySupport {
       lib.modifyEnum(enumType, params)(acc.defn, acc.companion)
     }
 
-  def appendObjectStats(defn: Defn.Object, stats: List[Stat])(implicit
-      dialect: Dialect
-  ): Defn.Object = {
-    // copy on Defn.Object and on Template.Body loses dialect information, so we're building them manually,
-    // even though we currently don't rely on dialects while building the tree
-    Defn.Object(
-      mods = defn.mods,
-      name = defn.name,
-      templ = defn.templ.copy(
-        earlyClause = defn.templ.earlyClause,
-        inits = defn.templ.inits,
-        body = Template.Body(selfOpt = None, stats = defn.templ.body.stats ++ stats),
-        derives = defn.templ.derives
-      )
-    )
-  }
+  def appendClassStats(defn: Defn.Class, stats: List[Stat]): Defn.Class =
+    // The scala.meta.Dialect is constant for any given plugin execution and
+    // therefore is not needed for AST manipulation.
+    defn.copy(templ = defn.templ.copy(stats = defn.templ.body.stats ++ stats))
+
+  def appendObjectStats(defn: Defn.Object, stats: List[Stat]): Defn.Object =
+    // The scala.meta.Dialect is constant for any given plugin execution and
+    // therefore is not needed for AST manipulation.
+    defn.copy(templ = defn.templ.copy(stats = defn.templ.body.stats ++ stats))
 
   def appendPkgObjectStats(packageObject: Pkg.Object, stats: List[Stat]): Pkg.Object =
+    // The scala.meta.Dialect is constant for any given plugin execution and
+    // therefore is not needed for AST manipulation.
     packageObject.copy(templ =
       packageObject.templ.copy(stats = packageObject.templ.body.stats ++ stats)
     )
-  def appendClassStats(defn: Defn.Class, stats: List[Stat]): Defn.Class =
-    defn.copy(templ = defn.templ.copy(stats = defn.templ.body.stats ++ stats))
+
   def appendTraitStats(defn: Defn.Trait, stats: List[Stat]): Defn.Trait =
+    // The scala.meta.Dialect is constant for any given plugin execution and
+    // therefore is not needed for AST manipulation.
     defn.copy(templ = defn.templ.copy(stats = defn.templ.body.stats ++ stats))
 }
 

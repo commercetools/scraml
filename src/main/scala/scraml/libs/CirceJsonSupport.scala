@@ -376,8 +376,8 @@ class CirceJsonSupport(formats: Map[String, String], imports: Seq[String])
         val decoderCalls = tail.foldLeft(initRead) { case (acc, next) =>
           val nextRead =
             q"""fold(_ => ${packageTerm(
-              s"${next.getName}.decoder"
-            )}.tryDecode(c), Right(_))""".toString
+                s"${next.getName}.decoder"
+              )}.tryDecode(c), Right(_))""".toString
           s"$acc.$nextRead"
         }
         decoderCalls.parse[Term].get
@@ -488,12 +488,12 @@ class CirceJsonSupport(formats: Map[String, String], imports: Seq[String])
           q"""
           @scala.inline
           def ${Term.Name("chunk" + index)}() = ${tail.foldLeft(
-            q"""${Term.Name(head.getName)}.decoder.tryDecode(c)"""
-          ) { case (accum, decoder) =>
-            q"""
+              q"""${Term.Name(head.getName)}.decoder.tryDecode(c)"""
+            ) { case (accum, decoder) =>
+              q"""
                 $accum.fold( _ => ${Term.Name(decoder.getName)}.decoder.tryDecode(c), Right(_) )
                 """
-          }}
+            }}
           """
         case (Nil, index) =>
           q"""
@@ -755,22 +755,22 @@ class CirceJsonSupport(formats: Map[String, String], imports: Seq[String])
           new Decoder[$objectTypeName] {
             def apply(c: HCursor): Decoder.Result[$objectTypeName] = {
               ${genFlatMaps(classDef.ctor.paramClauses.flatten) {
-          case (_, _, _, companionName, _) =>
-            val additionalParamName = Term.Name("_" + additional.propertyName)
+            case (_, _, _, companionName, _) =>
+              val additionalParamName = Term.Name("_" + additional.propertyName)
 
-            q"""
+              q"""
                 AdditionalProperties.decoder(c).flatMap {
                   $additionalParamName: Option[${additional.propertyType}] =>
                     $companionName.from( ..${generatePropertiesCode(classDef) { prop =>
-              Term.Name("_" + prop.name.value) :: Nil
-            }.collect { case t: Term =>
-              t
-            }},
+                  Term.Name("_" + prop.name.value) :: Nil
+                }.collect { case t: Term =>
+                  t
+                }},
             $additionalParamName
             ).swap.map(e => DecodingFailure(e.getMessage, Nil)).swap
             }
            """
-        }}
+          }}
         }
         }
        """.stats
@@ -783,30 +783,30 @@ class CirceJsonSupport(formats: Map[String, String], imports: Seq[String])
           new Decoder[$objectTypeName] {
             def apply(c: HCursor): Decoder.Result[$objectTypeName] = {
               ${genFlatMaps(classDef.ctor.paramClauses.flatten) {
-          case (fieldName, paramName, paramType, companionName, Some(default)) =>
-            q"""
+            case (fieldName, paramName, paramType, companionName, Some(default)) =>
+              q"""
               c.getOrElse[$paramType]($fieldName)($default).flatMap {
                 $paramName: $paramType =>
                   $companionName.from(..${generatePropertiesCode(classDef) { prop =>
-              Term.Name("_" + prop.name.value) :: Nil
-            }.collect { case t: Term =>
-              t
-            }}).swap.map(e => DecodingFailure(e.getMessage, Nil)).swap
+                  Term.Name("_" + prop.name.value) :: Nil
+                }.collect { case t: Term =>
+                  t
+                }}).swap.map(e => DecodingFailure(e.getMessage, Nil)).swap
             }
            """
 
-          case (fieldName, paramName, paramType, companionName, None) =>
-            q"""
+            case (fieldName, paramName, paramType, companionName, None) =>
+              q"""
               c.downField($fieldName).as[$paramType].flatMap {
                 $paramName: $paramType =>
                   $companionName.from(..${generatePropertiesCode(classDef) { prop =>
-              Term.Name("_" + prop.name.value) :: Nil
-            }.collect { case t: Term =>
-              t
-            }}).swap.map(e => DecodingFailure(e.getMessage, Nil)).swap
+                  Term.Name("_" + prop.name.value) :: Nil
+                }.collect { case t: Term =>
+                  t
+                }}).swap.map(e => DecodingFailure(e.getMessage, Nil)).swap
             }
            """
-        }}
+          }}
         }
         }
        """.stats
@@ -818,21 +818,21 @@ class CirceJsonSupport(formats: Map[String, String], imports: Seq[String])
           new Decoder[$objectTypeName] {
             def apply(c: HCursor): Decoder.Result[$objectTypeName] = {
               ${genFlatMaps(classDef.ctor.paramClauses.flatten) {
-            case (_, _, _, companionName, _) =>
-              val additionalParamName = Term.Name("_" + additional.propertyName)
+              case (_, _, _, companionName, _) =>
+                val additionalParamName = Term.Name("_" + additional.propertyName)
 
-              q"""
+                q"""
                 AdditionalProperties.decoder(c).map {
                   $additionalParamName: Option[${additional.propertyType}] =>
                     $companionName(..${generatePropertiesCode(classDef) { prop =>
-                Term.Name("_" + prop.name.value) :: Nil
-              }.collect { case t: Term =>
-                t
-              }}
+                    Term.Name("_" + prop.name.value) :: Nil
+                  }.collect { case t: Term =>
+                    t
+                  }}
               )($additionalParamName)
             }
            """
-          }}
+            }}
         }
         }
        """
@@ -845,31 +845,31 @@ class CirceJsonSupport(formats: Map[String, String], imports: Seq[String])
           new Decoder[$objectTypeName] {
             def apply(c: HCursor): Decoder.Result[$objectTypeName] = {
               ${genFlatMaps(classDef.ctor.paramClauses.flatten) {
-            case (fieldName, paramName, paramType, companionName, Some(default)) =>
-              q"""
+              case (fieldName, paramName, paramType, companionName, Some(default)) =>
+                q"""
               c.getOrElse[$paramType]($fieldName)($default).map {
                 $paramName: $paramType =>
                     $companionName(..${generatePropertiesCode(classDef) { prop =>
-                Term.Name("_" + prop.name.value) :: Nil
-              }.collect { case t: Term =>
-                t
-              }})
+                    Term.Name("_" + prop.name.value) :: Nil
+                  }.collect { case t: Term =>
+                    t
+                  }})
             }
            """
 
-            case (fieldName, paramName, paramType, companionName, None) =>
-              q"""
+              case (fieldName, paramName, paramType, companionName, None) =>
+                q"""
               c.downField($fieldName).as[$paramType].map {
                 $paramName: $paramType =>
                     $companionName(..${generatePropertiesCode(classDef) { prop =>
-                Term.Name("_" + prop.name.value) :: Nil
-              }.collect { case t: Term =>
-                t
-              }})
+                    Term.Name("_" + prop.name.value) :: Nil
+                  }.collect { case t: Term =>
+                    t
+                  }})
             }
            """
 
-          }}
+            }}
         }
         }
        """
@@ -908,16 +908,16 @@ class CirceJsonSupport(formats: Map[String, String], imports: Seq[String])
         import io.circe.Decoder.Result
 
         implicit lazy val decoder: Decoder[${Type.Name(
-            context.objectType.getName
-          )}] = new Decoder[${Type.Name(context.objectType.getName)}] {
+              context.objectType.getName
+            )}] = new Decoder[${Type.Name(context.objectType.getName)}] {
             override def apply(c: HCursor): Result[${Type.Name(context.objectType.getName)}] =
               c.as[$decodeType].map(${Term.Name(
-            context.objectType.getName
-          )}.apply)
+              context.objectType.getName
+            )}.apply)
         }
         implicit lazy val encoder: Encoder[${Type.Name(
-            context.objectType.getName
-          )}] = new Encoder[${Type.Name(context.objectType.getName)}] {
+              context.objectType.getName
+            )}] = new Encoder[${Type.Name(context.objectType.getName)}] {
             override def apply(a: ${Type.Name(context.objectType.getName)}): Json =
               a.values.asJson
         }
@@ -1014,11 +1014,11 @@ class CirceJsonSupport(formats: Map[String, String], imports: Seq[String])
         val jsonTypeHint = $discriminatorValueString
 
         implicit lazy val decoder: Decoder[${Type.Singleton(
-              Term.Name(context.objectType.getName)
-            )}] = new Decoder[${Type.Singleton(Term.Name(context.objectType.getName))}] {
+                Term.Name(context.objectType.getName)
+              )}] = new Decoder[${Type.Singleton(Term.Name(context.objectType.getName))}] {
           override def apply(c: HCursor): Result[${Type.Singleton(
-              Term.Name(context.objectType.getName)
-            )}] = c.downField($discriminatorPropertyName).as[String] match {
+                Term.Name(context.objectType.getName)
+              )}] = c.downField($discriminatorPropertyName).as[String] match {
             case Right(jsonTypeHint) =>
               Right(${Term.Name(context.objectType.getName)})
             case other =>
@@ -1026,10 +1026,12 @@ class CirceJsonSupport(formats: Map[String, String], imports: Seq[String])
           }
         }
         implicit lazy val encoder: Encoder[${Type.Singleton(
-              Term.Name(context.objectType.getName)
-            )}] = new Encoder[${Type.Singleton(Term.Name(context.objectType.getName))}] {
+                Term.Name(context.objectType.getName)
+              )}] = new Encoder[${Type.Singleton(Term.Name(context.objectType.getName))}] {
           override def apply(a: ${Type
-              .Singleton(Term.Name(context.objectType.getName))}): Json = Json.obj($discriminatorPropertyName -> Json.fromString(jsonTypeHint))
+                .Singleton(
+                  Term.Name(context.objectType.getName)
+                )}): Json = Json.obj($discriminatorPropertyName -> Json.fromString(jsonTypeHint))
         }
          """.stats
           ),
@@ -1171,6 +1173,6 @@ class CirceJsonSupport(formats: Map[String, String], imports: Seq[String])
         $enumDecode
        """.stats
 
-    DefnWithCompanion(enumTrait, companion.map(appendObjectStats(_, stats)(params.dialect)))
+    DefnWithCompanion(enumTrait, companion.map(appendObjectStats(_, stats)))
   }
 }

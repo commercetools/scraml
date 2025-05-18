@@ -7,7 +7,7 @@ lazy val root = (project in file("."))
   .settings(
     scalaVersion := "2.13.16",
     crossScalaVersions ++= Seq("3.3.4"),
-    name := "scraml-ct-api-circe-test",
+    name := "scraml-ct-api-test",
     version := "0.1",
     ramlFile := Some(file("reference/api-specs/api/api.raml")),
     basePackageName := "de.commercetools.api",
@@ -17,12 +17,18 @@ lazy val root = (project in file("."))
       number = "scala.math.BigDecimal"
     ),
     librarySupport := Set(
+      scraml.libs.BeanPropertiesSupport,
       scraml.libs.CatsEqSupport,
       scraml.libs.CatsShowSupport,
       scraml.libs.CirceJsonSupport(),
       scraml.libs.MonocleOpticsSupport,
       scraml.libs.TapirSupport("Endpoints"),
       scraml.libs.RefinedSupport
+    ),
+    beanProperties := scraml.BeanProperties(
+      array = scraml.BeanProperties.UseJavaCollectionTypes,
+      optional = scraml.BeanProperties.UseJavaOptionalType,
+      scalaNumber = scraml.BeanProperties.UseJavaLangTypes
     ),
     Compile / sourceGenerators += runScraml,
     libraryDependencies ++= Seq(
