@@ -323,20 +323,27 @@ class CirceJsonSupport(formats: Map[String, String], imports: Seq[String])
       discriminatorMap: Map[String, List[String]],
       subTypes: Seq[AnyType],
       typeName: String
-  ): Unit =
-    if (
-      subTypes.isEmpty || Some(discriminatorMap.values.toList.flatten).exists { toBeDerivedValues =>
-        val toBeDerivedTypes = subTypes.map(_.getName).toList
-        toBeDerivedTypes.length != toBeDerivedValues.length || toBeDerivedTypes
-          .diff(toBeDerivedValues)
-          .nonEmpty
-      }
-    ) {
+  ): Unit = {
+    if (subTypes.isEmpty) {
       throw new IllegalArgumentException(
         s"Discriminator map derivation cannot be executed. " +
-          s"Type $typeName does not have subtypes or mapping of types does not cover all cases."
+          s"Type $typeName does not have subtypes"
       )
+    } else {
+      val subTypesNames = subTypes.map(_.getName).toSet
+      val mappedTypes   = discriminatorMap.values.toList.flatten.toSet
+
+      val notMappedTypes = subTypesNames.diff(mappedTypes)
+      val notFoundTypes  = mappedTypes.diff(subTypesNames)
+
+      if (notMappedTypes.nonEmpty || notFoundTypes.nonEmpty) {
+        throw new IllegalArgumentException(
+          s"Discriminator map derivation cannot be executed. " +
+            s"Type $typeName mapping does not cover all cases. Not mapped types: [${notMappedTypes.mkString(", ")}]. Not found mapped types: [${notFoundTypes.mkString(", ")}]"
+        )
+      }
     }
+  }
 
   private def extractDecodeWithoutDiscriminator(
       context: ModelGenContext,
