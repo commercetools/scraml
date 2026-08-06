@@ -1,6 +1,7 @@
 package scraml
 
 import scala.meta.*
+import scala.meta.dialects.Scala212
 import _root_.io.vrap.rmf.raml.model.types.ObjectType
 import scraml.MetaUtil.typeFromName
 

@@ -1,6 +1,7 @@
 package scraml.libs
 
 import scala.meta._
+import scala.meta.dialects.Scala212
 
 import scraml.{MetaUtil, ModelGenContext}
 

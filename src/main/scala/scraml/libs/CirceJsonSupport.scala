@@ -520,8 +520,12 @@ class CirceJsonSupport(formats: Map[String, String], imports: Seq[String])
       }
       .toList
 
+    val chunkCalls: List[Term] = localDefs.map(d => q"${d.name}()")
+
     Term.Block(
-      localDefs :+ localDefs.map(d => q"${d.name}()").reduce { (a, b) =>
+      // `reduce` is pinned to `Term`; left to infer, it widens to `Stat` and the
+      // quasiquote then refuses to unquote `$a` into a term position under Scala 3.
+      localDefs :+ chunkCalls.reduce[Term] { (a, b) =>
         q"$a.fold(_ => $b, Right(_))"
       }
     )
@@ -656,7 +660,9 @@ class CirceJsonSupport(formats: Map[String, String], imports: Seq[String])
     def defaultValueFor(param: Term.Param): Option[Term] = {
       val property     = Option(objectType.getProperty(param.name.value))
       val propertyType = property.map(_.getType)
-      val isRequired   = property.fold(true)(_.getRequired)
+      // `getRequired` returns a `java.lang.Boolean`; without the ascription Scala 3
+      // infers the union `Boolean | java.lang.Boolean` instead of unboxing.
+      val isRequired: Boolean = property.fold(true)(_.getRequired)
 
       propertyType
         .flatMap(pt => Option(pt.getDefault))

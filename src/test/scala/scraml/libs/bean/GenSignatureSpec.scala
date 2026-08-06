@@ -9,8 +9,8 @@ import scraml.libs.SourceCodeFormatting
 class GenSignatureSpec extends AnyWordSpec with Diagrams with SourceCodeFormatting {
   import cats.syntax.semigroup._
 
-  implicit val defaultTypes = DefaultTypes()
-  lazy val intType          = "Int".parse[Type].get
+  implicit val defaultTypes: DefaultTypes = DefaultTypes()
+  lazy val intType                        = "Int".parse[Type].get
 
   "The GenSignature type" must {
     "support Java Collection" in {

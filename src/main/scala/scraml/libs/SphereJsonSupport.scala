@@ -7,6 +7,7 @@ import scraml.RMFUtil.getAnnotation
 import scraml.{DefnWithCompanion, JsonSupport, LibrarySupport, ModelGenContext, ModelGenParams}
 
 import scala.meta.*
+import scala.meta.dialects.Scala212
 import _root_.io.vrap.rmf.raml.model.types.StringType
 
 object SphereJsonSupport extends LibrarySupport with JsonSupport {

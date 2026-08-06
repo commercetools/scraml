@@ -8,6 +8,7 @@ import scraml.RMFUtil.{getAnnotation, getPackageName, isEnumType}
 import java.io.File
 import scala.collection.immutable.TreeSet
 import scala.meta._
+import scala.meta.dialects.Scala212
 import scala.reflect.ClassTag
 import scala.util.Try
 

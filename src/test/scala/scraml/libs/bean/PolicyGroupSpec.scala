@@ -1,6 +1,7 @@
 package scraml.libs.bean
 
 import scala.meta._
+import scala.meta.dialects.Scala212
 
 import org.scalatest.diagrams.Diagrams
 import org.scalatest.wordspec.AnyWordSpec
@@ -11,8 +12,8 @@ class PolicyGroupSpec extends AnyWordSpec with Diagrams with SourceCodeFormattin
   import BeanProperties._
   import cats.syntax.semigroup._
 
-  implicit val defaultTypes = DefaultTypes()
-  private val analyzer      = new Analyzer(companion = None)
+  implicit val defaultTypes: DefaultTypes = DefaultTypes()
+  private val analyzer                    = new Analyzer(companion = None)
 
   "The PolicyGroup type" when {
     "configured with default settings" must {

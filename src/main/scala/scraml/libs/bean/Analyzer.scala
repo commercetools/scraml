@@ -1,6 +1,7 @@
 package scraml.libs.bean
 
 import scala.meta._
+import scala.meta.dialects.Scala212
 import scraml.DefaultTypes
 
 final class Analyzer(private val companion: Option[Defn.Object]) {

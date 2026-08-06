@@ -1,6 +1,7 @@
 package scraml.libs.bean
 
 import scala.meta.{Name, Type}
+import scala.meta.prettyprinters.XtensionSyntax
 
 object IsAnyVal {
   // Even though Unit is technically an AnyVal, it is excluded here as it

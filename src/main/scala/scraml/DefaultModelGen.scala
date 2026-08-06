@@ -9,6 +9,7 @@ import org.scalafmt.interfaces.Scalafmt
 import java.io.File
 import java.time.LocalDateTime
 import scala.meta.*
+import scala.meta.dialects.Scala212
 import scala.meta.Type.{ArgClause, ParamClause}
 
 sealed trait GeneratedSource {

@@ -16,6 +16,7 @@ import scraml.{
 import scala.collection.immutable.TreeSet
 import scala.jdk.CollectionConverters.*
 import scala.meta.*
+import scala.meta.dialects.Scala212
 import scala.util.matching.Regex
 
 final case class ResourceDefinitions(
@@ -66,8 +67,6 @@ final class TapirSupport(endpointsObjectName: String) extends LibrarySupport {
       template: String,
       pathParams: List[Term.Param]
   ): Term = {
-    import meta._
-
     val paramTypes = pathParams.map { param =>
       param.name.value -> param.decltpe.map(_.toString).getOrElse("String")
     }.toMap
@@ -157,8 +156,8 @@ final class TapirSupport(endpointsObjectName: String) extends LibrarySupport {
     val resourceMethodStats = resource.getMethods.asScala.flatMap { method =>
       val resourceMethodName             = s"${method.getMethodName}$fullResourceName"
       val pathParams: List[Term.Param]   = pathParamsFromResource(resource)
-      val queryParams: List[Term.Param]  = paramTypes(method.getQueryParameters.asScala)
-      val headerParams: List[Term.Param] = paramTypes(method.getHeaders.asScala)
+      val queryParams: List[Term.Param]  = paramTypes(method.getQueryParameters.asScala.toSeq)
+      val headerParams: List[Term.Param] = paramTypes(method.getHeaders.asScala.toSeq)
       val hasParams = pathParams.nonEmpty || queryParams.nonEmpty || headerParams.nonEmpty
 
       val endpointWithMethod =
@@ -270,14 +269,14 @@ final class TapirSupport(endpointsObjectName: String) extends LibrarySupport {
       }
 
       val endpointWithOut =
-        unionType(TreeSet(successTypes: _*).map(_.bodyType))
+        unionType(TreeSet(successTypes: _*).toList.map(_.bodyType).distinct)
           .map(theType => q"""
         $endpointWithInputBody.out(jsonBody[$theType])
          """)
           .getOrElse(endpointWithInputBody)
 
       val endpointWithErrorOut =
-        unionType(TreeSet(errorTypes: _*).map(_.bodyType))
+        unionType(TreeSet(errorTypes: _*).toList.map(_.bodyType).distinct)
           .map(theType => q"""
         $endpointWithOut.errorOut(jsonBody[$theType])
          """)
@@ -386,7 +385,9 @@ final class TapirSupport(endpointsObjectName: String) extends LibrarySupport {
       enumTrait: Defn.Trait,
       companion: Option[Defn.Object]
   ): DefnWithCompanion[Defn.Trait] = {
-    val enumNames = enumType.getEnum.asScala.toList.map { enum => enum.getValue.toString }
+    val enumNames = enumType.getEnum.asScala.toList.map { instance =>
+      instance.getValue.toString
+    }
 
     val enumValuesAsList =
       q"""
@@ -399,11 +400,11 @@ final class TapirSupport(endpointsObjectName: String) extends LibrarySupport {
       implicit lazy val tapirCodec: sttp.tapir.Codec.PlainCodec[$enumTypeName] =
       sttp.tapir.Codec.string.mapDecode[$enumTypeName](
         ${Term.PartialFunction(
-          enumType.getEnum.asScala.toList.map { enum =>
+          enumType.getEnum.asScala.toList.map { instance =>
             Case(
-              Lit.String(enum.getValue.toString),
+              Lit.String(instance.getValue.toString),
               None,
-              q"sttp.tapir.DecodeResult.Value(${Term.Name(enum.getValue.toString)})"
+              q"sttp.tapir.DecodeResult.Value(${Term.Name(instance.getValue.toString)})"
             )
           }
             ++
@@ -438,11 +439,11 @@ final class TapirSupport(endpointsObjectName: String) extends LibrarySupport {
         )}
       )(
         ${Term.PartialFunction(
-          enumNames.map { enum =>
+          enumNames.map { enumName =>
             Case(
-              Term.Name(enum),
+              Term.Name(enumName),
               None,
-              Lit.String(enum)
+              Lit.String(enumName)
             )
           } ++ params.generateDefaultEnumVariant.map(name =>
             Case(
