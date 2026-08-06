@@ -16,12 +16,35 @@ res4: String = Defn.Val(List(Mod.Implicit(), Mod.Lazy()), List(Pat.Var(Term.Name
 
 also see https://scalameta.org/docs/trees/guide.html
 
+## Cross-building
+
+The build itself runs on sbt 2, and the plugin is published for both sbt versions:
+
+| Scala          | targets  | artifact                |
+| -------------- | -------- | ----------------------- |
+| 3.8.4 (default)| sbt 2.0.5| `sbt-scraml_sbt2_3`     |
+| 2.12.20        | sbt 1    | `sbt-scraml_2.12_1.0`   |
+
+Prefix a command with `+` to run it for both, or `++<version>` to select one:
+
+```shell
+sbt +test                     # both
+sbt '++ 2.12.20; test'        # sbt 1 build only
+```
+
+Note that sources must compile under **both** Scala 2.12 and Scala 3, so they are
+limited to the syntax the older compiler accepts.
+
 ## Running Tests
 
 ```shell
 sbt scripted # runs all tests in src/sbt-test
 sbt 'scripted sbt-scraml/simple' # runs a specific test (note use of quotes)
+sbt +scripted # runs them against both sbt 1 and sbt 2
 ```
+
+The scripted tests deliberately do not pin `sbt.version`; each cross-build leg runs
+them on the sbt version given by `scriptedSbt` in `build.sbt`.
 
 ## Building the examples project
 
