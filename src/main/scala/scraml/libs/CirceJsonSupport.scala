@@ -7,6 +7,7 @@ import scraml.MetaUtil.*
 import scraml.RMFUtil.{getAnnotation, isEnumType}
 import scraml.*
 
+import scala.collection.immutable.ListMap
 import scala.util.Try
 
 object CirceJsonSupport {
@@ -172,11 +173,19 @@ class CirceJsonSupport(formats: Map[String, String], imports: Seq[String])
   private def getDiscriminatorMapType(objectType: ObjectType): Option[Map[String, List[String]]] = {
     getAnnotation(objectType)("discriminator-map").map(_.getValue) match {
       case Some(discriminatorMap: ObjectInstance) =>
+        val properties = discriminatorMap.getValue.asScala
+        val grouped    = properties.groupBy(_.getName)
+
+        // `groupBy` yields an unordered Map whose iteration order differs between
+        // Scala 2.12 and 2.13+, and that order decides the order of the generated
+        // `case` clauses. Re-key into a ListMap so generation follows the order the
+        // discriminators are declared in the RAML spec on both cross-builds.
         Some(
-          discriminatorMap.getValue.asScala
-            .groupBy(_.getName)
-            .map { case (key, values) =>
-              key -> values.map(v => v.getValue.getValue.toString).toList
+          properties
+            .map(_.getName)
+            .distinct
+            .foldLeft(ListMap.empty[String, List[String]]) { (acc, key) =>
+              acc + (key -> grouped(key).map(v => v.getValue.getValue.toString).toList)
             }
         )
       case _ => None
