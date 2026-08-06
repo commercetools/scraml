@@ -1,12 +1,10 @@
 > compile
 # make sure the expected output is present
-$ exists target/scala-2.13/src_managed/main/scraml/inline/datatypes.scala
-$ exists target/scala-2.13/src_managed/main/scraml/inline/package.scala
-$ exists target/scala-2.13/src_managed/main/scraml/simple/datatypes.scala
-$ exists target/scala-2.13/src_managed/main/scraml/simple/package.scala
+> checkGenerated
+# clean before cross-compiling: under sbt 1 the runScraml cache directory is not
+# scoped by Scala version, so without this the generator short-circuits and the
+# 2.13 output gets reused for 3.3.
+> clean
 > ++3.3
 > compile
-$ exists target/scala-2.13/src_managed/main/scraml/inline/datatypes.scala
-$ exists target/scala-2.13/src_managed/main/scraml/inline/package.scala
-$ exists target/scala-2.13/src_managed/main/scraml/simple/datatypes.scala
-$ exists target/scala-2.13/src_managed/main/scraml/simple/package.scala
+> checkGenerated

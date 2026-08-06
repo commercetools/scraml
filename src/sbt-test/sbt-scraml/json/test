@@ -1,10 +1,8 @@
 > compile
-$ exists target/scala-2.13/src_managed/main/scraml/datatypes.scala
-$ exists target/scala-2.13/src_managed/main/scraml/package.scala
+> checkGenerated
 > run
 > clean
 > ++3.3
 > compile
-$ exists target/scala-3.3.4/src_managed/main/scraml/datatypes.scala
-$ exists target/scala-3.3.4/src_managed/main/scraml/package.scala
+> checkGenerated
 > run

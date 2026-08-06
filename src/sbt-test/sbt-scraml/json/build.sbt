@@ -24,3 +24,14 @@ lazy val root = (project in file("."))
         "io.circe" %% "circe-parser"
     ).map(_ % circeVersion)
   )
+
+// sbt 1 and sbt 2 lay out `target` differently, so assert the generated
+// sources against `Compile / sourceManaged` rather than a hardcoded path.
+TaskKey[Unit]("checkGenerated") := {
+  val dir = (Compile / sourceManaged).value
+  val missing = Seq(
+    "scraml/datatypes.scala",
+    "scraml/package.scala"
+  ).map(dir / _).filterNot(_.exists)
+  if (missing.nonEmpty) sys.error("missing generated sources: " + missing.mkString(", "))
+}
