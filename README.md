@@ -5,6 +5,8 @@
 
 `sbt` plugin that generates code from RAML files at build time.
 
+Cross-built for sbt 1 (Scala 2.12) and sbt 2 (Scala 3).
+
 Built on top of the [commercetools/rest-modeling-framework](https://github.com/commercetools/rest-modeling-framework)
 and [scalameta](https://scalameta.org/).
 

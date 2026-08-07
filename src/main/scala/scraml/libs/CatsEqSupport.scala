@@ -4,6 +4,7 @@ import scraml.LibrarySupport.appendObjectStats
 import scraml.{DefnWithCompanion, LibrarySupport, ModelGenContext}
 
 import scala.meta._
+import scala.meta.dialects.Scala212
 
 object CatsEqSupport extends LibrarySupport {
   object IsVersionedEntity extends HasProperties("id" :: "version" :: Nil)

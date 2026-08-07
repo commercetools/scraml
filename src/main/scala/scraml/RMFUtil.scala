@@ -47,7 +47,7 @@ object RMFUtil {
     * `TreeSet`.
     */
   def filterSubTypes(aType: AnyType)(allow: AnyType => Boolean): TreeSet[AnyType] =
-    TreeSet(aType.getSubTypes.asScala.filter(allow): _*)
+    TreeSet(aType.getSubTypes.asScala.filter(allow).toSeq: _*)
 
   /** find all terminal, or "leaf", types of '''aType'''.
     */

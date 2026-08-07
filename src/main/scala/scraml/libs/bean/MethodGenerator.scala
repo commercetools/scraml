@@ -1,6 +1,7 @@
 package scraml.libs.bean
 
 import scala.meta._
+import scala.meta.dialects.Scala212
 import scraml.{BeanProperties, DefaultTypes, ModelGenContext}
 
 sealed abstract class MethodGenerator(

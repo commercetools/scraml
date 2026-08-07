@@ -1,5 +1,11 @@
 # Setup
 
+## sbt compatibility
+
+SCRAML is cross-built for **sbt 1** (Scala 2.12, sbt 1.5.0 and newer) and **sbt 2**
+(Scala 3). The same coordinates work for both — sbt resolves the matching artifact
+for the version of sbt running your build.
+
 ## Add the dependency to your build
 
 `project/plugins.sbt`:

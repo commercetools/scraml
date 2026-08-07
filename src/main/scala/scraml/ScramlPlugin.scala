@@ -25,7 +25,10 @@ object ScramlPlugin extends AutoPlugin {
     val formatConfig =
       settingKey[Option[File]]("config to be used for formatting, no formatting if not set")
 
-    val runScraml = taskKey[Seq[File]]("generate Scala from RAML definitions")
+    // `Seq[File]` is not a valid output type for a cached task under sbt 2, and
+    // caching is handled explicitly below via `FileFunction.cached`. `@transient`
+    // opts the key out of sbt 2's automatic caching and is a no-op under sbt 1.
+    @transient val runScraml = taskKey[Seq[File]]("generate Scala from RAML definitions")
     val defaultEnumVariant = settingKey[Option[String]](
       "value to use as default enum variant type name (fallback during encode/decode)"
     )

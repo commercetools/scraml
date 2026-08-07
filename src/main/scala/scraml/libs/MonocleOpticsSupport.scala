@@ -4,6 +4,7 @@ import scraml.LibrarySupport.appendObjectStats
 import scraml.{DefnWithCompanion, LibrarySupport, ModelGenContext}
 
 import scala.meta._
+import scala.meta.dialects.Scala212
 
 object MonocleOpticsSupport extends LibrarySupport {
   override def modifyClass(classDef: Defn.Class, companion: Option[Defn.Object])(implicit

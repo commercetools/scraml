@@ -6,6 +6,8 @@ import org.scalatest.matchers.should.Matchers
 
 import java.io.File
 import scala.meta.Term
+import scala.meta.dialects.Scala212
+import scala.meta.prettyprinters.XtensionSyntax
 
 class DefaultModelGenSpec extends AnyFlatSpec with Matchers {
   "Default model gen" should "generate data type from API spec" in {

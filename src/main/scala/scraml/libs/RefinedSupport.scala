@@ -1,6 +1,7 @@
 package scraml.libs
 
 import scala.meta._
+import scala.meta.dialects.Scala212
 
 import _root_.io.vrap.rmf.raml.model.types._
 import _root_.io.vrap.rmf.raml.model.values.RegExp

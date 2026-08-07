@@ -6,3 +6,4 @@ target
 .bloop
 metals.sbt
 default.profraw
+*.semanticdb
